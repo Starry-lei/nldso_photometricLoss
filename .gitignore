@@ -1,2 +1,5 @@
 /build
 /cmake_modules
+/cmake-build-release
+/cmake-build-debug
+/thirdparty
