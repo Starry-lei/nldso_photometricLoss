@@ -1,0 +1,4 @@
+envMapImage,Image
+NodeClassName,Text,ImageShaderPluginNode
+NodeName,Text,PreFiltered Envmap
+samples,Integer,128

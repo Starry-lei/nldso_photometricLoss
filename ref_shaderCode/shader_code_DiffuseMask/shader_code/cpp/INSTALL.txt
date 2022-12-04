@@ -1,0 +1,53 @@
+To compile the C++ code you need to resolve the following dependencies:
+
+1) OpenGL Utility Toolkit (GLUT)
+   https://freeglut.sourceforge.net/
+
+2) OpenGL Extension Wrangler Library (GLEW)
+   https://glew.sourceforge.net/
+
+On a Linux system, you can use your package manager to resolve the dependencies. 
+E.g., on Ubuntu linux (tested on version 20.04.3 LTS) the following commands install the
+required packages.
+> sudo apt-get install freeglut3-dev
+> sudo apt-get install libglew-dev
+
+On a Windows system, prepackaged releases for GLUT and GLEW can be downloaded from here:
+https://www.transmissionzero.co.uk/software/freeglut-devel/
+https://glew.sourceforge.net/
+
+
+***** CMAKE *****
+A CMakeLists.txt is provided, which you can use with CMAKE on all plattforms and with all compilers:
+https://cmake.org/
+
+On a Linux system:
+> sudo apt-get install cmake
+
+Once CMAKE is installed, change to the "cpp" directory and enter the following commands:
+> cmake .
+> make VERBOSE=1
+> ./shader 
+
+If GLUT or GLEW are installed into a non-standard location, you need to tell 
+CMAKE to searched in these directories by adjusting the CMAKE_PREFIX_PATH:
+https://cmake.org/cmake/help/latest/variable/CMAKE_PREFIX_PATH.html
+
+
+***** VISUAL STUDIO *****
+For Windows, CMAKE also works, but additonally the Visual Studio 2019 project "Shader.vcxproj" is provided
+in the "cpp" directory.
+
+Download GLUT and GLEW from here:
+https://www.transmissionzero.co.uk/software/freeglut-devel/
+https://glew.sourceforge.net/
+and produce the following directory structure below the "cpp" directory
+cpp/3rdparty/freeglut/include
+cpp/3rdparty/freeglut/lib
+cpp/3rdparty/glew/include
+cpp/3rdparty/glew/lib
+
+Open "Shader.vcxproj" and compile the sources (Ctrl+F5)
+
+Please get in contact at https://www.gsn-lib.org if you have questions, requests, or suggestions for improvement.
+Your feedback is very much appreciated.
