@@ -75,6 +75,8 @@ include_directories(thirdparty/CLI11/include)
 # include_directories(thirdparty/g2o/include)
 include_directories(include)
 
+
+
 # to use link to target "ceres"
 # Note: always link to ceres first, as otherwise a system-wide install might
 # be found before our custom build. For example on macOS a both pangolin and
@@ -120,6 +122,11 @@ include_directories(${PCL_INCLUDE_DIRS})
 link_directories(${PCL_LIBRARY_DIRS})
 add_definitions(${PCL_DEFINITIONS})
 
+find_package(OpenGL REQUIRED)
+find_package(GLUT REQUIRED)
+find_package(GLEW REQUIRED)
+include_directories( ${OPENGL_INCLUDE_DIRS} ${GLEW_INCLUDE_DIRS})
+
 #
 #message(STATUS "show PCL-----PCL_INCLUDE_DIRS: ${PCL_INCLUDE_DIRS}")
 #message(STATUS "show PCL-----PCL_LIBRARY_DIRS: ${PCL_LIBRARY_DIRS}")
@@ -129,7 +136,20 @@ message(STATUS "show IT: ${CMAKE_CURRENT_SOURCE_DIR}")
 
 set(dsonl_SOURCE_FILES
         include/setting.cpp
-        include/PFMReadWrite.cpp)
+        include/PFMReadWrite.cpp
+        include/preFilter.h
+        include/preFilter/FileTools.cpp
+        include/preFilter/Renderer.cpp
+        include/preFilter/Matrix.cpp
+        include/preFilter/Mesh.cpp
+        include/preFilter/ShaderNode.cpp
+        include/preFilter/StringTools.cpp
+        include/preFilter/LoadOBJ.cpp
+
+        include/diffuseMap/Renderer_diffuse.cpp
+        include/diffuseMap/diffuse_mask_Renderer.cpp
+
+        include/preComputeSetting.h include/preComputeSetting.cpp include/GLI.h)
 
 add_library(dsonl ${dsonl_SOURCE_FILES})
 
@@ -142,6 +162,7 @@ target_link_libraries(photometricLoss
 #        opengv
         ${PCL_LIBRARIES}
         dsonl
+        ${OPENGL_LIBRARIES} ${GLUT_LIBRARIES} ${GLEW_LIBRARIES}
 
  )
 

@@ -74,6 +74,7 @@ namespace DSONL{
 		Mat normal_map_GT;
 		Mat image_ref_baseColor;
 		Mat image_target_baseColor;
+
 		Eigen::Matrix3d R12;
 		Eigen::Vector3d t12;
 		Eigen::Quaterniond q_12;
@@ -81,6 +82,12 @@ namespace DSONL{
 		Eigen::Matrix3d R2;
 		int rows;
 		int cols;
+
+		void load_brdfIntegrationMap();
+
+		void load_prefilteredEnvmap(){
+
+		}
 
 		void Init(){
 
@@ -94,11 +101,6 @@ namespace DSONL{
 			camera_intrinsics<< 1361.1, 0, 320,
 					0, 1361.1, 240,
 					0,   0,  1;
-
-//			M_matrix << 1.0/(tan(0.5*fov * M_PI/180.0)*aspect), 0, 0, 0,
-//					0,  1.0/tan(0.5*fov * M_PI/180.0), 0,  0,
-//					0,0, (far+near)/(near-far), 2*far*near/(near-far),
-//					0,  0,   -1,    0;
 
 			if(options_.isTextured){
 
@@ -163,37 +165,12 @@ namespace DSONL{
 				string depth_target_path;
 
 				if (options_.baseline==0){
-//					image_target_path ="../data/Env_light/right/image_rightRGB07.png";
-//					depth_target_path = "../data/Env_light/right/image_rightLinearDepth07.pfm";
-//					image_target_path ="../data/Env_light/right0702/image_rightRGB0702.png";
-//					depth_target_path = "../data/Env_light/right0702/image_rightLinearDepth0702.pfm";
-//					image_target_baseColor_path = "../data/Env_light/right/image_rightBasecolor07.png";
-//
 
 					image_target_path ="../data/Env_light/right0703/image_rightRGB0703.png";
 					depth_target_path = "../data/Env_light/right0703/image_rightLinearDepth0703.pfm";
-//					image_target_baseColor_path = "../data/Env_light/right/image_rightBasecolor07.png";
-
-
-
-
-
-					//0.0367,   -0.0355,   -0.6945,    0.7177  // 0.6945,   -0.7177,   -0.0367,    0.0355
-//					Eigen::Quaterniond q_2( 0.6945,   -0.7177,   -0.0367,    0.0355); //  cam2  wxyz
-//					Eigen::Vector3d t2(-0.31000, 3.02,  -0.100);
 
 					Eigen::Quaterniond q_2( 0.7404,   -0.6707 ,  -0.0299,    0.0330); //  cam2  wxyz
 					Eigen::Vector3d t2(-0.2700,3.0200,  0.3000);
-
-
-
-
-
-
-
-
-
-
 
 
 					R2=q_2.toRotationMatrix();
@@ -206,10 +183,6 @@ namespace DSONL{
 
 					q_12= R12;
 
-//					cout<<"show R1:\n"<<R1<<endl;
-//					cout<<"show R2:\n"<<R2<<endl;
-//					cout<<"show R12:\n"<<R12<<endl;
-//					cout<<"show t12:\n"<<t12<<endl;
 
 				}
 
@@ -256,16 +229,12 @@ namespace DSONL{
 		cout<<"The program ends here, have a nice day!"<<endl;
 	}
 
+	void dataLoader::load_brdfIntegrationMap() {
 
 
 
 
-
-
-
-
-
-
+	}
 
 
 }
