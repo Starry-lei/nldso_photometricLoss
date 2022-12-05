@@ -8,6 +8,13 @@
 
 namespace {
 
+	//TODO:
+	//  1.mod
+	// 2. reflect
+	// 3. clamp
+	// 4.normalize
+	// 5. pow
+	// 6.mix
 
 
 
