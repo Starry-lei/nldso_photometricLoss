@@ -10,6 +10,7 @@ set(CMAKE_PREFIX_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/eigen3" ${CMAKE
 
 set(EIGEN_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/eigen")
 set(CERES_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/build-ceres-solver")
+
 # set(PANGOLIN_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/build-Pangolin/src")
 # set(OPENGV_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/build-opengv")
 # set(g2o_DIR "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/g2o/lib/cmake/g2o")
@@ -19,17 +20,19 @@ set(CERES_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/build-ceres-solver")
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
   set(CMAKE_BUILD_TYPE RelWithDebInfo CACHE STRING "Choose the type of build." FORCE)
   message(STATUS "Setting build type to '${CMAKE_BUILD_TYPE}' as none was specified.")
+
   # Set the possible values of build type for cmake-gui
   set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release"
     "MinSizeRel" "RelWithDebInfo")
 endif()
 
 # Configure CCache if available
-if (NOT CMAKE_C_COMPILER_LAUNCHER AND NOT CMAKE_CXX_COMPILER_LAUNCHER)
+if(NOT CMAKE_C_COMPILER_LAUNCHER AND NOT CMAKE_CXX_COMPILER_LAUNCHER)
   find_program(CCACHE_PROGRAM ccache)
+
   if(CCACHE_PROGRAM)
     message(STATUS "Found ccache: ${CCACHE_PROGRAM}")
-    set(CMAKE_C_COMPILER_LAUNCHER   ${CCACHE_PROGRAM})
+    set(CMAKE_C_COMPILER_LAUNCHER ${CCACHE_PROGRAM})
     set(CMAKE_CXX_COMPILER_LAUNCHER ${CCACHE_PROGRAM})
   else()
     message(STATUS "Dind't find ccache")
@@ -57,25 +60,24 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "App
   set(EXTRA_WARNING_FLAGS "${EXTRA_WARNING_FLAGS} -Wno-exceptions")
 endif()
 
-set(CMAKE_CXX_FLAGS_DEBUG  "-O0 -g -DEIGEN_INITIALIZE_MATRICES_BY_NAN")                   # cmake default: "-g"
-set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O3 -DNDEBUG -g -DEIGEN_INITIALIZE_MATRICES_BY_NAN")  # cmake default: "-O2 -g -DNDEBUG"
-set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")                                               # cmake default: "-O3 -DNDEBUG"
+set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g -DEIGEN_INITIALIZE_MATRICES_BY_NAN") # cmake default: "-g"
+set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O3 -DNDEBUG -g -DEIGEN_INITIALIZE_MATRICES_BY_NAN") # cmake default: "-O2 -g -DNDEBUG"
+set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG") # cmake default: "-O3 -DNDEBUG"
 SET(CMAKE_CXX_FLAGS " -ftemplate-backtrace-limit=0 -Wall -Wextra ${EXTRA_WARNING_FLAGS} -march=${CXX_MARCH} ${CMAKE_CXX_FLAGS}")
-#SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native")
 
-set(EIGEN3_INCLUDE_DIR_HINTS ${EIGEN_ROOT})  # for opengv / pangolin
+# SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native")
+set(EIGEN3_INCLUDE_DIR_HINTS ${EIGEN_ROOT}) # for opengv / pangolin
 find_package(Eigen3 3.3.8 EXACT REQUIRED CONFIG) # find eigen with our adapted "config module", that uses our eigen source tree
-set(EIGEN_INCLUDE_DIR ${EIGEN3_INCLUDE_DIR})  # for opengv / pangolin
+set(EIGEN_INCLUDE_DIR ${EIGEN3_INCLUDE_DIR}) # for opengv / pangolin
 include_directories(${EIGEN3_INCLUDE_DIR})
 message(STATUS "Found Eigen headers in: ${EIGEN3_INCLUDE_DIR}")
 
 include_directories(thirdparty/Sophus)
 include_directories(thirdparty/cereal/include)
 include_directories(thirdparty/CLI11/include)
+
 # include_directories(thirdparty/g2o/include)
 include_directories(include)
-
-
 
 # to use link to target "ceres"
 # Note: always link to ceres first, as otherwise a system-wide install might
@@ -85,93 +87,85 @@ find_package(Ceres 2.0 REQUIRED CONFIG HINTS "${CERES_ROOT}" NO_DEFAULT_PATH)
 
 # to use link to target "pangolin"
 set(Pangolin_DIR ${PANGOLIN_ROOT})
-#find_package(Pangolin REQUIRED CONFIG NO_DEFAULT_PATH)
-#message(STATUS "Found Pangolin headers in: ${Pangolin_INCLUDE_DIR}")
+
+# find_package(Pangolin REQUIRED CONFIG NO_DEFAULT_PATH)
+# message(STATUS "Found Pangolin headers in: ${Pangolin_INCLUDE_DIR}")
 
 # to use link to target "opengv"
-#find_package(opengv REQUIRED CONFIG HINTS ${OPENGV_ROOT} NO_DEFAULT_PATH)
-#message(STATUS "Found OpenGV headers in: ${opengv_DIR}")
+# find_package(opengv REQUIRED CONFIG HINTS ${OPENGV_ROOT} NO_DEFAULT_PATH)
+# message(STATUS "Found OpenGV headers in: ${opengv_DIR}")
 
 # to use link to target "TBB"
 find_package(TBB REQUIRED)
 message(STATUS "Found TBB ${TBB_VERSION_MAJOR}.${TBB_VERSION_MINOR} (interface version ${TBB_INTERFACE_VERSION}) headers in: ${TBB_INCLUDE_DIRS}")
 
-
 # to use link to target "OpenCV"
 # NOTE: not specifying version, since 2, 3 or 4 is fine
-find_package(OpenCV REQUIRED )
-#COMPONENTS core features2d
-message(STATUS "Found OpenCV ${OpenCV_VERSION} headers in: ${OpenCV_INCLUDE_DIRS}")
-add_library(OpenCV INTERFACE IMPORTED  include/numType.h)
+find_package(OpenCV)
+message(STATUS "Found OpenCV ${OpenCV_VERSION} headers in: ${OpenCV_INCLUDE_DIRS} AND ${OpenCV_LIBS}")
+
+# add_library(OpenCV INTERFACE IMPORTED include/numType.h)
+add_library(OpenCV INTERFACE IMPORTED)
 set_property(TARGET OpenCV PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${OpenCV_INCLUDE_DIRS})
 set_property(TARGET OpenCV PROPERTY INTERFACE_LINK_LIBRARIES ${OpenCV_LIBS})
+
 if(OpenCV_VERSION VERSION_LESS 3)
   set_property(TARGET OpenCV PROPERTY INTERFACE_COMPILE_DEFINITIONS DBATK_OPENCV2)
 endif()
 
-#add PCL library, remained to be installed as third party library
+# add PCL library, remained to be installed as third party library
 if(NOT DEFINED CMAKE_SUPPRESS_DEVELOPER_WARNINGS)
-    set(CMAKE_SUPPRESS_DEVELOPER_WARNINGS 1 CACHE INTERNAL "No dev warnings")
+  set(CMAKE_SUPPRESS_DEVELOPER_WARNINGS 1 CACHE INTERNAL "No dev warnings")
 endif()
 
-#add PCL library
+# add PCL library
+find_package(PCL REQUIRED)
 
-
-find_package(PCL REQUIRED )
-
-include_directories(${PCL_INCLUDE_DIRS})
+include_directories(${PCL_INCLUDE_DIRS}
+  ${OpenCV_INCLUDE_DIRS})
 link_directories(${PCL_LIBRARY_DIRS})
 add_definitions(${PCL_DEFINITIONS})
 
 find_package(OpenGL REQUIRED)
 find_package(GLUT REQUIRED)
 find_package(GLEW REQUIRED)
-include_directories( ${OPENGL_INCLUDE_DIRS} ${GLEW_INCLUDE_DIRS})
+include_directories(${OPENGL_INCLUDE_DIRS} ${GLEW_INCLUDE_DIRS})
 
 #
-#message(STATUS "show PCL-----PCL_INCLUDE_DIRS: ${PCL_INCLUDE_DIRS}")
-#message(STATUS "show PCL-----PCL_LIBRARY_DIRS: ${PCL_LIBRARY_DIRS}")
-#message(STATUS "show PCL-----PCL_DEFINITIONS: ${PCL_DEFINITIONS}")
-#some output:
+# message(STATUS "show PCL-----PCL_INCLUDE_DIRS: ${PCL_INCLUDE_DIRS}")
+# message(STATUS "show PCL-----PCL_LIBRARY_DIRS: ${PCL_LIBRARY_DIRS}")
+# message(STATUS "show PCL-----PCL_DEFINITIONS: ${PCL_DEFINITIONS}")
+# some output:
 message(STATUS "show IT: ${CMAKE_CURRENT_SOURCE_DIR}")
 
 set(dsonl_SOURCE_FILES
-        include/setting.cpp
-        include/PFMReadWrite.cpp
-        include/preFilter.h
+  include/setting.cpp
+  include/PFMReadWrite.cpp
+  include/preFilter.h
+  include/preFilter/FileTools.cpp
+  include/preFilter/Renderer.cpp
+  include/preFilter/Matrix.cpp
+  include/preFilter/Mesh.cpp
+  include/preFilter/ShaderNode.cpp
+  include/preFilter/StringTools.cpp
+  include/preFilter/LoadOBJ.cpp
 
-        include/preFilter/FileTools.cpp
-        include/preFilter/Renderer.cpp
-        include/preFilter/Matrix.cpp
-        include/preFilter/Mesh.cpp
-        include/preFilter/ShaderNode.cpp
-        include/preFilter/StringTools.cpp
-        include/preFilter/LoadOBJ.cpp
+  include/diffuseMap/Renderer_diffuse.cpp
+  include/diffuseMap/diffuse_mask_Renderer.cpp
+  include/deltaCompute.h
+  include/deltaCompute.cpp
+  include/preComputeSetting.h include/preComputeSetting.cpp include/GLI.h)
 
-        include/diffuseMap/Renderer_diffuse.cpp
-        include/diffuseMap/diffuse_mask_Renderer.cpp
+add_library(dsonl ${dsonl_SOURCE_FILES})
 
-        include/deltaCompute.h
-        include/deltaCompute.cpp
+add_executable(photometricLoss src/photometricLoss.cpp)
 
-        include/preComputeSetting.h
-        include/preComputeSetting.cpp
-        include/GLI.h
-        )
-
-
-add_library(dsonl ${dsonl_SOURCE_FILES} )
-
-add_executable(photometricLoss src/photometricLoss.cpp) 
 target_link_libraries(photometricLoss
-        Ceres::ceres
-#        pangolin
-        TBB::tbb
-        OpenCV
-#        opengv
-        ${PCL_LIBRARIES}
-        dsonl
-        ${OPENGL_LIBRARIES} ${GLUT_LIBRARIES} ${GLEW_LIBRARIES}
-
- )
-
+  Ceres::ceres
+  OpenCV
+  TBB::tbb
+  ${PCL_LIBRARIES}
+  dsonl
+  ${OPENGL_LIBRARIES} ${GLUT_LIBRARIES} ${GLEW_LIBRARIES}
+  ${OpenCV_LIBS}
+)
