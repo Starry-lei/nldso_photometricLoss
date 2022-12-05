@@ -233,12 +233,13 @@ namespace DSONL {
 		return SE3_updated;
 	}
 
-	void downscale(Mat &image, const Mat& depth, Eigen::Matrix3f &K, int &level, Mat &image_d, Mat &depth_d, Eigen::Matrix3f &K_d) {
+	void downscale(Mat &image, const Mat &depth, Eigen::Matrix3f &K, int &level, Mat &image_d, Mat &depth_d,
+	               Eigen::Matrix3f &K_d) {
 
 		if (level <= 1) {
 			image_d = image;
 			// remove negative gray values
-			image_d=cv::max(image_d,0.0);
+			image_d = cv::max(image_d, 0.0);
 			depth_d = depth;
 			// set all nan zero
 			Mat mask = Mat(depth_d != depth_d);
@@ -255,7 +256,7 @@ namespace DSONL {
 		pyrDown(image, image_d, Size(image.cols / 2, image.rows / 2));
 		pyrDown(depth, depth_d, Size(depth.cols / 2, depth.rows / 2));
 		// remove negative gray values
-		image_d=cv::max(image_d,0.0);
+		image_d = cv::max(image_d, 0.0);
 		// set all nan zero
 		Mat mask = Mat(depth_d != depth_d);
 		depth_d.setTo(0.0, mask);
@@ -265,27 +266,25 @@ namespace DSONL {
 	}
 
 
-
-
-	void showScaledImage(const Mat & org_GT, const Mat & GT, const Mat& ES){
+	void showScaledImage(const Mat &org_GT, const Mat &GT, const Mat &ES) {
 
 		double max_orig, min_orig;
-		cv::minMaxLoc(GT, &min_orig,&max_orig);
+		cv::minMaxLoc(GT, &min_orig, &max_orig);
 		double max_adj, min_adj;
-		cv::minMaxLoc(ES, &min_adj,&max_adj);
+		cv::minMaxLoc(ES, &min_adj, &max_adj);
 
 //	 double max_real= max(max_adj, max_orig);
 //	 double min_real=min(min_adj, min_orig);
-		double max_real=0.1;
-		double min_real=0.001;
+		double max_real = 0.1;
+		double min_real = 0.001;
 
 
 
 //	 Mat GT_for_show= 25*GT*(1.0/(max_real-min_real))+(-min_real*(1.0/(max_real-min_real)));
 //	 Mat ES_for_show= 25*ES*(1.0/(max_real-min_real))+(-min_real*(1.0/(max_real-min_real)));
-		Mat GT_for_show= GT*(1.0/(max_real-min_real))+(-min_real*(1.0/(max_real-min_real)));
-		Mat ES_for_show= ES*(1.0/(max_real-min_real))+(-min_real*(1.0/(max_real-min_real)));
-		Mat GT_orig_for_show= org_GT*(1.0/(max_real-min_real))+(-min_real*(1.0/(max_real-min_real)));
+		Mat GT_for_show = GT * (1.0 / (max_real - min_real)) + (-min_real * (1.0 / (max_real - min_real)));
+		Mat ES_for_show = ES * (1.0 / (max_real - min_real)) + (-min_real * (1.0 / (max_real - min_real)));
+		Mat GT_orig_for_show = org_GT * (1.0 / (max_real - min_real)) + (-min_real * (1.0 / (max_real - min_real)));
 
 		//org_GT
 
@@ -303,55 +302,77 @@ namespace DSONL {
 		waitKey(0);
 
 
-
 	}
 
-	void projection_K(double uj, double vj,double iDepth,Sophus::SO3d& Rotation,
-	                  Eigen::Vector3d& Translation, Eigen::Matrix<double, 2, 1>& pt2d){
+	void projection_K(double uj, double vj, double iDepth, Sophus::SO3d &Rotation,
+	                  Eigen::Vector3d &Translation, Eigen::Matrix<double, 2, 1> &pt2d) {
 
-		Eigen::Matrix<double,3,3> K;
-		K<< 1361.1, 0, 320,
+		cout<<"======================show Rotation projection============:"<<Rotation.matrix()<<endl;
+
+		Eigen::Matrix<double, 3, 3> K;
+		K << 1361.1, 0, 320,
 				0, 1361.1, 240,
-				0,   0,  1;
+				0, 0, 1;
 
-		double fx = K(0, 0), cx = K(0, 2), fy =  K(1, 1), cy =K(1, 2);
-		Eigen::Matrix<double,3,1> p_3d_no_d;
-		p_3d_no_d<< (uj-cx)/fx, (vj-cy)/fy,(double )1.0;
-		Eigen::Matrix<double, 3,1> p_c1 ;
-		p_c1 <<  p_3d_no_d.x() /iDepth,  p_3d_no_d.y() /iDepth ,p_3d_no_d.z() /iDepth;
+		double fx = K(0, 0), cx = K(0, 2), fy = K(1, 1), cy = K(1, 2);
+		Eigen::Matrix<double, 3, 1> p_3d_no_d;
+		p_3d_no_d << (uj - cx) / fx, (vj - cy) / fy, (double) 1.0;
+		Eigen::Matrix<double, 3, 1> p_c1;
+		p_c1 << p_3d_no_d.x() / iDepth, p_3d_no_d.y() / iDepth, p_3d_no_d.z() / iDepth;
+		cout<<"show iDepth:"<<iDepth<<endl;
+		cout << "show parameter using:<<\n" << Rotation.matrix() << "," << Translation << endl;
+		Eigen::Matrix<double, 3, 1> p1 = Rotation * p_c1 + Translation;
+		Eigen::Matrix<double, 3, 1> p_3d_transformed2, point_K;
+		p_3d_transformed2 = p1;
+		point_K = K * p_3d_transformed2;
 
-		cout<<"show parameter using:<<\n"<<Rotation.matrix()<<","<<Translation<<endl;
-		Eigen::Matrix<double, 3, 1> p1 = Rotation * p_c1+Translation ;
-
-//		Eigen::Matrix<double, 3, 1> p1 = p_c1;
-
-		Eigen::Matrix<double,3,1> p_3d_transformed2,point_K;
-		p_3d_transformed2=p1;
-		point_K = K*p_3d_transformed2;
-
-		pt2d.x()=point_K.x()/point_K.z();
-		pt2d.y()=point_K.y()/point_K.z();
+		pt2d.x() = point_K.x() / point_K.z();
+		pt2d.y() = point_K.y() / point_K.z();
 
 	}
 
 	template<typename T>
-	bool checkImageBoundaries(const Eigen::Matrix<T, 2, 1>& pixel, int width, int height)
-	{
+	bool checkImageBoundaries(const Eigen::Matrix<T, 2, 1> &pixel, int width, int height) {
 		return (pixel[0] > 1.1 && pixel[0] < width - 2.1 && pixel[1] > 1.1 && pixel[1] < height - 2.1);
 	}
 
 
 	bool project(double uj, double vj, double iDepth, int width, int height,
-	             Eigen::Matrix<double, 2, 1>& pt2d,  Sophus::SO3d& Rotation,
-	             Eigen::Vector3d& Translation)
-	{
-		Eigen::Matrix<double,2,1> point_2d_K;
+	             Eigen::Matrix<double, 2, 1> &pt2d, Sophus::SO3d &Rotation,
+	             Eigen::Vector3d &Translation) {
+		Eigen::Matrix<double, 2, 1> point_2d_K;
 //		cout<<"show parameter later:<<\n"<<Rotation.matrix()<<","<<Translation<<endl;
-		projection_K(uj, vj, iDepth,Rotation, Translation, point_2d_K);
+		projection_K(uj, vj, iDepth, Rotation, Translation, point_2d_K);
 		return checkImageBoundaries(point_2d_K, width, height);
 	}
 
+	template<typename T>
+	bool project(T uj, T vj, T iDepth, int width, int height,
+	             const Eigen::Matrix<T, 3, 3>& KRKinv, const Eigen::Matrix<T, 3, 1>& Kt,
+	             Eigen::Matrix<T, 2, 1>& pt2d)
+	{
+		// transform and project
+		const Eigen::Matrix<T, 3, 1> pt = KRKinv * Eigen::Matrix<T, 3, 1>(uj, vj, 1) + Kt*iDepth;
 
+		// rescale factor
+		const T rescale = 1 / pt[2];
+
+		// if the point was in the range [0, Inf] in camera1
+		// it has to be also in the same range in camera2
+		// This allows using negative inverse depth values
+		// i.e. same iDepth sign in both cameras
+		if (!(rescale > 0)) return false;
+
+		// inverse depth in new image
+		//		newIDepth = iDepth*rescale;
+
+		// normalize
+		pt2d[0] = pt[0] * rescale;
+		pt2d[1] = pt[1] * rescale;
+
+		// check image boundaries
+		return checkImageBoundaries(pt2d, width, height);
+	}
 
 
 }

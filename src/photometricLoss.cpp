@@ -128,8 +128,8 @@ int main(int argc, char **argv) {
 	Mat deltaMap(depth_ref.rows, depth_ref.cols, CV_32FC1, Scalar(1)); // storing delta
 	int lvl_target, lvl_ref;
 
-	double depth_upper_bound = 0.2;  // 0.5; 1
-	double depth_lower_bound = 0.0001;  // 0.001
+	double depth_upper_bound = 0.5;  // 0.5; 1
+	double depth_lower_bound = 0.1;  // 0.001
 
 	options.optimize_depth = false;
 	options.useFilterController = false; // control the number of optimized depth
@@ -140,9 +140,9 @@ int main(int argc, char **argv) {
 	dataLoader->options_.remove_outlier_manually = false;
 	options.huber_parameter = 0.25 * 4.0 / 255.0;   /// 0.25*4/255 :   or 4/255
 
-	// initialize the pose xi
-	xi.setRotationMatrix(perturbedRotation);
-	xi.translation() = perturbedTranslation;
+	// initialize the pose xi         or just use the default value
+//	xi.setRotationMatrix(perturbedRotation);
+//	xi.translation() = perturbedTranslation;
 
 
 	Sophus::SO3d Rotation(xi.rotationMatrix());
@@ -184,7 +184,7 @@ int main(int argc, char **argv) {
 	Mat inv_depth_ref_for_show = inv_depth_ref * (1.0 / (max_gt_special - min_gt_special)) +
 	                             (-min_gt_special * (1.0 / (max_gt_special - min_gt_special)));
 	string depth_ref_name = "inv_depth_ref";
-	imshow(depth_ref_name, inv_depth_ref_for_show);
+//	imshow(depth_ref_name, inv_depth_ref_for_show);
 
 
 	for (int lvl = 1; lvl >= 1; lvl--) {
@@ -216,7 +216,7 @@ int main(int argc, char **argv) {
 			Mat inv_depth_ref_for_show = inv_depth_ref * (1.0 / (max_gt_special - min_gt_special)) +
 			                             (-min_gt_special * (1.0 / (max_gt_special - min_gt_special)));
 			string depth_ref_name = "inv_depth_ref" + to_string(i);
-			imshow(depth_ref_name, inv_depth_ref_for_show);
+//			imshow(depth_ref_name, inv_depth_ref_for_show);
 //			cout<<"show the current depth:"<<inv_depth_ref.at<double>(359,470)<<endl;
 
 
@@ -231,8 +231,8 @@ int main(int argc, char **argv) {
 				PhotometricBA(IRef, I, options, Klvl, Rotation, Translation, inv_depth_ref, deltaMap, depth_upper_bound,
 				              depth_lower_bound, statusMap, statusMapB);
 
-				imshow(depth_ref_name, inv_depth_ref_for_show);
-				waitKey(0);
+//				imshow(depth_ref_name, inv_depth_ref_for_show);
+//				waitKey(0);
 			}
 
 
@@ -335,11 +335,6 @@ int main(int argc, char **argv) {
 //	============SampleDiffuse val(RGBA):
 //	1,0.760294,0.382353,1
 
-
-
-
-
-
 //	imshow("show Diffuse Map", getDiffuseMap.diffuse_Map);
 
 //	brdfIntegrationMap *brdfIntegrationMap;
@@ -353,10 +348,6 @@ int main(int argc, char **argv) {
 //	EnvMapLookup EnvMapLookup(argc,argv);
 //	EnvMapLookup.makeMipMap();
 //
-
-
-
-
 
 
 //	for (int i = 0; i < 6; ++i) {

@@ -141,8 +141,8 @@ set(dsonl_SOURCE_FILES
 
   include/setting.cpp
 
-#  include/dataLoader/PFMReadWrite.h
-#  include/dataLoader/PFMReadWrite.cpp
+
+  include/dataLoader/PFMReadWrite.cpp
   include/preFilter/preFilter.h
 
 
