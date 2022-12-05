@@ -5,3 +5,4 @@
 /thirdparty
 /.vscode
 build_submodules.sh
+/ref_shaderCode
