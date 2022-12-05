@@ -180,13 +180,23 @@ add_library(dsonl ${dsonl_SOURCE_FILES})
 add_executable(photometricLoss src/photometricLoss.cpp)
 target_link_libraries(photometricLoss
   Ceres::ceres
-
-  # pangolin
   TBB::tbb
   OpenCV
-
-  # opengv
   ${PCL_LIBRARIES}
   dsonl
-  ${OPENGL_LIBRARIES} ${GLUT_LIBRARIES} ${GLEW_LIBRARIES}
+  ${OPENGL_LIBRARIES}
+  ${GLUT_LIBRARIES}
+  ${GLEW_LIBRARIES}
+)
+
+add_executable(test_functions src/test_functions.cpp)
+target_link_libraries(test_functions
+  Ceres::ceres
+  TBB::tbb
+  OpenCV
+  ${PCL_LIBRARIES}
+  dsonl
+  ${OPENGL_LIBRARIES}
+  ${GLUT_LIBRARIES}
+  ${GLEW_LIBRARIES}
 )
