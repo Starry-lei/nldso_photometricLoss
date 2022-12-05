@@ -20,10 +20,11 @@
 
 #include <iostream>
 #include "PFMReadWrite.h"
+
 #define baseline_l 0;
 #define baseline_s 1;
 
-namespace DSONL{
+namespace DSONL {
 	using namespace cv;
 	using namespace std;
 
@@ -37,30 +38,33 @@ namespace DSONL{
 		/// is textured or not
 		bool isTextured = true;
 		/// use red channel for testing
-		int channelIdx= 1;
-		bool lambertian= true;
-		bool remove_outlier_manually= true;
+		int channelIdx = 1;
+		bool lambertian = true;
+		bool remove_outlier_manually = true;
 		/// should we calculate 3 channel delta map for loss function now?????????????????
 
 	};
 
-	void signChange(Eigen::Matrix<double,3,3> &R_orig, Eigen::Matrix<double,3,1> &T_orig ){
-		R_orig(0,1)=-R_orig(0,1);
-		R_orig(0,2)=-R_orig(0,2);
-		R_orig(1,0)=-R_orig(1,0);
-		R_orig(2,0)=-R_orig(2,0);
-		T_orig.y()=-T_orig.y();
-		T_orig.z()=-T_orig.z();
+	void signChange(Eigen::Matrix<double, 3, 3> &R_orig, Eigen::Matrix<double, 3, 1> &T_orig) {
+		R_orig(0, 1) = -R_orig(0, 1);
+		R_orig(0, 2) = -R_orig(0, 2);
+		R_orig(1, 0) = -R_orig(1, 0);
+		R_orig(2, 0) = -R_orig(2, 0);
+		T_orig.y() = -T_orig.y();
+		T_orig.z() = -T_orig.z();
 
 
 	}
 
-	class dataLoader{
+	class dataLoader {
 
 	public:
 		EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+
 		dataLoader();
+
 		~dataLoader();
+
 		dataOptions options_;
 		float image_ref_metallic;
 		float image_ref_roughness;
@@ -85,76 +89,72 @@ namespace DSONL{
 
 		void load_brdfIntegrationMap();
 
-		void load_prefilteredEnvmap(){
+		void load_prefilteredEnvmap() {}
 
-		}
-
-		void Init(){
-
-
-			double fov= 20;
-			double near= 0.5;
-			double far= 15.0;
-			double aspect= 1.333;
+		void Init() {
+			double fov = 20;
+			double near = 0.5;
+			double far = 15.0;
+			double aspect = 1.333;
 
 			// Camera intrinsics
-			camera_intrinsics<< 1361.1, 0, 320,
+			camera_intrinsics << 1361.1, 0, 320,
 					0, 1361.1, 240,
-					0,   0,  1;
+					0, 0, 1;
 
-			if(options_.isTextured){
+			if (options_.isTextured) {
 
 				string image_ref_path;
 				string image_ref_baseColor_path;
 				string depth_ref_path;
 
 
-				if (options_.baseline==0){
+				if (options_.baseline == 0) {
 					image_ref_path = "../data/Env_light/left/image_leftRGB07.png";
 					image_ref_baseColor_path = "../data/Env_light/left/image_leftbaseColor07.png";
 //					depth_ref_path = "../data/Env_light/ref/image_refNonLinearDepth06.pfm";
 					depth_ref_path = "../data/Env_light/left/image_leftLinearDepth07.pfm";
 
 
-					image_ref_metallic=  0.21;
-					image_ref_roughness= 0.95;
+					image_ref_metallic = 0.21;
+					image_ref_roughness = 0.95;
 
 				}
 				//  0.0889,   -0.0838,    0.6805 ,  -0.7225// 0.6805   -0.7225    0.0889   -0.0838
-				Eigen::Quaterniond q_1(0.6805,   -0.7225 ,   0.0889,   -0.0838); //  cam1  wxyz
-				Eigen::Vector3d t1( 0.770000,  3.080000, -0.19);
+				Eigen::Quaterniond q_1(0.6805, -0.7225, 0.0889, -0.0838); //  cam1  wxyz
+				Eigen::Vector3d t1(0.770000, 3.080000, -0.19);
 
 //				Eigen::Quaterniond q_1(0.0889,   -0.0838  , -0.6805 ,   0.7225);
 //				Eigen::Vector3d t1( -0.770000,  -3.080000, 0.190000);
 
 
 				R1 = q_1.toRotationMatrix();
-				cout<<"show input R1:\n"<<R1<<endl;
+				cout << "show input R1:\n" << R1 << endl;
 
 				//normal map GT
-				string normal_GT_path="../data/Env_light/left/image_leftnormal07.png";
+				string normal_GT_path = "../data/Env_light/left/image_leftnormal07.png";
 				Mat image_ref = imread(image_ref_path, IMREAD_ANYCOLOR | IMREAD_ANYDEPTH);
 
 //				Mat depth_ref = imread(depth_ref_path, CV_LOAD_IMAGE_ANYDEPTH | CV_LOAD_IMAGE_ANYCOLOR);
-				Mat depth_ref= loadPFM(depth_ref_path);
+				Mat depth_ref = loadPFM(depth_ref_path);
 
 
-				image_ref_baseColor= imread(image_ref_baseColor_path,CV_LOAD_IMAGE_ANYDEPTH | CV_LOAD_IMAGE_ANYCOLOR);
-				image_ref_baseColor.convertTo(image_ref_baseColor, CV_64FC3, 1.0/255.0);
+				image_ref_baseColor = imread(image_ref_baseColor_path, CV_LOAD_IMAGE_ANYDEPTH | CV_LOAD_IMAGE_ANYCOLOR);
+				image_ref_baseColor.convertTo(image_ref_baseColor, CV_64FC3, 1.0 / 255.0);
 				normal_map_GT = imread(normal_GT_path, cv::IMREAD_ANYCOLOR | cv::IMREAD_ANYDEPTH);
-				normal_map_GT.convertTo(normal_map_GT, CV_64FC3, 1.0/255.0);
+				normal_map_GT.convertTo(normal_map_GT, CV_64FC3, 1.0 / 255.0);
 
 
-				int channelIdx= options_.channelIdx;
+				int channelIdx = options_.channelIdx;
 				extractChannel(image_ref, grayImage_ref, channelIdx);
-				grayImage_ref.convertTo(grayImage_ref, CV_64FC1,1.0/255.0);
-				rows=image_ref.rows;
-				cols=image_ref.cols;
+				grayImage_ref.convertTo(grayImage_ref, CV_64FC1, 1.0 / 255.0);
+				rows = image_ref.rows;
+				cols = image_ref.cols;
 //				setGlobalCalib(cols,rows,camera_intrinsics);
 				// ref image depth
-				Mat channel[3],depth_ref_render, channel_tar[3], depth_tar_render;
-				split(depth_ref,channel);
-				depth_map_ref=channel[0];
+				Mat channel[3], depth_ref_render, channel_tar[3], depth_tar_render;
+				split(depth_ref, channel);
+				depth_map_ref = channel[0];
 				depth_map_ref.convertTo(depth_map_ref, CV_64FC1);
 
 
@@ -164,48 +164,49 @@ namespace DSONL{
 				string image_target_baseColor_path;
 				string depth_target_path;
 
-				if (options_.baseline==0){
+				if (options_.baseline == 0) {
 
-					image_target_path ="../data/Env_light/right0703/image_rightRGB0703.png";
+					image_target_path = "../data/Env_light/right0703/image_rightRGB0703.png";
 					depth_target_path = "../data/Env_light/right0703/image_rightLinearDepth0703.pfm";
 
-					Eigen::Quaterniond q_2( 0.7404,   -0.6707 ,  -0.0299,    0.0330); //  cam2  wxyz
-					Eigen::Vector3d t2(-0.2700,3.0200,  0.3000);
+					Eigen::Quaterniond q_2(0.7404, -0.6707, -0.0299, 0.0330); //  cam2  wxyz
+					Eigen::Vector3d t2(-0.2700, 3.0200, 0.3000);
 
 
-					R2=q_2.toRotationMatrix();
-					R12= R2.transpose() * R1;
+					R2 = q_2.toRotationMatrix();
+					R12 = R2.transpose() * R1;
 
-					t12= R2.transpose()* (t1-t2);
-					cout<<"show old R12:\n"<<R12<<endl;
+					t12 = R2.transpose() * (t1 - t2);
+					cout << "show old R12:\n" << R12 << endl;
 					signChange(R12, t12);
-					cout<<"show new R12:\n"<<R12<<endl;
+					cout << "show new R12:\n" << R12 << endl;
 
-					q_12= R12;
+					q_12 = R12;
 
 
 				}
 
 				Mat image_target = imread(image_target_path, IMREAD_ANYCOLOR | IMREAD_ANYDEPTH);
 //				Mat depth_target = imread(depth_target_path, CV_LOAD_IMAGE_ANYDEPTH | CV_LOAD_IMAGE_ANYCOLOR);
-				Mat depth_target= loadPFM(depth_target_path);
-				image_target_baseColor= imread(image_target_baseColor_path,CV_LOAD_IMAGE_ANYDEPTH | CV_LOAD_IMAGE_ANYCOLOR);
-				image_target_baseColor.convertTo(image_target_baseColor, CV_64FC3, 1.0/255.0);
+				Mat depth_target = loadPFM(depth_target_path);
+				image_target_baseColor = imread(image_target_baseColor_path,
+				                                CV_LOAD_IMAGE_ANYDEPTH | CV_LOAD_IMAGE_ANYCOLOR);
+				image_target_baseColor.convertTo(image_target_baseColor, CV_64FC3, 1.0 / 255.0);
 				extractChannel(image_target, grayImage_target, channelIdx);
-				grayImage_target.convertTo(grayImage_target, CV_64FC1,1.0/255.0);
+				grayImage_target.convertTo(grayImage_target, CV_64FC1, 1.0 / 255.0);
 				// target map depth
 				split(depth_target, channel_tar);
-				depth_map_target=channel_tar[0];
+				depth_map_target = channel_tar[0];
 				depth_map_target.convertTo(depth_map_target, CV_64FC1);
 
-			}else{
+			} else {
 				// RGB image without texture
 				string image_ref_path = "../data/rgb/No_Texture_Images/rt_16_4_56_cam1_notexture.exr";
 				string image_ref_baseColor_path = "../data/rgb/No_Texture_Images/rt_16_5_47_cam1_notexture_basecolor.exr";
-				if(options_.baseline==0){
+				if (options_.baseline == 0) {
 					string image_target_path = "../data/rgb/No_Texture_Images/rt_16_4_56_cam5_notexture.exr";
 					string image_target_baseColor = "../data/rgb/No_Texture_Images/rt_16_5_47_cam5_notexture_basecolor.exr";
-				}else if (options_.baseline==1){
+				} else if (options_.baseline == 1) {
 					// TODO: small baseline data
 					string image_target_path = "../data/rgb/No_Texture_Images/rt_16_4_56_cam5_notexture.exr";
 				}
@@ -216,22 +217,17 @@ namespace DSONL{
 
 		}
 
-
-
-
 	};
 
-	dataLoader::dataLoader(void ) {
-		cout<<"The game is loading ..."<<endl;
+	dataLoader::dataLoader(void) {
+		cout << "The game is loading ..." << endl;
 	}
 
-	dataLoader::~dataLoader(void ) {
-		cout<<"The program ends here, have a nice day!"<<endl;
+	dataLoader::~dataLoader(void) {
+		cout << "The program ends here, have a nice day!" << endl;
 	}
 
 	void dataLoader::load_brdfIntegrationMap() {
-
-
 
 
 	}

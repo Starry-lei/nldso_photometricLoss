@@ -138,9 +138,13 @@ include_directories(${OPENGL_INCLUDE_DIRS} ${GLEW_INCLUDE_DIRS})
 message(STATUS "show IT: ${CMAKE_CURRENT_SOURCE_DIR}")
 
 set(dsonl_SOURCE_FILES
+
   include/setting.cpp
-  include/PFMReadWrite.cpp
+
+#  include/dataLoader/PFMReadWrite.h
+#  include/dataLoader/PFMReadWrite.cpp
   include/preFilter/preFilter.h
+
 
   # include/numType.h
   include/preFilter/FileTools.cpp
@@ -159,6 +163,16 @@ set(dsonl_SOURCE_FILES
 
   include/preComputeSetting.h
   include/preComputeSetting.cpp
+
+  include/utils/ultils.h
+  include/cameraProjection/reprojection.h
+  include/cameraProjection/photometricBA.h
+  include/dataLoader/dataLoader.h
+
+
+
+
+
 )
 
 add_library(dsonl ${dsonl_SOURCE_FILES})

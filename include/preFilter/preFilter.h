@@ -17,7 +17,7 @@
 #include <Eigen/Core>
 
 #include "preComputeSetting.h"
-#include "PFMReadWrite.h"
+#include "dataLoader/PFMReadWrite.h"
 
 // GLI library
 #define GLM_ENABLE_EXPERIMENTAL
@@ -450,9 +450,8 @@ namespace DSONL
 			fprintf(stderr, "Glew error: %s\n", glewGetErrorString(err));
 		}
 		glutDisplayFunc(glutDisplay_diffuse_mask);
-
 		glutReshapeFunc(glutResize_diffuse_mask);
-		glutCloseFunc(glutClose_diffuse);
+		glutCloseFunc(glutClose_diffuse_mask);
 		glutKeyboardFunc(glutKeyboard_diffuse_mask);
 
 		render_diffuse_mask->init();
