@@ -99,7 +99,8 @@ message(STATUS "Found TBB ${TBB_VERSION_MAJOR}.${TBB_VERSION_MINOR} (interface v
 
 # to use link to target "OpenCV"
 # NOTE: not specifying version, since 2, 3 or 4 is fine
-find_package(OpenCV REQUIRED COMPONENTS core features2d)
+find_package(OpenCV REQUIRED )
+#COMPONENTS core features2d
 message(STATUS "Found OpenCV ${OpenCV_VERSION} headers in: ${OpenCV_INCLUDE_DIRS}")
 add_library(OpenCV INTERFACE IMPORTED  include/numType.h)
 set_property(TARGET OpenCV PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${OpenCV_INCLUDE_DIRS})
@@ -138,6 +139,7 @@ set(dsonl_SOURCE_FILES
         include/setting.cpp
         include/PFMReadWrite.cpp
         include/preFilter.h
+
         include/preFilter/FileTools.cpp
         include/preFilter/Renderer.cpp
         include/preFilter/Matrix.cpp
@@ -149,9 +151,16 @@ set(dsonl_SOURCE_FILES
         include/diffuseMap/Renderer_diffuse.cpp
         include/diffuseMap/diffuse_mask_Renderer.cpp
 
-        include/preComputeSetting.h include/preComputeSetting.cpp include/GLI.h)
+        include/deltaCompute.h
+        include/deltaCompute.cpp
 
-add_library(dsonl ${dsonl_SOURCE_FILES})
+        include/preComputeSetting.h
+        include/preComputeSetting.cpp
+        include/GLI.h
+        )
+
+
+add_library(dsonl ${dsonl_SOURCE_FILES} )
 
 add_executable(photometricLoss src/photometricLoss.cpp) 
 target_link_libraries(photometricLoss

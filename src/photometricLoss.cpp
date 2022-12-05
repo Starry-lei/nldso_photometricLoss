@@ -7,8 +7,11 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/core/eigen.hpp>
 
-#include "preFilter.h"
+//#include "preFilter.h"
 #include "dataLoader.h"
+#include "deltaCompute.h"
+
+
 
 using namespace cv;
 using namespace std;
@@ -18,8 +21,8 @@ using namespace DSONL;
 int main(int argc, char **argv){
 
 
-//	dataLoader* dataLoader;
-//	dataLoader= new DSONL::dataLoader();
+
+//	dataLoader* dataLoader= new DSONL::dataLoader();
 //	dataLoader->Init();
 //	dataLoader->load_brdfIntegrationMap();
 

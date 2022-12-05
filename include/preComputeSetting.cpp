@@ -3,9 +3,6 @@
 //
 #include "preComputeSetting.h"
 
-
-
-
 namespace DSONL{
 		std::vector<cv::Mat> img_pyramid;
 		cv::Mat img_diffuseMap;

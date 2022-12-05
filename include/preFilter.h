@@ -498,7 +498,6 @@ namespace DSONL{
 		glutTimerFunc(unsigned(20), timer_diffuse, 0);
 		glutMainLoop();
 		diffuse_Map= img_diffuseMap;
-
 	}
 	gli::vec4 diffuseMap::getDiffuse(float &u, float &v) {
 		// show the min max val
@@ -517,54 +516,59 @@ namespace DSONL{
 
 		return SampleDiffuse;
 	}
-}
 
-Mat applyMask(Mat& input, Mat& mask){
+	Mat applyMask(Mat& input, Mat& mask){
 
-	for (int u = 0; u< input.rows; u++) // colId, cols: 0 to 128
-	{
-		for (int v = 0; v < input.cols; v++) // rowId,  rows: 0 to 256
+		for (int u = 0; u< input.rows; u++) // colId, cols: 0 to 128
 		{
+			for (int v = 0; v < input.cols; v++) // rowId,  rows: 0 to 256
+			{
 
-			if(mask.at<float>(u,v)==0.0){ continue;}
-			input.at<float>(u,v)=1.0/mask.at<float>(u,v);
+				if(mask.at<float>(u,v)==0.0){ continue;}
+				input.at<float>(u,v)=1.0/mask.at<float>(u,v);
 
+			}
 		}
+
+		return input;
+
+
 	}
 
-	return input;
 
 
-}
 
-
-void makeDiffuseMap(Mat& diffuse_Map, Mat& diffuse_Mask, Mat& final_diffuseMap) {
+	void makeDiffuseMap(Mat& diffuse_Map, Mat& diffuse_Mask, Mat& final_diffuseMap) {
 
 //	imshow("Diffuse Mask:", diffuse_Map);
 //	imshow("Diffuse Map:",  diffuse_Mask);
 
 
-	Mat map_channel[3], mask_channel[3];
+		Mat map_channel[3], mask_channel[3];
 
-	split(diffuse_Map,map_channel);
-	split(diffuse_Mask,mask_channel);
-	std::vector<Mat> final_channels;
+		split(diffuse_Map,map_channel);
+		split(diffuse_Mask,mask_channel);
+		std::vector<Mat> final_channels;
 
-	final_channels.push_back(applyMask(map_channel[0], mask_channel[0]));
-	final_channels.push_back(applyMask(map_channel[1], mask_channel[1]));
-	final_channels.push_back(applyMask(map_channel[2], mask_channel[2]));
-
-
-	merge(final_channels, final_diffuseMap);
+		final_channels.push_back(applyMask(map_channel[0], mask_channel[0]));
+		final_channels.push_back(applyMask(map_channel[1], mask_channel[1]));
+		final_channels.push_back(applyMask(map_channel[2], mask_channel[2]));
 
 
+		merge(final_channels, final_diffuseMap);
+
+
+		imshow("final_diffuseMap:",  final_diffuseMap);
+
+
+	}
 
 
 
-	imshow("final_diffuseMap:",  final_diffuseMap);
 
 
 }
+
 
 
 
