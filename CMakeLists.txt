@@ -102,7 +102,7 @@ message(STATUS "Found TBB ${TBB_VERSION_MAJOR}.${TBB_VERSION_MINOR} (interface v
 find_package(OpenCV REQUIRED )
 #COMPONENTS core features2d
 message(STATUS "Found OpenCV ${OpenCV_VERSION} headers in: ${OpenCV_INCLUDE_DIRS}")
-add_library(OpenCV INTERFACE IMPORTED  include/numType.h)
+add_library(OpenCV INTERFACE IMPORTED  )
 set_property(TARGET OpenCV PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${OpenCV_INCLUDE_DIRS})
 set_property(TARGET OpenCV PROPERTY INTERFACE_LINK_LIBRARIES ${OpenCV_LIBS})
 if(OpenCV_VERSION VERSION_LESS 3)
@@ -138,8 +138,8 @@ message(STATUS "show IT: ${CMAKE_CURRENT_SOURCE_DIR}")
 set(dsonl_SOURCE_FILES
         include/setting.cpp
         include/PFMReadWrite.cpp
-        include/preFilter.h
-
+        include/preFilter/preFilter.h
+#        include/numType.h
         include/preFilter/FileTools.cpp
         include/preFilter/Renderer.cpp
         include/preFilter/Matrix.cpp
@@ -151,12 +151,11 @@ set(dsonl_SOURCE_FILES
         include/diffuseMap/Renderer_diffuse.cpp
         include/diffuseMap/diffuse_mask_Renderer.cpp
 
-        include/deltaCompute.h
-        include/deltaCompute.cpp
+        include/deltaCompute/deltaCompute.h
+        include/deltaCompute/deltaCompute.cpp
 
         include/preComputeSetting.h
         include/preComputeSetting.cpp
-        include/GLI.h
         )
 
 

@@ -7,9 +7,9 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/core/eigen.hpp>
 
-//#include "preFilter.h"
-#include "dataLoader.h"
-#include "deltaCompute.h"
+#include "preFilter/preFilter.h"
+#include "dataLoader/dataLoader.h"
+#include "deltaCompute/deltaCompute.h"
 
 
 
