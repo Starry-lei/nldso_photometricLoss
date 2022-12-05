@@ -1,5 +1,5 @@
 #include "deltaCompute/deltaCompute.h"
-
+//#include "thread"
 int main()
 {
     Eigen::Vector3d x;
@@ -22,4 +22,17 @@ int main()
     std::cout << DSONL::reflect(x, y) << std::endl
               << std::endl;
     return 0;
+
+      // Bro Binghui: Hi! ヽ(✿ﾟ▽ﾟ)ノ, please have your todos here~
+
+      //TODO: 1. template functions
+      //      2. parallel for-loops ( double index-based for-loop), and multi-threads
+      //      3. locate the position in DSO(or DSM...) where we plug our IBL radiance code
+
+
+
+
+
+
+
 }

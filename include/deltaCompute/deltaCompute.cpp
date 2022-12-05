@@ -101,4 +101,18 @@ namespace DSONL
         Eigen::Vector3d out_vec = I - 2 * dot(N_norm, I) * N_norm;
         return out_vec;
     }
-}
+    IBL_Radiance::IBL_Radiance() {}
+    IBL_Radiance::~IBL_Radiance() {}
+    Vec2f IBL_Radiance::directionToSphericalEnvmap(Vec3f dir) {
+      return cv::Vec2f();
+    }
+    Vec3f IBL_Radiance::specularIBL(Vec3f F0, float roughness, Vec3f N,
+                                    Vec3f V) {
+      return cv::Vec3f();
+    }
+    Vec3f IBL_Radiance::diffuseIBL(Vec3f normal) { return cv::Vec3f(); }
+    Vec3f IBL_Radiance::fresnelSchlick(float cosTheta, Vec3f F0) {
+      return cv::Vec3f();
+    }
+
+    }
