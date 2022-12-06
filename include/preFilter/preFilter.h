@@ -286,16 +286,13 @@ namespace DSONL
 
 	class EnvMapLookup
 	{
-
 	public:
 		EnvMapLookup(int argc, char **argv);
 		~EnvMapLookup();
 		std::vector<cv::Mat> image_pyramid;
 		void prefilteredColor(float u, float v, float level);
-		void makeMipMap(gli::sampler2d<float>* prefilteredEnvmapSampler );
-//                gli::sampler2d<float> *prefilteredEnvmapSampler=NULL;
-
-
+		void makeMipMap( );
+//                gli::sampler2d<float> * prefilteredEnvmapSampler;
 	private:
 //          gli::sampler2d<float> *prefilteredEnvmapSampler;
 
@@ -318,12 +315,11 @@ namespace DSONL
 	{
 	}
 
-	void EnvMapLookup::makeMipMap(gli::sampler2d<float>* prefilteredEnvmapSampler)
+	void EnvMapLookup::makeMipMap()
 	{
 
 		//===================================================mind  opencv BGR order  ...=================================
 		// define and allocate space for Mipmap using GLM library
-
 		std::size_t numMipmaps = 6;
 		gli::texture2d orig_tex(gli::FORMAT_RGB32_SFLOAT_PACK32, gli::texture2d::extent_type(1024, 512), 1);
 
@@ -351,10 +347,7 @@ namespace DSONL
 			//			std::cout <<"And dimension: newTex.extent(level).x :" <<newTex.extent(level).x << std::endl;
 			//			std::cout <<"newTex.extent(level).y :" <<newTex.extent(level).y << std::endl;
 		}
-
-
 		gli::sampler2d<float> Sampler(newTex, gli::WRAP_CLAMP_TO_EDGE, gli::FILTER_LINEAR, gli::FILTER_LINEAR, gli::vec4(1.0f, 0.5f, 0.0f, 1.0f));
-
                 prefilteredEnvmapSampler= &Sampler;
 
                 gli::vec4 SampleA = Sampler.texture_lod(gli::fsampler2D::normalized_type(0.5f, 0.75f), 0.0f); // transform the texture coordinate

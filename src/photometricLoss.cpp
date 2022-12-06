@@ -25,13 +25,11 @@ int main(int argc, char **argv) {
 	dataLoader *dataLoader = new DSONL::dataLoader();
 	dataLoader->Init();
 
-
-
         EnvMapLookup *EnvMapLookup=new DSONL::EnvMapLookup(argc,argv);
-        EnvMapLookup->makeMipMap(prefilteredEnvmapSampler);
+        EnvMapLookup->makeMipMap();
 
 
-        gli::vec4 Sample_val =DSONL:: prefilteredEnvmapSampler->texture_lod(gli::fsampler2D::normalized_type(0.5f, 0.75f),0.0f); // transform the texture coordinate
+        gli::vec4 Sample_val =prefilteredEnvmapSampler->texture_lod(gli::fsampler2D::normalized_type(0.5f, 0.75f),0.0f); // transform the texture coordinate
         cout << "\n============Sample_val val(RGBA):\n" << Sample_val.b << "," << Sample_val.g << "," << Sample_val.r << ","   << Sample_val.a << endl;
         delete DSONL::prefilteredEnvmapSampler;
 
