@@ -7,6 +7,8 @@
 #include <Eigen/Core>
 #include <opencv2/core/mat.hpp>
 #include <math.h> /* fmod */
+#include <cmath>
+
 #include "iostream"
 using namespace cv;
 namespace DSONL
@@ -30,6 +32,7 @@ namespace DSONL
 	Eigen::Vector3d normalize(const Eigen::Vector3d);
 
 	double mix(const double, const double, const double);
+
 	Eigen::Vector3d mix(const Eigen::Vector3d, const Eigen::Vector3d, const double);
 
 	Eigen::Vector3d reflect(const Eigen::Vector3d, const Eigen::Vector3d);
@@ -45,13 +48,6 @@ namespace DSONL
           Vec3f diffuseIBL(Vec3f normal);
           Vec3f fresnelSchlick(float cosTheta, Vec3f F0);
           Vec3f ibl_radiance_val;
-
-
-
-
-
-
-
 
 
         private:

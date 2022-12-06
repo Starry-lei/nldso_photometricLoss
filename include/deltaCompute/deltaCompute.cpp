@@ -7,6 +7,7 @@
 namespace DSONL
 {
 
+
     double dot(const Eigen::Vector3d x, const Eigen::Vector3d y)
     {
         double ans = x.dot(y);
@@ -104,7 +105,14 @@ namespace DSONL
     IBL_Radiance::IBL_Radiance() {}
     IBL_Radiance::~IBL_Radiance() {}
     Vec2f IBL_Radiance::directionToSphericalEnvmap(Vec3f dir) {
-      return cv::Vec2f();
+
+
+
+    float s = 1.0 - mod(1.0 / (2.0*M_PI) * atan( dir.val[1],  dir.val[0]), 1.0);
+    float t = 1.0 / (M_PI) * acos(- dir.val[2]);
+
+    return Vec2f(s, t);
+
     }
     Vec3f IBL_Radiance::specularIBL(Vec3f F0, float roughness, Vec3f N,
                                     Vec3f V) {
