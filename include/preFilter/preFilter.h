@@ -16,10 +16,11 @@
 #include <vector>
 #include <Eigen/Core>
 #include <memory>
-
+#include <regex>
+#include <fstream>
+#include <iostream>
 #include "preComputeSetting.h"
 #include "dataLoader/PFMReadWrite.h"
-
 
 // GLI library
 #define GLM_ENABLE_EXPERIMENTAL
@@ -42,9 +43,6 @@ namespace DSONL
 	static Renderer *renderer = NULL; //this is a static pointer to a Renderer used in the glut callback functions
 	static Renderer_diffuse *render_diffuse = NULL;
 	static diffuse_Mask_Renderer *render_diffuse_mask = NULL;
-
-
-
 
 	int window(0);
 	int window_diffuse(0);
@@ -192,41 +190,78 @@ namespace DSONL
 
 	class preFilter
 	{
-            public:
-                    preFilter(float &roughness);
-                    ~preFilter();
-                    float _roughness; // description="roughness in range [0.0, 1.0]" defaultval ="0.2"
-                    Mat outColor;
-                    Mat envMapImage;
-                    void Init(int argc, char **argv); //int argc, char** argv
-            private:
-                    Eigen::Matrix<float, 2, 1> tc; // texture coordinate of the output image in range [0.0, 1.0]
-                    int samples;				   // description="number of samples" defaultval="64"
-                    float envMapLevel;			   // description="Environment map level" defaultval="0.0"
+	public:
+		preFilter(float &roughness);
+		~preFilter();
+		void modify_shader_file(string, string) const;
+		float _roughness; // description="roughness in range [0.0, 1.0]" defaultval ="0.2"
+		Mat outColor;
+		Mat envMapImage;
+		void Init(int argc, char **argv); //int argc, char** argv
+	private:
+		Eigen::Matrix<float, 2, 1> tc; // texture coordinate of the output image in range [0.0, 1.0]
+		int samples;				   // description="number of samples" defaultval="64"
+		float envMapLevel;			   // description="Environment map level" defaultval="0.0"
 	};
+
+	void preFilter::modify_shader_file(string roughness_str, string envmapLvl_str) const
+	{
+		string shader_txt = "../include/shaders/fragment_shader.txt";
+		string shader_txt_out = "../include/shaders/fragment_shader_modified.txt";
+		char buff[256];
+		std::cmatch m;
+		fstream setRoughness(shader_txt);
+		ofstream setRoughness_out(shader_txt_out, ios::out);
+		regex rule_roughness("(roughness.*defaultval)");
+		regex rule_envmapLvl("(envMapLevel.*defaultval)");
+		regex rule_default("defaultval(\\s*)=(\\s*)\".*\"");
+		if (!setRoughness.is_open())
+			cout << "Error open shader_txt" << endl;
+		if (!setRoughness_out.is_open())
+			cout << "Error open shader_txt_out" << endl;
+		while (!setRoughness.eof())
+		{
+			setRoughness.getline(buff, 100);
+			bool ret_1 = std::regex_search(buff, m, rule_roughness);
+			bool ret_2 = std::regex_search(buff, m, rule_envmapLvl);
+			if (ret_1)
+			{
+				// cout << buff << endl;
+				char toreplace_buff[256];
+				sprintf(toreplace_buff, "defaultval=\"%s\"", roughness_str.c_str());
+				string new_string = std::regex_replace(buff, rule_default, toreplace_buff);
+				setRoughness_out << new_string << endl;
+			}
+
+			else if (ret_2)
+			{
+				// cout << buff << endl;
+				char toreplace_buff[256];
+				sprintf(toreplace_buff, "defaultval=\"%s\"", envmapLvl_str.c_str());
+				string new_string = std::regex_replace(buff, rule_default, toreplace_buff);
+				setRoughness_out << new_string << endl;
+			}
+			else
+			{
+				setRoughness_out << buff << endl;
+			}
+		}
+		setRoughness.close();
+		setRoughness_out.close();
+	}
 
 	preFilter::preFilter(float &roughness)
 	{
 		_roughness = roughness;
-		string shader_txt = "../include/shaders/fragment_shader.txt";
-		fstream setRoughness(shader_txt);
-		std::ostringstream oss;
-		oss << std::setprecision(1) << _roughness;
-		string roughness_str;
-		(_roughness == 1 || _roughness == 0) ? roughness_str = oss.str() + ".0" : roughness_str = oss.str();
-//		cout << "show roughness_str:" << roughness_str << endl;
-		// set corresponding env_map level
 		float envmapLvl;
+		std::ostringstream oss, oss_envl;
+		oss << std::setprecision(1) << _roughness;
+		string roughness_str, envmapLvl_str;
+		(_roughness == 1 || _roughness == 0) ? roughness_str = oss.str() + ".0" : roughness_str = oss.str();
 		roughness == (float)0.2 ? envmapLvl = 0.0 : envmapLvl = roughness * 5.0;
-		std::ostringstream oss_envl;
 		oss_envl << std::setprecision(2) << envmapLvl;
-		string envmapLvl_str = oss_envl.str() + ".0";
-//		cout << "envmapLvl_str:" << envmapLvl_str << endl;
-		setRoughness.seekg(221L, ios::beg);
-		setRoughness << roughness_str;
-		setRoughness.seekg(378L, ios::beg);
-		setRoughness << envmapLvl_str;
-		setRoughness.close();
+		envmapLvl_str = oss_envl.str() + ".0";
+		modify_shader_file(roughness_str, envmapLvl_str);
 	}
 	preFilter::~preFilter() {}
 
@@ -291,10 +326,9 @@ namespace DSONL
 		~EnvMapLookup();
 		std::vector<cv::Mat> image_pyramid;
 		void prefilteredColor(float u, float v, float level);
-                gli::sampler2d<float>* makeMipMap( );
+		gli::sampler2d<float> *makeMipMap();
+
 	private:
-
-
 	};
 
 	EnvMapLookup::EnvMapLookup(int argc, char **argv)
@@ -314,7 +348,7 @@ namespace DSONL
 	{
 	}
 
-        gli::sampler2d<float>*  EnvMapLookup::makeMipMap()
+	gli::sampler2d<float> *EnvMapLookup::makeMipMap()
 	{
 
 		//===================================================mind  opencv BGR order  ...=================================
@@ -328,12 +362,12 @@ namespace DSONL
 		gli::texture2d newTex(orig_tex.format(), orig_tex.extent(), numMipmaps);
 		memcpy(newTex.data(), orig_tex.data(), orig_tex.size());
 
-//		gli::extent2d cood(512, 384);
-//		gli::vec4 Sampletest = Sampler_single.texel_fetch(cood, 0);
-//		cout << "\n============Sampletest val(RGBA):\n"
-//			 << Sampletest.b << "," << Sampletest.g << "," << Sampletest.r << "," << Sampletest.a << endl;
+		//		gli::extent2d cood(512, 384);
+		//		gli::vec4 Sampletest = Sampler_single.texel_fetch(cood, 0);
+		//		cout << "\n============Sampletest val(RGBA):\n"
+		//			 << Sampletest.b << "," << Sampletest.g << "," << Sampletest.r << "," << Sampletest.a << endl;
 
-                for (gli::texture::size_type level = 1; level < newTex.levels(); level++)
+		for (gli::texture::size_type level = 1; level < newTex.levels(); level++)
 		{
 
 			cv::Mat flat = image_pyramid[level].reshape(1, image_pyramid[level].total() * image_pyramid[level].channels());
@@ -345,39 +379,29 @@ namespace DSONL
 			//			std::cout <<"newTex.extent(level).y :" <<newTex.extent(level).y << std::endl;
 		}
 
-
 		static gli::sampler2d<float> Sampler(newTex, gli::WRAP_CLAMP_TO_EDGE, gli::FILTER_LINEAR, gli::FILTER_LINEAR, gli::vec4(1.0f, 0.5f, 0.0f, 1.0f));
 
+		//                prefilteredEnvmapSampler= &Sampler;
 
-//                prefilteredEnvmapSampler= &Sampler;
-
-
-                gli::vec4 SampleA = Sampler.texture_lod(gli::fsampler2D::normalized_type(0.5f, 0.75f), 0.0f); // transform the texture coordinate
-                cout << "\n============SampleA val------------------------(RGBA):\n"
+		gli::vec4 SampleA = Sampler.texture_lod(gli::fsampler2D::normalized_type(0.5f, 0.75f), 0.0f); // transform the texture coordinate
+		cout << "\n============SampleA val------------------------(RGBA):\n"
 			 << SampleA.b << "," << SampleA.g << "," << SampleA.r << "," << SampleA.a << endl;
 
-//                gli::vec4 SampleAAAAAA = prefilteredEnvmapSampler->texture_lod(gli::fsampler2D::normalized_type(0.5f, 0.75f), 0.0f); // transform the texture coordinate
-//                cout << "\n============SampleAAAAAA val(RGBA):\n"
-//                     << SampleAAAAAA.b << "," << SampleAAAAAA.g << "," << SampleAAAAAA.r << "," << SampleAAAAAA.a << endl;
+		//                gli::vec4 SampleAAAAAA = prefilteredEnvmapSampler->texture_lod(gli::fsampler2D::normalized_type(0.5f, 0.75f), 0.0f); // transform the texture coordinate
+		//                cout << "\n============SampleAAAAAA val(RGBA):\n"
+		//                     << SampleAAAAAA.b << "," << SampleAAAAAA.g << "," << SampleAAAAAA.r << "," << SampleAAAAAA.a << endl;
 
-
-
-                return &Sampler;
-
-
+		return &Sampler;
 	}
 
-
-
-
-//	void EnvMapLookup::prefilteredColor(float u, float v, float level)
-//	{
-//          gli::vec4 Sample_val = prefilteredEnvmapSampler->texture_lod(gli::fsampler2D::normalized_type(0.5f, 0.75f),0.0f); // transform the texture coordinate
-//
-//          cout << "\n============Sample_val val(RGBA):\n" << Sample_val.b << "," << Sample_val.g << "," << Sample_val.r << ","   << Sample_val.a << endl;
-////          return Vec3f(Sample_val.r, Sample_val.g, Sample_val.b);
-//
-//	}
+	//	void EnvMapLookup::prefilteredColor(float u, float v, float level)
+	//	{
+	//          gli::vec4 Sample_val = prefilteredEnvmapSampler->texture_lod(gli::fsampler2D::normalized_type(0.5f, 0.75f),0.0f); // transform the texture coordinate
+	//
+	//          cout << "\n============Sample_val val(RGBA):\n" << Sample_val.b << "," << Sample_val.g << "," << Sample_val.r << ","   << Sample_val.a << endl;
+	////          return Vec3f(Sample_val.r, Sample_val.g, Sample_val.b);
+	//
+	//	}
 
 	class brdfIntegrationMap
 	{
