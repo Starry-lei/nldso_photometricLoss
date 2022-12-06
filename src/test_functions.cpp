@@ -10,18 +10,13 @@
 #include "gli/gli/gli.hpp"
 #include "gli/gli/texture2d.hpp"
 #include "gli/gli/sampler2d.hpp"
-
 #include "preFilter/preFilter.h"
 
 using namespace std;
 static gli::sampler2d<float> *ptr= nullptr;
 
 
-int test(){
 
-  return ptr[0];
-
-}
 
 int main()
 {
@@ -46,11 +41,6 @@ int main()
 //            << std::endl;
 //  std::cout << DSONL::mix(x, y, 0.1) << std::endl
 //            << std::endl;
-
-  int array[10]; array[0]=1000;
-  ptr=array;
-
-  cout<<"show global ptr val:"<< test()<<endl;
 
 
 //  std::cout << DSONL::reflect(x, y) << std::endl

@@ -123,8 +123,8 @@ namespace DSONL
       Vec3f R = reflect(-V, N);
       Vec2f uv = directionToSphericalEnvmap(R);
 
-//      gli::vec4 Sample_val = prefilteredEnvmapSampler->texture_lod(gli::fsampler2D::normalized_type(0.5f, 0.75f),0.0f); // transform the texture coordinate
-//      cout << "\n============Sample_val val(RGBA):\n" << Sample_val.b << "," << Sample_val.g << "," << Sample_val.r << ","   << Sample_val.a << endl;
+      //      gli::vec4 Sample_val = prefilteredEnvmapSampler->texture_lod(gli::fsampler2D::normalized_type(0.5f, 0.75f),0.0f); // transform the texture coordinate
+      //      cout << "\n============Sample_val val(RGBA):\n" << Sample_val.b << "," << Sample_val.g << "," << Sample_val.r << ","   << Sample_val.a << endl;
       //       return Vec3f(Sample_val.r, Sample_val.g, Sample_val.b);
       //       EnvMapLookup.prefilteredColor(0.5f,0.75f, 0.0f);
       //       Vec3f color=EnvMapLookup.prefilteredColor(0.5f,0.75f, 0.0f);

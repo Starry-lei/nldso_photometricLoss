@@ -42,7 +42,7 @@ namespace DSONL
 	static Renderer *renderer = NULL; //this is a static pointer to a Renderer used in the glut callback functions
 	static Renderer_diffuse *render_diffuse = NULL;
 	static diffuse_Mask_Renderer *render_diffuse_mask = NULL;
-        static gli::sampler2d<float>* prefilteredEnvmapSampler = NULL;
+
 
 
 
@@ -192,17 +192,17 @@ namespace DSONL
 
 	class preFilter
 	{
-	public:
-		preFilter(float &roughness);
-		~preFilter();
-		float _roughness; // description="roughness in range [0.0, 1.0]" defaultval ="0.2"
-		Mat outColor;
-		Mat envMapImage;
-		void Init(int argc, char **argv); //int argc, char** argv
-	private:
-		Eigen::Matrix<float, 2, 1> tc; // texture coordinate of the output image in range [0.0, 1.0]
-		int samples;				   // description="number of samples" defaultval="64"
-		float envMapLevel;			   // description="Environment map level" defaultval="0.0"
+            public:
+                    preFilter(float &roughness);
+                    ~preFilter();
+                    float _roughness; // description="roughness in range [0.0, 1.0]" defaultval ="0.2"
+                    Mat outColor;
+                    Mat envMapImage;
+                    void Init(int argc, char **argv); //int argc, char** argv
+            private:
+                    Eigen::Matrix<float, 2, 1> tc; // texture coordinate of the output image in range [0.0, 1.0]
+                    int samples;				   // description="number of samples" defaultval="64"
+                    float envMapLevel;			   // description="Environment map level" defaultval="0.0"
 	};
 
 	preFilter::preFilter(float &roughness)
@@ -291,10 +291,9 @@ namespace DSONL
 		~EnvMapLookup();
 		std::vector<cv::Mat> image_pyramid;
 		void prefilteredColor(float u, float v, float level);
-		void makeMipMap( );
-//                gli::sampler2d<float> * prefilteredEnvmapSampler;
+                gli::sampler2d<float>* makeMipMap( );
 	private:
-//          gli::sampler2d<float> *prefilteredEnvmapSampler;
+
 
 	};
 
@@ -315,19 +314,17 @@ namespace DSONL
 	{
 	}
 
-	void EnvMapLookup::makeMipMap()
+        gli::sampler2d<float>*  EnvMapLookup::makeMipMap()
 	{
 
 		//===================================================mind  opencv BGR order  ...=================================
 		// define and allocate space for Mipmap using GLM library
 		std::size_t numMipmaps = 6;
 		gli::texture2d orig_tex(gli::FORMAT_RGB32_SFLOAT_PACK32, gli::texture2d::extent_type(1024, 512), 1);
-
 		cv::Mat flat = image_pyramid[0].reshape(1, image_pyramid[0].total() * image_pyramid[0].channels());
 		std::vector<float> img_array = image_pyramid[0].isContinuous() ? flat : flat.clone();
 		memcpy(orig_tex.data(), img_array.data(), orig_tex.size());
 		gli::sampler2d<float> Sampler_single(orig_tex, gli::WRAP_CLAMP_TO_EDGE, gli::FILTER_LINEAR, gli::FILTER_LINEAR, gli::vec4(1.0f, 0.5f, 0.0f, 1.0f));
-
 		gli::texture2d newTex(orig_tex.format(), orig_tex.extent(), numMipmaps);
 		memcpy(newTex.data(), orig_tex.data(), orig_tex.size());
 
@@ -347,16 +344,25 @@ namespace DSONL
 			//			std::cout <<"And dimension: newTex.extent(level).x :" <<newTex.extent(level).x << std::endl;
 			//			std::cout <<"newTex.extent(level).y :" <<newTex.extent(level).y << std::endl;
 		}
-		gli::sampler2d<float> Sampler(newTex, gli::WRAP_CLAMP_TO_EDGE, gli::FILTER_LINEAR, gli::FILTER_LINEAR, gli::vec4(1.0f, 0.5f, 0.0f, 1.0f));
-                prefilteredEnvmapSampler= &Sampler;
+
+
+		static gli::sampler2d<float> Sampler(newTex, gli::WRAP_CLAMP_TO_EDGE, gli::FILTER_LINEAR, gli::FILTER_LINEAR, gli::vec4(1.0f, 0.5f, 0.0f, 1.0f));
+
+
+//                prefilteredEnvmapSampler= &Sampler;
+
 
                 gli::vec4 SampleA = Sampler.texture_lod(gli::fsampler2D::normalized_type(0.5f, 0.75f), 0.0f); // transform the texture coordinate
-                cout << "\n============SampleA val(RGBA):\n"
+                cout << "\n============SampleA val------------------------(RGBA):\n"
 			 << SampleA.b << "," << SampleA.g << "," << SampleA.r << "," << SampleA.a << endl;
 
-                gli::vec4 SampleAAAAAA = prefilteredEnvmapSampler->texture_lod(gli::fsampler2D::normalized_type(0.5f, 0.75f), 0.0f); // transform the texture coordinate
-                cout << "\n============SampleAAAAAA val(RGBA):\n"
-                     << SampleAAAAAA.b << "," << SampleAAAAAA.g << "," << SampleAAAAAA.r << "," << SampleAAAAAA.a << endl;
+//                gli::vec4 SampleAAAAAA = prefilteredEnvmapSampler->texture_lod(gli::fsampler2D::normalized_type(0.5f, 0.75f), 0.0f); // transform the texture coordinate
+//                cout << "\n============SampleAAAAAA val(RGBA):\n"
+//                     << SampleAAAAAA.b << "," << SampleAAAAAA.g << "," << SampleAAAAAA.r << "," << SampleAAAAAA.a << endl;
+
+
+
+                return &Sampler;
 
 
 	}

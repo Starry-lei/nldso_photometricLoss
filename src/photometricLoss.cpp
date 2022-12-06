@@ -7,6 +7,8 @@
 #include <opencv2/core/eigen.hpp>
 
 #include "preFilter/preFilter.h"
+
+
 #include "dataLoader/dataLoader.h"
 #include "deltaCompute/deltaCompute.h"
 #include "utils/ultils.h"
@@ -18,6 +20,7 @@ using namespace cv;
 using namespace std;
 using namespace DSONL;
 
+//static gli::sampler2d<float>* prefilteredEnvmapSampler = NULL;
 
 int main(int argc, char **argv) {
 
@@ -26,12 +29,13 @@ int main(int argc, char **argv) {
 	dataLoader->Init();
 
         EnvMapLookup *EnvMapLookup=new DSONL::EnvMapLookup(argc,argv);
-        EnvMapLookup->makeMipMap();
+        gli::sampler2d<float>* prefilteredEnvmapSampler = EnvMapLookup->makeMipMap();
 
 
-        gli::vec4 Sample_val =prefilteredEnvmapSampler->texture_lod(gli::fsampler2D::normalized_type(0.5f, 0.75f),0.0f); // transform the texture coordinate
+        gli::vec4 Sample_val = prefilteredEnvmapSampler->texture_lod(gli::fsampler2D::normalized_type(0.5f, 0.75f),0.0f); // transform the texture coordinate
         cout << "\n============Sample_val val(RGBA):\n" << Sample_val.b << "," << Sample_val.g << "," << Sample_val.r << ","   << Sample_val.a << endl;
-        delete DSONL::prefilteredEnvmapSampler;
+
+//        delete prefilteredEnvmapSampler;
 
 
 
