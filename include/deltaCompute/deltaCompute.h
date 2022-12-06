@@ -9,7 +9,8 @@
 #include <math.h> /* fmod */
 #include <cmath>
 #include "iostream"
-//#include "preFilter/preFilter.h"
+#include "preComputeSetting.h"
+
 
 
 using namespace cv;
@@ -45,6 +46,11 @@ namespace DSONL
         public:
                 IBL_Radiance();
                 ~IBL_Radiance();
+                int16_t mipCount=5;
+
+                Vec3f prefilteredColor(float u, float v, float level);
+                Vec2f brdfIntegration(float NoV,float roughness );
+
                 Vec2f directionToSphericalEnvmap(Vec3f dir);
                 Vec3f specularIBL(Vec3f F0, float roughness, Vec3f N, Vec3f V);
                 Vec3f diffuseIBL(Vec3f normal);

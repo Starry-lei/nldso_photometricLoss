@@ -1,6 +1,7 @@
 //
 // Created by cheng on 27.11.22.
 //
+
 #pragma once
 
 #include <opencv2/core/mat.hpp>
@@ -10,7 +11,7 @@
 #include <string>
 #include <iostream>
 #include <thread>
-
+#include "gli/gli/sampler2d.hpp"
 
 using namespace cv;
 
@@ -19,6 +20,9 @@ namespace DSONL{
 	extern std::vector<cv::Mat> img_pyramid;
 	extern  cv::Mat img_diffuseMap;
 	extern  cv::Mat img_diffuseMapMask;
+        extern  gli::sampler2d<float>* prefilteredEnvmapSampler;
+        extern  gli::sampler2d<float>* brdfSampler;
+
 
 
 }

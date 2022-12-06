@@ -43,6 +43,8 @@ namespace DSONL
 	static Renderer_diffuse *render_diffuse = NULL;
 	static diffuse_Mask_Renderer *render_diffuse_mask = NULL;
 
+//        gli::sampler2d<float>* prefilteredEnvmapSampler =NULL;
+
 
 
 
@@ -290,8 +292,7 @@ namespace DSONL
 		EnvMapLookup(int argc, char **argv);
 		~EnvMapLookup();
 		std::vector<cv::Mat> image_pyramid;
-		void prefilteredColor(float u, float v, float level);
-                gli::sampler2d<float>* makeMipMap( );
+                void makeMipMap();
 	private:
 
 
@@ -314,7 +315,7 @@ namespace DSONL
 	{
 	}
 
-        gli::sampler2d<float>*  EnvMapLookup::makeMipMap()
+        void  EnvMapLookup::makeMipMap()
 	{
 
 		//===================================================mind  opencv BGR order  ...=================================
@@ -349,7 +350,7 @@ namespace DSONL
 		static gli::sampler2d<float> Sampler(newTex, gli::WRAP_CLAMP_TO_EDGE, gli::FILTER_LINEAR, gli::FILTER_LINEAR, gli::vec4(1.0f, 0.5f, 0.0f, 1.0f));
 
 
-//                prefilteredEnvmapSampler= &Sampler;
+                prefilteredEnvmapSampler= &Sampler;
 
 
                 gli::vec4 SampleA = Sampler.texture_lod(gli::fsampler2D::normalized_type(0.5f, 0.75f), 0.0f); // transform the texture coordinate
@@ -362,22 +363,7 @@ namespace DSONL
 
 
 
-                return &Sampler;
-
-
 	}
-
-
-
-
-//	void EnvMapLookup::prefilteredColor(float u, float v, float level)
-//	{
-//          gli::vec4 Sample_val = prefilteredEnvmapSampler->texture_lod(gli::fsampler2D::normalized_type(0.5f, 0.75f),0.0f); // transform the texture coordinate
-//
-//          cout << "\n============Sample_val val(RGBA):\n" << Sample_val.b << "," << Sample_val.g << "," << Sample_val.r << ","   << Sample_val.a << endl;
-////          return Vec3f(Sample_val.r, Sample_val.g, Sample_val.b);
-//
-//	}
 
 	class brdfIntegrationMap
 	{
@@ -385,7 +371,7 @@ namespace DSONL
 	public:
 		brdfIntegrationMap();
 		~brdfIntegrationMap();
-		gli::vec4 get_brdfIntegrationMap(float &NoV, float &roughness);
+		void get_brdfIntegrationMap(float &NoV, float &roughness);
 		Mat brdfIntegration_Map;
 
 	private:
@@ -399,7 +385,7 @@ namespace DSONL
 		cout << "show brdfIntegrationMap info:" << brdfIntegration_Map.depth() << "\nshow channel:" << brdfIntegration_Map.channels() << "\nshow width:" << brdfIntegration_Map.cols << "\nshow height:" << brdfIntegration_Map.rows << endl;
 	}
 
-	gli::vec4 brdfIntegrationMap::get_brdfIntegrationMap(float &NoV, float &roughness)
+	void brdfIntegrationMap::get_brdfIntegrationMap(float &NoV, float &roughness)
 	{
 
 		gli::texture2d brdf_tex(gli::FORMAT_RGB32_SFLOAT_PACK32, gli::texture2d::extent_type(128, 128), 1);
@@ -409,13 +395,18 @@ namespace DSONL
 
 		memcpy(brdf_tex.data(), img_array.data(), brdf_tex.size());
 		//		vec4 brdfIntegration = texture(brdfIntegrationMap, vec2(NoV, roughness));
-		gli::sampler2d<float> Sampler_brdf(brdf_tex, gli::WRAP_CLAMP_TO_EDGE, gli::FILTER_LINEAR, gli::FILTER_LINEAR, gli::vec4(1.0f, 0.5f, 0.0f, 1.0f));
+	        static 	gli::sampler2d<float> Sampler_brdf(brdf_tex, gli::WRAP_CLAMP_TO_EDGE, gli::FILTER_LINEAR, gli::FILTER_LINEAR, gli::vec4(1.0f, 0.5f, 0.0f, 1.0f));
+
+                brdfSampler= & Sampler_brdf;
+
+
+
 
 		gli::vec4 SampleBrdf = Sampler_brdf.texture_lod(gli::fsampler2D::normalized_type(NoV, roughness), 0.0f); // transform the texture coordinate
 		cout << "\n============SampleBrdf val(RGBA):\n"
 			 << SampleBrdf.b << "," << SampleBrdf.g << "," << SampleBrdf.r << "," << SampleBrdf.a << endl;
 
-		return SampleBrdf;
+
 
 		// case 1
 		// 0.5, 0.5
@@ -426,12 +417,15 @@ namespace DSONL
 		// gsn : 0.5, 0.75
 		//		image_ref_path_PFM blue  green and red channel value: [0, 0.00670501, 0.570426]
 		// GLI: 0.5, 0.25
-		//		============SampleBrdf val(RGBA):  0.573688,0.00701116,0,1
+		//		============SampleBrdf val(BGRA):  0.573688,0.00701116,0,1
 	}
 
 	brdfIntegrationMap::~brdfIntegrationMap()
 	{
 	}
+
+
+
 
 	class diffuseMapMask
 	{
@@ -562,7 +556,10 @@ namespace DSONL
 		memcpy(diffuse_tex.data(), img_array_diffuse.data(), diffuse_tex.size());
 
 		gli::sampler2d<float> Sampler_diffuse(diffuse_tex, gli::WRAP_CLAMP_TO_EDGE, gli::FILTER_LINEAR, gli::FILTER_LINEAR, gli::vec4(1.0f, 0.5f, 0.0f, 1.0f)); // TODO: check 1.0, 0.5 meaning
-		gli::vec4 SampleDiffuse = Sampler_diffuse.texture_lod(gli::fsampler2D::normalized_type(u, v), 0.0f);
+
+
+
+                gli::vec4 SampleDiffuse = Sampler_diffuse.texture_lod(gli::fsampler2D::normalized_type(u, v), 0.0f);
 		cout << "\n============SampleDiffuse val(RGBA):\n"
 			 << SampleDiffuse.b << "," << SampleDiffuse.g << "," << SampleDiffuse.r << "," << SampleDiffuse.a << endl;
 

@@ -29,18 +29,17 @@ int main(int argc, char **argv) {
 	dataLoader->Init();
 
         EnvMapLookup *EnvMapLookup=new DSONL::EnvMapLookup(argc,argv);
-        gli::sampler2d<float>* prefilteredEnvmapSampler = EnvMapLookup->makeMipMap();
+        EnvMapLookup->makeMipMap();
 
 
-        gli::vec4 Sample_val = prefilteredEnvmapSampler->texture_lod(gli::fsampler2D::normalized_type(0.5f, 0.75f),0.0f); // transform the texture coordinate
-        cout << "\n============Sample_val val(RGBA):\n" << Sample_val.b << "," << Sample_val.g << "," << Sample_val.r << ","   << Sample_val.a << endl;
-
-//        delete prefilteredEnvmapSampler;
+//       delete prefilteredEnvmapSampler;
+        DSONL::IBL_Radiance radiance_beta_vec;
+        radiance_beta_vec.specularIBL(Vec3f(0.5,0.5,0.5), 0.5, Vec3f(0.5,0.5,0.5), Vec3f(0.5,0.5,0.5) );
 
 
 
         float image_ref_metallic = dataLoader->image_ref_metallic;
-	float image_ref_roughness = dataLoader->image_ref_roughness;
+	    float image_ref_roughness = dataLoader->image_ref_roughness;
 
 	Mat grayImage_target, grayImage_ref, depth_ref, depth_target, image_ref_baseColor, image_target_baseColor;
 	grayImage_ref = dataLoader->grayImage_ref;
@@ -312,11 +311,11 @@ int main(int argc, char **argv) {
 //	diffuseMap getDiffuseMap;
 //	getDiffuseMap.Init(argc,argv);
 //	getDiffuseMap.getDiffuse(u, v);
-//
-//
+
+
 //	Mat final_diffuseMap;
 //	makeDiffuseMap(getDiffuseMap.diffuse_Map, DiffuseMaskMap.diffuse_Map_Mask, final_diffuseMap);
-//
+
 //	getDiffuseMap.diffuse_Map=final_diffuseMap;
 //	cout<<"show final search value:"<<endl;
 //	getDiffuseMap.getDiffuse(u, v);
