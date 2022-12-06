@@ -106,12 +106,12 @@ void PhotometricBA(Mat &image, Mat &image_right,
       // statusMap[u*image.cols+v]==0 ){ continue;}
 
       // use the inlier filter
-//      if (inliers_filter.count(u) == 0) {
-//        continue;
-//      } // ~~~~~~~~~~~~~~Filter~~~~~~~~~~~~~~~~~~~~~~~
-//      if (inliers_filter[u] != v) {
-//        continue;
-//      } // ~~~~~~~~~~~~~~Filter~~~~~~~~~~~~~~~~~~~~~~~
+      if (inliers_filter.count(u) == 0) {
+        continue;
+      } // ~~~~~~~~~~~~~~Filter~~~~~~~~~~~~~~~~~~~~~~~
+      if (inliers_filter[u] != v) {
+        continue;
+      } // ~~~~~~~~~~~~~~Filter~~~~~~~~~~~~~~~~~~~~~~~
 
       // if(pixelSkip%step!=0){ pixelSkip++;continue;
       // }///----------------------current PhotoBA---------------------------

@@ -15,9 +15,11 @@
 #include <sstream>
 #include <vector>
 #include <Eigen/Core>
+#include <memory>
 
 #include "preComputeSetting.h"
 #include "dataLoader/PFMReadWrite.h"
+
 
 // GLI library
 #define GLM_ENABLE_EXPERIMENTAL
@@ -40,6 +42,9 @@ namespace DSONL
 	static Renderer *renderer = NULL; //this is a static pointer to a Renderer used in the glut callback functions
 	static Renderer_diffuse *render_diffuse = NULL;
 	static diffuse_Mask_Renderer *render_diffuse_mask = NULL;
+        static gli::sampler2d<float>* prefilteredEnvmapSampler = NULL;
+
+
 
 	int window(0);
 	int window_diffuse(0);
@@ -209,14 +214,14 @@ namespace DSONL
 		oss << std::setprecision(1) << _roughness;
 		string roughness_str;
 		(_roughness == 1 || _roughness == 0) ? roughness_str = oss.str() + ".0" : roughness_str = oss.str();
-		cout << "show roughness_str:" << roughness_str << endl;
+//		cout << "show roughness_str:" << roughness_str << endl;
 		// set corresponding env_map level
 		float envmapLvl;
 		roughness == (float)0.2 ? envmapLvl = 0.0 : envmapLvl = roughness * 5.0;
 		std::ostringstream oss_envl;
 		oss_envl << std::setprecision(2) << envmapLvl;
 		string envmapLvl_str = oss_envl.str() + ".0";
-		cout << "envmapLvl_str:" << envmapLvl_str << endl;
+//		cout << "envmapLvl_str:" << envmapLvl_str << endl;
 		setRoughness.seekg(221L, ios::beg);
 		setRoughness << roughness_str;
 		setRoughness.seekg(378L, ios::beg);
@@ -286,11 +291,14 @@ namespace DSONL
 		EnvMapLookup(int argc, char **argv);
 		~EnvMapLookup();
 		std::vector<cv::Mat> image_pyramid;
-		Eigen::Vector3d textureLookup();
-		void makeMipMap();
+		void prefilteredColor(float u, float v, float level);
+		void makeMipMap(gli::sampler2d<float>* prefilteredEnvmapSampler );
+//                gli::sampler2d<float> *prefilteredEnvmapSampler=NULL;
+
 
 	private:
-		unsigned int EnvMapTexture;
+//          gli::sampler2d<float> *prefilteredEnvmapSampler;
+
 	};
 
 	EnvMapLookup::EnvMapLookup(int argc, char **argv)
@@ -310,7 +318,7 @@ namespace DSONL
 	{
 	}
 
-	void EnvMapLookup::makeMipMap()
+	void EnvMapLookup::makeMipMap(gli::sampler2d<float>* prefilteredEnvmapSampler)
 	{
 
 		//===================================================mind  opencv BGR order  ...=================================
@@ -327,13 +335,12 @@ namespace DSONL
 		gli::texture2d newTex(orig_tex.format(), orig_tex.extent(), numMipmaps);
 		memcpy(newTex.data(), orig_tex.data(), orig_tex.size());
 
-		gli::extent2d cood(512, 384);
-		gli::vec4 Sampletest = Sampler_single.texel_fetch(cood, 0);
+//		gli::extent2d cood(512, 384);
+//		gli::vec4 Sampletest = Sampler_single.texel_fetch(cood, 0);
+//		cout << "\n============Sampletest val(RGBA):\n"
+//			 << Sampletest.b << "," << Sampletest.g << "," << Sampletest.r << "," << Sampletest.a << endl;
 
-		cout << "\n============Sampletest val(RGBA):\n"
-			 << Sampletest.b << "," << Sampletest.g << "," << Sampletest.r << "," << Sampletest.a << endl;
-
-		for (gli::texture::size_type level = 1; level < newTex.levels(); level++)
+                for (gli::texture::size_type level = 1; level < newTex.levels(); level++)
 		{
 
 			cv::Mat flat = image_pyramid[level].reshape(1, image_pyramid[level].total() * image_pyramid[level].channels());
@@ -344,16 +351,34 @@ namespace DSONL
 			//			std::cout <<"And dimension: newTex.extent(level).x :" <<newTex.extent(level).x << std::endl;
 			//			std::cout <<"newTex.extent(level).y :" <<newTex.extent(level).y << std::endl;
 		}
+
+
 		gli::sampler2d<float> Sampler(newTex, gli::WRAP_CLAMP_TO_EDGE, gli::FILTER_LINEAR, gli::FILTER_LINEAR, gli::vec4(1.0f, 0.5f, 0.0f, 1.0f));
-		gli::vec4 SampleA = Sampler.texture_lod(gli::fsampler2D::normalized_type(0.5f, 0.75f), 0.0f); // transform the texture coordinate
-		cout << "\n============SampleA val(RGBA):\n"
+
+                prefilteredEnvmapSampler= &Sampler;
+
+                gli::vec4 SampleA = Sampler.texture_lod(gli::fsampler2D::normalized_type(0.5f, 0.75f), 0.0f); // transform the texture coordinate
+                cout << "\n============SampleA val(RGBA):\n"
 			 << SampleA.b << "," << SampleA.g << "," << SampleA.r << "," << SampleA.a << endl;
+
+                gli::vec4 SampleAAAAAA = prefilteredEnvmapSampler->texture_lod(gli::fsampler2D::normalized_type(0.5f, 0.75f), 0.0f); // transform the texture coordinate
+                cout << "\n============SampleAAAAAA val(RGBA):\n"
+                     << SampleAAAAAA.b << "," << SampleAAAAAA.g << "," << SampleAAAAAA.r << "," << SampleAAAAAA.a << endl;
+
+
 	}
 
-	Eigen::Vector3d EnvMapLookup::textureLookup()
-	{
-		return Eigen::Vector3d();
-	}
+
+
+
+//	void EnvMapLookup::prefilteredColor(float u, float v, float level)
+//	{
+//          gli::vec4 Sample_val = prefilteredEnvmapSampler->texture_lod(gli::fsampler2D::normalized_type(0.5f, 0.75f),0.0f); // transform the texture coordinate
+//
+//          cout << "\n============Sample_val val(RGBA):\n" << Sample_val.b << "," << Sample_val.g << "," << Sample_val.r << ","   << Sample_val.a << endl;
+////          return Vec3f(Sample_val.r, Sample_val.g, Sample_val.b);
+//
+//	}
 
 	class brdfIntegrationMap
 	{
@@ -361,9 +386,7 @@ namespace DSONL
 	public:
 		brdfIntegrationMap();
 		~brdfIntegrationMap();
-
 		gli::vec4 get_brdfIntegrationMap(float &NoV, float &roughness);
-
 		Mat brdfIntegration_Map;
 
 	private:

@@ -8,64 +8,51 @@
 #include <opencv2/core/mat.hpp>
 #include <math.h> /* fmod */
 #include <cmath>
-
 #include "iostream"
+#include "preFilter/preFilter.h"
+
+
 using namespace cv;
 namespace DSONL
 {
 
-
         // added by Binghui
-	double dot(const Eigen::Vector3d, const Eigen::Vector3d);
+        float dot(const Eigen::Vector3f, const Eigen::Vector3f);
 
-	double mod(const double, const double);
+        float mod(const float, const float);
 
-	double clamp(const double, const double, const double);
+        float clamp(const float, const float, const float);
 
-	double pow(const double, const double);
-	Eigen::Vector3d pow(const double, const Eigen::Vector3d);
-//        template typename  TEigen::Matrix<T, 3,1>;
-//        Vec3f
-	Eigen::Vector3d pow(const Eigen::Vector3d, const double);
-	Eigen::Vector3d pow(const Eigen::Vector3d, const Eigen::Vector3d);
+        float pow(const float, const float);
+        Eigen::Vector3f pow(const float, const Eigen::Vector3f);
+        //        template typename  TEigen::Matrix<T, 3,1>;
+        //        Vec3f
+        Eigen::Vector3f pow(const Eigen::Vector3f, const float);
+        Eigen::Vector3f pow(const Eigen::Vector3f, const Eigen::Vector3f);
 
-	Eigen::Vector3d normalize(const Eigen::Vector3d);
+        Eigen::Vector3f normalize(const Eigen::Vector3f);
 
-	double mix(const double, const double, const double);
+        float mix(const float, const float, const float);
+        Eigen::Vector3f mix(const Eigen::Vector3f, const Eigen::Vector3f, const float);
 
-	Eigen::Vector3d mix(const Eigen::Vector3d, const Eigen::Vector3d, const double);
-
-	Eigen::Vector3d reflect(const Eigen::Vector3d, const Eigen::Vector3d);
+        Vec3f reflect(Vec3f, Vec3f);
 
 
-        class IBL_Radiance{
+
+        class IBL_Radiance
+        {
 
         public:
-          IBL_Radiance();
-          ~IBL_Radiance();
-          Vec2f directionToSphericalEnvmap(Vec3f dir);
-          Vec3f specularIBL(Vec3f F0 , float roughness, Vec3f N, Vec3f V);
-          Vec3f diffuseIBL(Vec3f normal);
-          Vec3f fresnelSchlick(float cosTheta, Vec3f F0);
-          Vec3f ibl_radiance_val;
+                IBL_Radiance();
+                ~IBL_Radiance();
+                Vec2f directionToSphericalEnvmap(Vec3f dir);
+                Vec3f specularIBL(Vec3f F0, float roughness, Vec3f N, Vec3f V);
+                Vec3f diffuseIBL(Vec3f normal);
+                Vec3f fresnelSchlick(float cosTheta, Vec3f F0);
+                Vec3f ibl_radiance_val;
 
 
         private:
-
         };
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 }

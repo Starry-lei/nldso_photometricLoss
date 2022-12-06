@@ -55,7 +55,10 @@ vec2 directionToSphericalEnvmap(vec3 dir) {
 
 // adapted from "Real Shading in Unreal Engine 4", Brian Karis, Epic Games
 // https://cdn2.unrealengine.com/Resources/files/2013SiggraphPresentationsNotes-26915738.pdf
+
+
 vec3 specularIBL(vec3 F0 , float roughness, vec3 N, vec3 V) {
+
   float NoV = clamp(dot(N, V), 0.0, 1.0);
   vec3 R = reflect(-V, N);
   vec2 uv = directionToSphericalEnvmap(R);
@@ -68,6 +71,10 @@ vec3 specularIBL(vec3 F0 , float roughness, vec3 N, vec3 V) {
   vec2 uv_test_brdf=vec2(0.5f, 0.75f);
   brdfIntegration_check = texture(brdfIntegrationMap, uv_test_brdf);
   return prefilteredColor * ( F0 * brdfIntegration.x + brdfIntegration.y );
+
+
+
+
 }
 
 vec3 diffuseIBL(vec3 normal) {
@@ -148,3 +155,15 @@ void main() {
     outColor.a = 1.0;
   }
 }
+
+
+
+  template <typename T> int sign(T val) {
+      return (T(0) < val) - (val < T(0));
+    }
+
+    float atan2_r( float y,  float x)
+    {
+      return x == 0.0 ? sign(y)*M_PI/2 : std::atan2(y, x);
+    }
+

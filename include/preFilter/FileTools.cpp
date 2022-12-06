@@ -161,7 +161,7 @@ bool FileTools::loadPFM(const std::string& filename, int& width, int& height, in
     }
   }
 
-  cout << "FileTools::loadPFM: " << filename << " Info: width=" << width << " height=" << height << " channels=" << channels << " min=" << pixelmin << " max=" << pixelmax << endl; 
+//  cout << "FileTools::loadPFM: " << filename << " Info: width=" << width << " height=" << height << " channels=" << channels << " min=" << pixelmin << " max=" << pixelmax << endl;
   fclose(file);
   return true;
 }

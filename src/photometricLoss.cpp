@@ -25,7 +25,19 @@ int main(int argc, char **argv) {
 	dataLoader *dataLoader = new DSONL::dataLoader();
 	dataLoader->Init();
 
-	float image_ref_metallic = dataLoader->image_ref_metallic;
+
+
+        EnvMapLookup *EnvMapLookup=new DSONL::EnvMapLookup(argc,argv);
+        EnvMapLookup->makeMipMap(prefilteredEnvmapSampler);
+
+
+        gli::vec4 Sample_val =DSONL:: prefilteredEnvmapSampler->texture_lod(gli::fsampler2D::normalized_type(0.5f, 0.75f),0.0f); // transform the texture coordinate
+        cout << "\n============Sample_val val(RGBA):\n" << Sample_val.b << "," << Sample_val.g << "," << Sample_val.r << ","   << Sample_val.a << endl;
+        delete DSONL::prefilteredEnvmapSampler;
+
+
+
+        float image_ref_metallic = dataLoader->image_ref_metallic;
 	float image_ref_roughness = dataLoader->image_ref_roughness;
 
 	Mat grayImage_target, grayImage_ref, depth_ref, depth_target, image_ref_baseColor, image_target_baseColor;
@@ -266,10 +278,6 @@ int main(int argc, char **argv) {
 
 	}
 
-
-
-
-
 	// tidy up
 	delete dataLoader;
 	if (options.usePixelSelector) {
@@ -284,7 +292,6 @@ int main(int argc, char **argv) {
 		delete[] statusMap;
 		delete[] statusMapB;
 	}
-
 	return 0;
 }
 

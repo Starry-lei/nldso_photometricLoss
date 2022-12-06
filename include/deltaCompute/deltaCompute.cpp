@@ -7,31 +7,32 @@
 namespace DSONL
 {
 
-
-    double dot(const Eigen::Vector3d x, const Eigen::Vector3d y)
+    float dot(const Eigen::Vector3f x, const Eigen::Vector3f y)
     {
-        double ans = x.dot(y);
+        float ans = x.dot(y);
         return ans;
     }
 
-    double mod(const double numer, const double denom)
+    float _dot(Vec3f&  fst, Vec3f&  snd){ return max( (float)0.0, fst.dot(snd));}
+
+    float mod(const float numer, const float denom)
     {
-        return fmod(numer, denom);
+        return std::fmod(numer, denom);
     }
 
-    double clamp(const double x, const double min_v, const double max_v)
+    float clamp(const float x, const float min_v, const float max_v)
     {
         return std::min(std::max(x, min_v), max_v);
     }
 
-    double pow(const double x, const double y)
+    float pow(const float x, const float y)
     {
         return std::pow(x, y);
     }
 
-    Eigen::Vector3d pow(const double x, const Eigen::Vector3d y_vec)
+    Eigen::Vector3f pow(const float x, const Eigen::Vector3f y_vec)
     {
-        Eigen::Vector3d out_vec;
+        Eigen::Vector3f out_vec;
         for (int i = 0; i < 3; i++)
         {
             out_vec[i] = pow(x, y_vec[i]);
@@ -39,14 +40,14 @@ namespace DSONL
         return out_vec;
     }
 
-    Eigen::Vector3d pow(const Eigen::Vector3d x, const double y)
+    Eigen::Vector3f pow(const Eigen::Vector3f x, const float y)
     {
         return pow(y, x);
     }
 
-    Eigen::Vector3d pow(const Eigen::Vector3d x_vec, const Eigen::Vector3d y_vec)
+    Eigen::Vector3f pow(const Eigen::Vector3f x_vec, const Eigen::Vector3f y_vec)
     {
-        Eigen::Vector3d out_vec;
+        Eigen::Vector3f out_vec;
         for (int i = 0; i < 3; i++)
         {
             out_vec[i] = pow(x_vec[i], y_vec[i]);
@@ -54,10 +55,10 @@ namespace DSONL
         return out_vec;
     }
 
-    Eigen::Vector3d normalize(const Eigen::Vector3d vec)
+    Eigen::Vector3f normalize(const Eigen::Vector3f vec)
     {
-        Eigen::Vector3d out_vec(vec);
-        double sum_quare(0);
+        Eigen::Vector3f out_vec(vec);
+        float sum_quare(0);
         for (int i = 0; i < 3; i++)
         {
             sum_quare += vec[i] * vec[i];
@@ -75,15 +76,15 @@ namespace DSONL
         return out_vec;
     }
 
-    double mix(const double x, const double y, const double a)
+    float mix(const float x, const float y, const float a)
     {
         if (a > 1 || a < 0)
             throw std::invalid_argument("received value a not in interval(0,1)");
         return x * (1 - a) + y * a;
     }
-    Eigen::Vector3d mix(const Eigen::Vector3d x_vec, const Eigen::Vector3d y_vec, const double a)
+    Eigen::Vector3f mix(const Eigen::Vector3f x_vec, const Eigen::Vector3f y_vec, const float a)
     {
-        Eigen::Vector3d out_vec;
+        Eigen::Vector3f out_vec;
         for (int i = 0; i < 3; i++)
         {
             out_vec[i] = mix(x_vec[i], y_vec[i], a);
@@ -96,26 +97,41 @@ namespace DSONL
         I: Specifies the incident vector.
         N: Specifies the normal vector.
     */
-    Eigen::Vector3d reflect(const Eigen::Vector3d I, const Eigen::Vector3d N)
+    Vec3f reflect(Vec3f I, Vec3f N)
     {
-        Eigen::Vector3d N_norm = normalize(N);
-        Eigen::Vector3d out_vec = I - 2 * dot(N_norm, I) * N_norm;
-        return out_vec;
+      Vec3f N_norm = normalize(N);
+      Vec3f out_vec = I - 2 * _dot(N_norm, I) * N_norm;
+      return out_vec;
     }
+
+
     IBL_Radiance::IBL_Radiance() {}
     IBL_Radiance::~IBL_Radiance() {}
+
+
     Vec2f IBL_Radiance::directionToSphericalEnvmap(Vec3f dir) {
-
-
-
-    float s = 1.0 - mod(1.0 / (2.0*M_PI) * atan( dir.val[1],  dir.val[0]), 1.0);
-    float t = 1.0 / (M_PI) * acos(- dir.val[2]);
-
-    return Vec2f(s, t);
-
+      float s = 1.0 - mod(1.0 / (2.0*M_PI) * atan2(dir.val[1], dir.val[0]), 1.0);
+      float t = 1.0 / (M_PI) * acos(-dir.val[2]);
+      return Vec2f(s, t);
     }
+
+
     Vec3f IBL_Radiance::specularIBL(Vec3f F0, float roughness, Vec3f N,
                                     Vec3f V) {
+
+      float NoV = clamp(_dot(N, V), 0.0, 1.0);
+      Vec3f R = reflect(-V, N);
+      Vec2f uv = directionToSphericalEnvmap(R);
+
+//      gli::vec4 Sample_val = prefilteredEnvmapSampler->texture_lod(gli::fsampler2D::normalized_type(0.5f, 0.75f),0.0f); // transform the texture coordinate
+//      cout << "\n============Sample_val val(RGBA):\n" << Sample_val.b << "," << Sample_val.g << "," << Sample_val.r << ","   << Sample_val.a << endl;
+      //       return Vec3f(Sample_val.r, Sample_val.g, Sample_val.b);
+      //       EnvMapLookup.prefilteredColor(0.5f,0.75f, 0.0f);
+      //       Vec3f color=EnvMapLookup.prefilteredColor(0.5f,0.75f, 0.0f);
+      //       cout<<"test color:"<<color<<endl;
+      //       Vec3f prefilteredColor = textureLod(prefilteredEnvmap, uv, roughness*float(mipCount)).rgb;
+
+
       return cv::Vec3f();
     }
     Vec3f IBL_Radiance::diffuseIBL(Vec3f normal) { return cv::Vec3f(); }
