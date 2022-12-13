@@ -58,18 +58,6 @@ void PhotometricBA(Mat &image, Mat &image_right,
 
   inliers_filter.emplace(148, 66); ///(33, 265)
 
-  //	at (366, 326)  B value is: 52  G value is: 111  R value is: 255
-  //	at (352, 562)  B value is: 53  G value is: 109  R value is: 255
-
-  // correspondence2
-
-  //	at (436, 127)  B value is: 97  G value is: 106  R value is: 95
-  //	at (439, 338)  B value is: 98  G value is: 109  R value is: 111
-
-  // extrem baseline
-  //	at (148, 66)  B value is: 53  G value is: 112  R value is: 255
-  //	at (33, 265)  B value is: 46  G value is: 105  R value is: 255
-
   int counter = 0;
   for (int u = 0; u < image.rows; u++) // colId, cols: 0 to 480
   {
@@ -159,9 +147,7 @@ void PhotometricBA(Mat &image, Mat &image_right,
 //      cout << "show parameter before:<<\n"
 //           << Rotation.matrix() << "," << Translation << endl;
 
-      //if (!project((double) v, (double) u,
-      // depth_ref.at<double>(u, v), cols_, rows_, pt2d, Rotation,
-      // Translation)) { continue; }
+      //if (!project((double) v, (double) u,depth_ref.at<double>(u, v), cols_, rows_, pt2d, Rotation,Translation)) { continue; }
       if (!project((float)v, (float)u, (float)depth_ref.at<double>(u, v),
                    (int)cols_, (int)rows_, KRKi, Kt, pt2d)) {
         continue;

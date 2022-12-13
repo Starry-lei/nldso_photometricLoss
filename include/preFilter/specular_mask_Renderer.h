@@ -1,13 +1,13 @@
 // Copyright (C) Thorsten Thormaehlen, MIT License (see license file)
 
-#ifndef DEF_RENDERER_H
-#define DEF_RENDERER_H
+#ifndef DEF_SPECULAR_MASK_RENDERER_H
+#define DEF_SPECULAR_SPECULARMASK_H
 
 #include <stdio.h>
 #include <string>
 #include <vector>
-#include "Mesh.h"
-#include "ShaderNode.h"
+#include "preFilter/Mesh.h"
+#include "preFilter/ShaderNode.h"
 
 namespace gsn {
   /*!
@@ -15,20 +15,25 @@ namespace gsn {
   \brief This class defines a renderer.
   */
 
-  class Renderer {
-
+  class specular_Mask_Renderer {
   public:
+
     //! constructor
-    Renderer();
+    specular_Mask_Renderer();
+
     //! destructor
-    ~Renderer();
+    ~specular_Mask_Renderer();
+
   public:
     //! initialize all rendering resources
     void init();
+
     //! resize event
     void resize(int w, int h);
+
     //! draw call
     void display();
+
     //! release all rendering resources
     void dispose();
 
@@ -36,13 +41,13 @@ namespace gsn {
     float t;
     int selectedOutput;
     float roughness;
-
   private:
     int windowWidth;
     int windowHeight;
 
+
     struct ShaderSettings {
-      int width = 512; // needs to be changed
+      int width = 512;
       int height = 512;
       bool wireframe = false;
       Matrix backgroundColor; 

@@ -139,7 +139,9 @@ message(STATUS "show IT: ${CMAKE_CURRENT_SOURCE_DIR}")
 
 set(dsonl_SOURCE_FILES
 
-  include/setting.cpp
+  include/settings/setting.cpp
+
+  include/dataLoader/stb_image.h
 
 
   include/dataLoader/PFMReadWrite.cpp
@@ -149,6 +151,7 @@ set(dsonl_SOURCE_FILES
   # include/numType.h
   include/preFilter/FileTools.cpp
   include/preFilter/Renderer.cpp
+  include/preFilter/specular_mask_Renderer.cpp
   include/preFilter/Matrix.cpp
   include/preFilter/Mesh.cpp
   include/preFilter/ShaderNode.cpp
@@ -161,8 +164,8 @@ set(dsonl_SOURCE_FILES
   include/deltaCompute/deltaCompute.h
   include/deltaCompute/deltaCompute.cpp
 
-  include/preComputeSetting.h
-  include/preComputeSetting.cpp
+  include/settings/preComputeSetting.h
+  include/settings/preComputeSetting.cpp
 
   include/utils/ultils.h
   include/cameraProjection/reprojection.h

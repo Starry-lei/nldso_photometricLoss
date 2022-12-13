@@ -27,17 +27,17 @@
 //#include <ceres/loss_function.h>
 
 //#include <omp.h>
-//#include <pcl/io/ply_io.h>
-//#include <pcl/io/pcd_io.h>
-//#include <chrono>
-//#include <pcl/point_cloud.h>
-//#include <pcl/kdtree/kdtree_flann.h>
-//#include <pcl/search/search.h>
-//#include <pcl/surface/mls.h>
-//
-//#include <pcl/point_types.h>
-//#include <pcl/io/io.h>
-//
+#include <pcl/io/ply_io.h>
+#include <pcl/io/pcd_io.h>
+#include <chrono>
+#include <pcl/point_cloud.h>
+#include <pcl/kdtree/kdtree_flann.h>
+#include <pcl/search/search.h>
+#include <pcl/surface/mls.h>
+
+#include <pcl/point_types.h>
+#include <pcl/io/io.h>
+
 //#include <pcl/visualization/cloud_viewer.h>
 //#include <pcl/filters/radius_outlier_removal.h>
 //#include <pcl/filters/voxel_grid.h>
@@ -319,7 +319,8 @@ namespace DSONL {
 		p_3d_no_d << (uj - cx) / fx, (vj - cy) / fy, (double) 1.0;
 		Eigen::Matrix<double, 3, 1> p_c1;
 		p_c1 << p_3d_no_d.x() / iDepth, p_3d_no_d.y() / iDepth, p_3d_no_d.z() / iDepth;
-		cout<<"show iDepth:"<<iDepth<<endl;
+
+                cout<<"show iDepth:"<<iDepth<<endl;
 		cout << "show parameter using:<<\n" << Rotation.matrix() << "," << Translation << endl;
 		Eigen::Matrix<double, 3, 1> p1 = Rotation * p_c1 + Translation;
 		Eigen::Matrix<double, 3, 1> p_3d_transformed2, point_K;
@@ -373,6 +374,282 @@ namespace DSONL {
 		// check image boundaries
 		return checkImageBoundaries(pt2d, width, height);
 	}
+
+
+
+
+
+        void showMinus(Mat& minus_original, Mat& minus_adjust, Mat& minus_mask ){
+
+          double max_orig, min_orig;
+          cv::minMaxLoc(minus_original, &min_orig,&max_orig);
+          double max_adj, min_adj;
+          cv::minMaxLoc(minus_adjust, &min_adj,&max_adj);
+
+          double max_real= max(max_adj, max_orig);
+          double min_real=min(min_adj, min_orig);
+
+          Mat adj_show(minus_original.rows, minus_original.cols, CV_32FC3, Scalar(0,0,0));
+          Mat orig_show(minus_original.rows, minus_original.cols, CV_32FC3, Scalar(0,0,0));
+
+
+          for(int x = 0; x < minus_original.rows; ++x) {
+            for (int y = 0; y < minus_original.cols; ++y) {
+              if (minus_mask.at<uchar>(x,y)==1){
+
+                float minus_orig_val= minus_original.at<float>(x,y);
+
+                minus_orig_val*=(1.0/(max_real-min_real))+(-min_real*(1.0/(max_real-min_real)));
+
+                float minus_adj_val= minus_adjust.at<float>(x,y);
+                minus_adj_val*=(1.0/(max_real-min_real))+(-min_real*(1.0/(max_real-min_real)));
+                if (isnan(minus_orig_val) || isnan(minus_adj_val)){
+                  orig_show.at<Vec3f>(x,y)[0]=1;
+                  orig_show.at<Vec3f>(x,y)[1]=0;
+                  orig_show.at<Vec3f>(x,y)[2]=0;
+
+                  adj_show.at<Vec3f>(x,y)[0]=1;
+                  adj_show.at<Vec3f>(x,y)[1]=0;
+                  adj_show.at<Vec3f>(x,y)[2]=0;
+                  continue;
+                }
+                orig_show.at<Vec3f>(x,y)[0]=minus_orig_val;
+                orig_show.at<Vec3f>(x,y)[1]=minus_orig_val;
+                orig_show.at<Vec3f>(x,y)[2]=minus_orig_val;
+
+                adj_show.at<Vec3f>(x,y)[0]=minus_adj_val;
+                adj_show.at<Vec3f>(x,y)[1]=minus_adj_val;
+                adj_show.at<Vec3f>(x,y)[2]=minus_adj_val;
+
+              }else{
+
+                orig_show.at<Vec3f>(x,y)[0]=0;
+                orig_show.at<Vec3f>(x,y)[1]=0;
+                orig_show.at<Vec3f>(x,y)[2]=1;
+
+                adj_show.at<Vec3f>(x,y)[0]=0;
+                adj_show.at<Vec3f>(x,y)[1]=0;
+                adj_show.at<Vec3f>(x,y)[2]=1;
+
+              }
+            }
+          }
+
+          imshow("orig_show",orig_show);
+          imshow("adj_show",adj_show);
+
+//          imwrite("orig_show.png",orig_show);
+//          imwrite("adj_show.png",adj_show);
+
+          //	    waitKey(0);
+        }
+
+
+
+        Mat colorMap(Mat& deltaMap, float upper, float lower){
+          Mat deltaMap_Color(deltaMap.rows, deltaMap.cols, CV_32FC3, Scalar(0,0,0));
+
+
+          for(int x = 0; x < deltaMap.rows; ++x) {
+            for (int y = 0; y < deltaMap.cols; ++y) {
+
+              float delta= deltaMap.at<float>(x,y);
+              if (delta< upper && delta> lower){
+
+                delta=delta*(1.0/(upper-lower))+(-lower*(1.0/(upper-lower)));
+                deltaMap_Color.at<Vec3f>(x,y)[0]=delta;
+                deltaMap_Color.at<Vec3f>(x,y)[1]=delta;
+                deltaMap_Color.at<Vec3f>(x,y)[2]=delta;
+
+              } else if(delta>upper){
+                deltaMap_Color.at<Vec3f>(x,y)[0]=0;
+                deltaMap_Color.at<Vec3f>(x,y)[1]=1;
+                deltaMap_Color.at<Vec3f>(x,y)[2]=0;
+              }else if( delta<lower && delta!=-1){
+                deltaMap_Color.at<Vec3f>(x,y)[0]=1;
+                deltaMap_Color.at<Vec3f>(x,y)[1]=0;
+                deltaMap_Color.at<Vec3f>(x,y)[2]=1;
+              }
+              else if(delta==-1){
+                deltaMap_Color.at<Vec3f>(x,y)[0]=0;
+                deltaMap_Color.at<Vec3f>(x,y)[1]=0;
+                deltaMap_Color.at<Vec3f>(x,y)[2]=1;
+
+              }else{
+                deltaMap_Color.at<Vec3f>(x,y)[0]=1;
+                deltaMap_Color.at<Vec3f>(x,y)[1]=0;
+                deltaMap_Color.at<Vec3f>(x,y)[2]=0;
+              }
+
+
+            }
+          }
+
+          return deltaMap_Color;
+        }
+
+
+
+        Mat deltaMapGT(Mat& Img_left,  Mat& depth_left,  Mat& Img_right, Mat& depth_right,const Eigen::Matrix<double,3,3> & K_, double & thres,
+                       const  Sophus::SE3d & ExtrinsicPose, float& upper,float& buttom, Mat& pred_deltaMap ){
+
+          //		Mat normalMap_left=getNormals(K_,depth_left);
+          //		Mat normalMap_right=getNormals(K_,depth_right);
+
+          Mat deltaMapGT(depth_left.rows, depth_left.cols, CV_32FC1, Scalar(-1)); // default value 1.0
+                                                                                  //		Mat deltaMapGT(depth_left.rows, depth_left.cols, CV_32FC1, Scalar(1)); // default value 1.0
+          double fx = K_(0, 0), cx = K_(0, 2), fy =  K_(1, 1), cy = K_(1, 2);
+          pcl::PCDWriter writer;
+          pcl::PointCloud<pcl::PointXYZ>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZ>);
+          pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_rig (new pcl::PointCloud<pcl::PointXYZ>);
+
+
+          for(int x = 0; x < depth_left.rows; ++x) {
+            for (int y = 0; y < depth_left.cols; ++y) {
+
+              if (round( depth_left.at<double>(x,y))==15.0){
+              //                cout<<"round( depth_left.at<float>(x,y):"<<round( depth_left.at<double>(x,y))<<endl;
+                continue;
+              }
+
+              double d_r= depth_right.at<double>(x,y);
+              // Mark: skip depth=15
+              if (round(d_r)==15.0f){
+              //                cout<<"d_r:"<<d_r<<endl;
+                continue;
+              }
+
+              Eigen::Matrix<double,3,1> p_3d_no_d_r;
+              p_3d_no_d_r<< (y-cx)/fx, (x-cy)/fy,1.0;
+              Eigen::Matrix<double, 3,1> p_c2=d_r*p_3d_no_d_r;
+
+              cloud_rig->push_back(pcl::PointXYZ(p_c2.x(), p_c2.y(), p_c2.z()));
+
+            }
+          }
+
+          pcl::KdTreeFLANN<pcl::PointXYZ> kdtree;
+          kdtree.setInputCloud (cloud_rig);
+          double  max, min;
+          cv::minMaxLoc(Img_left, &min, &max);
+          cout<<"\n show max and min of Img_left:\n"<< max <<","<<min<<endl;
+          cv::minMaxLoc(Img_right, &min, &max);
+          cout<<"\n show max and min of Img_right:\n"<< max <<","<<min<<endl;
+          std::unordered_map<int, int> inliers_filter;
+          //new image
+
+          //		inliers_filter.emplace(173,333); //yes
+          inliers_filter.emplace(213,295); //yes
+
+          std::vector<int> pointIdxRadiusSearch;
+          std::vector<float> pointRadiusSquaredDistance;
+
+          float radius =thres;
+
+          Mat minus_original(depth_left.rows, depth_left.cols, CV_32FC1, Scalar(0));
+          Mat minus_adjust(depth_left.rows, depth_left.cols, CV_32FC1, Scalar(0));
+          Mat minus_mask(depth_left.rows, depth_left.cols, CV_8UC1,Scalar(0));
+
+          for(int x = 0; x < depth_left.rows; ++x)
+          {
+            for(int y = 0; y < depth_left.cols; ++y)
+            {
+              //
+              //				if(inliers_filter.count(x)==0){continue;}// ~~~~~~~~~~~~~~Filter~~~~~~~~~~~~~~~~~~~~~~~
+              //				if(inliers_filter[x]!=y ){continue;}// ~~~~~~~~~~~~~~Filter~~~~~~~~~~~~~~
+              // calculate 3D point of left camera
+              double d= depth_left.at<double>(x,y);
+
+              // Mark: skip depth=15
+              if (round(d)==15.0){ continue; }
+
+
+              Eigen::Matrix<double,3,1> p_3d_no_d;
+              p_3d_no_d<< (y-cx)/fx, (x-cy)/fy,1.0;
+              Eigen::Matrix<double, 3,1> p_c1=d*p_3d_no_d;
+
+              Eigen::Vector3d  point_Trans=ExtrinsicPose.rotationMatrix() *  p_c1+ExtrinsicPose.translation();
+
+              cloud->push_back(pcl::PointXYZ(point_Trans.x(), point_Trans.y(), point_Trans.z()));
+              pcl::PointXYZ searchPoint(point_Trans.x(),point_Trans.y(),point_Trans.z());
+              if ( kdtree.radiusSearch (searchPoint, radius, pointIdxRadiusSearch, pointRadiusSquaredDistance) > 0 )
+              {
+                //					for (std::size_t i = 0; i < pointIdxRadiusSearch.size (); ++i)
+                //						std::cout << "\n------"  <<   (*cloud_rig)[ pointIdxRadiusSearch[0] ].x
+                //						          << " " << (*cloud_rig)[ pointIdxRadiusSearch[0] ].y
+                //						          << " " << (*cloud_rig)[ pointIdxRadiusSearch[0] ].z
+                //						          << " (squared distance: " << pointRadiusSquaredDistance[0] << ")" << std::endl;
+                //
+                float left_intensity=Img_left.at<double>(x,y);
+                float pointCorres_x= (*cloud_rig)[ pointIdxRadiusSearch[0] ].x;
+                float pointCorres_y= (*cloud_rig)[ pointIdxRadiusSearch[0] ].y;
+                float pointCorres_z= (*cloud_rig)[ pointIdxRadiusSearch[0] ].z;
+                float pixel_x=(fx*pointCorres_x)/pointCorres_z+cx;
+                float pixel_y= (fy*pointCorres_y)/pointCorres_z+cy;
+                float right_intensity=Img_right.at<double>(round(pixel_y), round(pixel_x));
+                float delta=right_intensity/left_intensity;
+                //float delta= abs(left_intensity-right_intensity);
+
+                float diff_orig=std::abs(left_intensity-right_intensity);
+                minus_original.at<float>(x,y)=diff_orig;
+                float delta_pred=pred_deltaMap.at<float>(x,y);
+                float diff_adj=std::abs(right_intensity-delta_pred*left_intensity);
+                minus_adjust.at<float>(x,y)=diff_adj;
+                minus_mask.at<uchar>(x,y)=1;
+
+                deltaMapGT.at<float>(x,y)=delta;
+
+
+              }
+
+
+              //				double left_intensity=Img_left.at<double>(x,y);
+              //				for(int x_ = 0; x_ < depth_left.rows; ++x_) {
+              //					for (int y_ = 0; y_ < depth_left.cols; ++y_) {
+              //
+              //						double d_r= depth_right.at<double>(x_,y_);
+              //						Eigen::Matrix<double,3,1> p_3d_no_d_r;
+              //						p_3d_no_d_r<< (y_-cx)/fx, (x_-cy)/fy,1.0;
+              //						Eigen::Matrix<double, 3,1> p_c2=d_r*p_3d_no_d_r;
+              //						cloud_rig->push_back(pcl::PointXYZ(p_c2.x(), p_c2.y(), p_c2.z()));
+              //						double distance= ((point_Trans-p_c2).norm());
+              //						if ( distance< thres){
+              //							double rigth_intensity=Img_right.at<double>(x_,y_);
+              //							deltaMapGT.at<double>(x,y)=left_intensity/rigth_intensity;
+              //						}
+              //					}
+              //				}
+
+
+              //				double d_r= depth_right.at<double>(x,y);
+              //				Eigen::Matrix<double,3,1> p_3d_no_d_r;
+              //				p_3d_no_d_r<< (y-cx)/fx, (x-cy)/fy,1.0;
+              //				Eigen::Matrix<double, 3,1> p_c2=d_r*p_3d_no_d_r;
+              //				cloud_rig->push_back(pcl::PointXYZ(p_c2.x(), p_c2.y(), p_c2.z()));
+
+            }
+          }
+
+          showMinus(minus_original,minus_adjust, minus_mask);
+
+//          		writer.write("PointCloud_Transformed.pcd",*cloud, false);// do we need the sensor acquisition origin?
+//          		writer.write("PointCloud_right_HD.pcd",*cloud_rig, false);// do we need the sensor acquisition origin?
+
+          double  max_n, min_n;
+          cv::minMaxLoc(deltaMapGT, &min_n, &max_n);
+          //deltaMapGT=deltaMapGT*(1.0/(upper-buttom))+(-buttom*(1.0/(upper-buttom)));
+          cout<<"\n show max and min of deltaMapGT:\n"<< max_n <<","<<min_n<<endl;
+
+
+          return deltaMapGT;
+        }
+
+
+
+
+
+
+
 
 
 }

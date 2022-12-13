@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "setting.h"
+#include "settings/setting.h"
 
 #include <opencv2/core/mat.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
@@ -20,6 +20,7 @@
 
 #include <iostream>
 #include "PFMReadWrite.h"
+
 
 #define baseline_l 0;
 #define baseline_s 1;
@@ -102,6 +103,11 @@ namespace DSONL {
 					0, 1361.1, 240,
 					0, 0, 1;
 
+                        Eigen::Matrix3d S_x;
+                        S_x<< 1.0, 0.0, 0.0,
+                              0.0, -1.0, 0.0,
+                              0.0, 0.0, -1.0;
+
 			if (options_.isTextured) {
 
 				string image_ref_path;
@@ -110,39 +116,52 @@ namespace DSONL {
 
 
 				if (options_.baseline == 0) {
-					image_ref_path = "../data/Env_light/left/image_leftRGB07.png";
-					image_ref_baseColor_path = "../data/Env_light/left/image_leftbaseColor07.png";
-//					depth_ref_path = "../data/Env_light/ref/image_refNonLinearDepth06.pfm";
-					depth_ref_path = "../data/Env_light/left/image_leftLinearDepth07.pfm";
+					image_ref_path = "../data/Env_light/left/image_leftRGB08.png";
+					image_ref_baseColor_path = "../data/Env_light/left/image_leftBaseColor08.pfm";
+					depth_ref_path = "../data/Env_light/left/image_leftLinearDepth08.pfm";
 
-
-					image_ref_metallic = 0.21;
-					image_ref_roughness = 0.95;
+					image_ref_metallic = 0.5;
+					image_ref_roughness = 0.3;
 
 				}
-				//  0.0889,   -0.0838,    0.6805 ,  -0.7225// 0.6805   -0.7225    0.0889   -0.0838
-				Eigen::Quaterniond q_1(0.6805, -0.7225, 0.0889, -0.0838); //  cam1  wxyz
-				Eigen::Vector3d t1(0.770000, 3.080000, -0.19);
-
-//				Eigen::Quaterniond q_1(0.0889,   -0.0838  , -0.6805 ,   0.7225);
-//				Eigen::Vector3d t1( -0.770000,  -3.080000, 0.190000);
 
 
-				R1 = q_1.toRotationMatrix();
+
+
+				Eigen::Quaterniond q_1(0.6570,   -0.7441 ,   0.0907,   -0.0801); //  cam1  wxyz
+				Eigen::Vector3d t1(0.7500,3.0300,-0.3900);
+
+
+                                Eigen::Matrix3d R1_w_l, R1_w_r; // left-handed and right-handed
+                                Eigen::Vector3d t1_w_l;
+
+                                R1_w_l<<  -0.970705,  0.029789, -0.238420,
+                                          -0.240274 , -0.120346,  0.963216,
+                                           0.000000,  0.992285 , 0.123978;
+
+                                t1_w_l <<-0.75000,  3.030000, 0.390000;
+
+                                R1_w_r= R1_w_l*S_x;
+
+                                Eigen::Quaternion<double> quaternionR1(R1_w_r);
+				R1 = quaternionR1.toRotationMatrix();
 				cout << "show input R1:\n" << R1 << endl;
 
+
 				//normal map GT
-				string normal_GT_path = "../data/Env_light/left/image_leftnormal07.png";
+				string normal_GT_path = "../data/Env_light/left/image_leftNormal08.pfm";
 				Mat image_ref = imread(image_ref_path, IMREAD_ANYCOLOR | IMREAD_ANYDEPTH);
 
 //				Mat depth_ref = imread(depth_ref_path, CV_LOAD_IMAGE_ANYDEPTH | CV_LOAD_IMAGE_ANYCOLOR);
 				Mat depth_ref = loadPFM(depth_ref_path);
+//				image_ref_baseColor = imread(image_ref_baseColor_path, CV_LOAD_IMAGE_ANYDEPTH | CV_LOAD_IMAGE_ANYCOLOR);
+                                image_ref_baseColor= loadPFM(image_ref_baseColor_path);
+//				image_ref_baseColor.convertTo(image_ref_baseColor, CV_64FC3, 1.0 / 255.0);
+//				normal_map_GT = imread(normal_GT_path, cv::IMREAD_ANYCOLOR | cv::IMREAD_ANYDEPTH);
+                                normal_map_GT = loadPFM(normal_GT_path);
 
 
-				image_ref_baseColor = imread(image_ref_baseColor_path, CV_LOAD_IMAGE_ANYDEPTH | CV_LOAD_IMAGE_ANYCOLOR);
-				image_ref_baseColor.convertTo(image_ref_baseColor, CV_64FC3, 1.0 / 255.0);
-				normal_map_GT = imread(normal_GT_path, cv::IMREAD_ANYCOLOR | cv::IMREAD_ANYDEPTH);
-				normal_map_GT.convertTo(normal_map_GT, CV_64FC3, 1.0 / 255.0);
+//                                normal_map_GT.convertTo(normal_map_GT, CV_64FC3);
 
 
 				int channelIdx = options_.channelIdx;
@@ -166,24 +185,42 @@ namespace DSONL {
 
 				if (options_.baseline == 0) {
 
-					image_target_path = "../data/Env_light/right0703/image_rightRGB0703.png";
-					depth_target_path = "../data/Env_light/right0703/image_rightLinearDepth0703.pfm";
-
-					Eigen::Quaterniond q_2(0.7404, -0.6707, -0.0299, 0.0330); //  cam2  wxyz
-					Eigen::Vector3d t2(-0.2700, 3.0200, 0.3000);
+                                image_target_path = "../data/Env_light/right/image_rightRGB08.png";
+                                depth_target_path = "../data/Env_light/right/image_rightLinearDepth08.pfm";
 
 
-					R2 = q_2.toRotationMatrix();
-					R12 = R2.transpose() * R1;
-
-					t12 = R2.transpose() * (t1 - t2);
-					cout << "show old R12:\n" << R12 << endl;
-					signChange(R12, t12);
-					cout << "show new R12:\n" << R12 << endl;
-
-					q_12 = R12;
 
 
+                                Eigen::Matrix3d R2_w_l, R1_w_r, R2_w_r;
+                                Eigen::Vector3d t2_w_l;
+
+
+
+                                R2_w_l<<-0.916968,  0.045904,  -0.396312,
+                                        -0.398961,  -0.105505,  0.910878,
+                                        0.000000,  0.993359,  0.115058;
+                                t2_w_l<<-1.24000, 2.850000 , 0.360000;
+
+                                R2_w_r= R2_w_l*S_x;
+
+
+
+
+//
+//
+//                                Eigen::Quaterniond q_2(0.6512 ,  -0.7310,    0.1521 ,  -0.1355); //  cam2  wxyz
+//                                Eigen::Vector3d t2( 1.2400,2.8500, -0.3600);
+
+                                Eigen::Quaterniond quaternionR2(R2_w_r);
+
+                                R2 = quaternionR2.toRotationMatrix();
+                                R12 = R2.transpose() * R1;
+
+                                t12 = R2.transpose() * (t1_w_l - t2_w_l);
+                                cout << "show old R12:\n" << R12 << endl;
+//                                signChange(R12, t12);
+                                cout << "show new R12:\n" << R12 << endl;
+                                q_12 = R12;
 				}
 
 				Mat image_target = imread(image_target_path, IMREAD_ANYCOLOR | IMREAD_ANYDEPTH);

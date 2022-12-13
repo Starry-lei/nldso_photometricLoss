@@ -18,11 +18,10 @@
 #include "preFilter/FileTools.h"
 #include "preFilter/StringTools.h"
 
-#include <opencv2/imgcodecs.hpp>
+#include "settings/preComputeSetting.h"
+#include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
-#include <opencv2/highgui/highgui.hpp>
-#include "preComputeSetting.h"
 
 using namespace std;
 using namespace gsn;
@@ -141,7 +140,7 @@ void Renderer_diffuse::display() {
 //	glPixelStorei(GL_PACK_ALIGNMENT, 4);
 	glPixelStoref(GL_PACK_ALIGNMENT, 8);
 
-//	float array[256*128*3];
+//	float array[1024*512*3];
 
 	glReadPixels(0,0,width,height,GL_BGR,GL_FLOAT,saveBufferMat.data);
 
@@ -177,6 +176,8 @@ void Renderer_diffuse::dispose() {
 Renderer_diffuse::ShaderSettings Renderer_diffuse::loadShaderSettings(const std::string& filename) const
 {
 	Renderer_diffuse::ShaderSettings settings;
+        settings.width=windowWidth;// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1attention!!!!!!!!!!!!!!!!!!!!!!!!
+        settings.height=windowHeight;
 
   std::string content = FileTools::readTextFile(filename);
   std::vector <string> lines = StringTools::split(content, "\n");

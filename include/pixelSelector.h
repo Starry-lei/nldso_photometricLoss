@@ -2,13 +2,13 @@
 // Created by cheng on 30.10.22.
 //
 
-#include "numType.h"
-#include <opencv2/core/mat.hpp>
 #include "minimalImage.h"
-#include <unordered_set>
+#include "numType.h"
+#include "settings/setting.h"
 #include <boost/thread.hpp>
+#include <opencv2/core/mat.hpp>
 #include <opencv2/highgui/highgui.hpp>
-#include "setting.h"
+#include <unordered_set>
 #pragma once
 namespace DSONL
 {

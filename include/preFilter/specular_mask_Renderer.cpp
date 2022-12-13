@@ -2,52 +2,55 @@
 #include <GL/glew.h>
 #include <opencv2/core/core.hpp>
 #include <string>
-#include <iostream>
+#include <iostream> 
 #include <iomanip>
 #include <fstream>
 #include <sstream>
 #include <ctype.h>
 #define _USE_MATH_DEFINES
 #include <math.h>
-#include "diffuse_mask_Renderer.h"
-//#include "Mesh.h"
-//#include "ShaderNode.h"
-#include "preFilter/LoadOBJ.h"
-#include "preFilter/Matrix.h"
-#include "preFilter/FileTools.h"
-#include "preFilter/StringTools.h"
+
+#include "specular_mask_Renderer.h"
+#include "Mesh.h"
+#include "ShaderNode.h"
+#include "LoadOBJ.h"
+#include "Matrix.h"
+#include "FileTools.h"
+#include "StringTools.h"
+
 
 #include "settings/preComputeSetting.h"
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 
+
 using namespace std;
 using namespace gsn;
 
-diffuse_Mask_Renderer::diffuse_Mask_Renderer()
+specular_Mask_Renderer::specular_Mask_Renderer()
 {
   t = 0.0;
   windowWidth = 0;
   windowHeight = 0;
   selectedOutput = 0;
+  roughness=0;
 }
 
-diffuse_Mask_Renderer::~diffuse_Mask_Renderer() {
-
+specular_Mask_Renderer::~specular_Mask_Renderer() {
 }
 
-void diffuse_Mask_Renderer::init() {
+void specular_Mask_Renderer::init() {
 
   // Initialize shader A
-  shaderSettingsA = loadShaderSettings(FileTools::findFile("include/diffuseMap/parameters.csv"));
+  shaderSettingsA = loadShaderSettings(FileTools::findFile("include/preFilter_data/parameters_envmapMask.csv"));
 
   if (shaderSettingsA.nodeClassName == "ImageShaderPluginNode") {
     // for image shaders, no mesh is required but a screen-aligned quad
     meshA.createQuad();
     // for image shaders, only the fragment shader code is required, 
     // the vertex shader is set to default
-    std::string f = FileTools::findFile("include/shaders/diffuse_mask_fragment_shader.txt");
+    std::string f = FileTools::findFile("include/shaders/specular_mask_fragment_shader.txt");
     shaderNodeA.setShaderSourceFromFile("", f);
   } else {
     // for regular shaders, load the input mesh
@@ -58,7 +61,7 @@ void diffuse_Mask_Renderer::init() {
     shaderNodeA.setShaderSourceFromFile(v, f);
   }
   
-  shaderNodeA.setUniformsFromFile(FileTools::findFile("include/diffuseMap/parameters.csv"));
+  shaderNodeA.setUniformsFromFile(FileTools::findFile("include/preFilter_data/parameters_envmapMask.csv"));
   
   // Initialize shader B
   // Shader B is an image shader that renders a screen-aligned quad
@@ -87,12 +90,12 @@ void diffuse_Mask_Renderer::init() {
 
 }
 
-void diffuse_Mask_Renderer::resize(int w, int h) {
+void specular_Mask_Renderer::resize(int w, int h) {
   windowWidth = w;
   windowHeight = h;
 }
 
-void diffuse_Mask_Renderer::display() {
+void specular_Mask_Renderer::display() {
 
   // You can manually overwrite the uniform variables, e.g.,
   //
@@ -107,8 +110,9 @@ void diffuse_Mask_Renderer::display() {
   //                  0.0f, 0.0f, 0.0f, // look at
   //                  0.0f, 1.0f, 0.0f); // up
   // shaderNodeA.setUniformMatrix("cameraLookAt", lookat);
-  // render meshA with shaderNodeA to FBO
 
+
+  // render meshA with shaderNodeA to FBO
   shaderNodeA.render(meshA, shaderSettingsA.backgroundColor, shaderSettingsA.width, shaderSettingsA.height, shaderSettingsA.wireframe, true);
 
 
@@ -133,48 +137,45 @@ void diffuse_Mask_Renderer::display() {
 
 
 
-	int height= windowHeight;
-	int width= windowWidth;
-
-
-	cv::Mat saveBufferMat(height, width, CV_32FC3);
-	glPixelStoref(GL_PACK_ALIGNMENT, 8);
-	glReadPixels(0,0,width,height,GL_BGR,GL_FLOAT,saveBufferMat.data);
-
-
-	cv::Mat flipped;
-	cv::flip(saveBufferMat, flipped, 0);
-	DSONL::img_diffuseMapMask= flipped;
-
-//	cout<<"\n Image depth():"<<flipped.depth()<<"\n Image saved! And its width: "<< flipped.cols<<", its height:"<<flipped.rows<<endl;
-
-	// save images
-	//	cv::imwrite("saveBufferMat.png", flipped);
-	//	cv::Mat showRender =cv::imread("saveBufferMat.png");
-
-	// show images
-//		cv::imshow("show flipped image!",flipped);
-	//	cv::imshow("show it!",showRender);
-//		cv::waitKey(0);
 
 
 
+  int height= windowHeight;
+  int width= windowWidth;
+
+  //	cv::Mat saveBufferMat(height, width, CV_8UC3);
+  cv::Mat saveBufferMat(height, width, CV_32FC3);
+  glPixelStoref(GL_PACK_ALIGNMENT, 8);
+  glReadPixels(0,0,width,height,GL_BGR,GL_FLOAT,saveBufferMat.data);
 
 
+  cv::Mat flipped;
+  cv::flip(saveBufferMat, flipped, 0);
+  DSONL::img_pyramid_mask.push_back(flipped);
+
+  //	cout<<"\n Image depth():"<<flipped.depth()<<"\n Image saved! And its width: "<< flipped.cols<<", its height:"<<flipped.rows<<endl;
+
+  // save images
+  //	cv::imwrite("saveBufferMat.png", flipped);
+  //	cv::Mat showRender =cv::imread("saveBufferMat.png");
+
+  // show images
+  //	cv::imshow("show flipped image!",flipped);
+  //	cv::imshow("show it!",showRender);
+  //	cv::waitKey(0);
 
 
 
 }
 
-void diffuse_Mask_Renderer::dispose() {
+void specular_Mask_Renderer::dispose() {
 }
 
-diffuse_Mask_Renderer::ShaderSettings diffuse_Mask_Renderer::loadShaderSettings(const std::string& filename) const
+specular_Mask_Renderer::ShaderSettings specular_Mask_Renderer::loadShaderSettings(const std::string& filename) const
 {
-	diffuse_Mask_Renderer::ShaderSettings settings;
-
-        settings.width=windowWidth;// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1attention!!!!!!!!!!!!!!!!!!!!!!!!
-        settings.height=windowHeight;
+  specular_Mask_Renderer::ShaderSettings settings;
+  settings.width=windowWidth;// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1attention!!!!!!!!!!!!!!!!!!!!!!!!
+  settings.height=windowHeight;
 
   std::string content = FileTools::readTextFile(filename);
   std::vector <string> lines = StringTools::split(content, "\n");

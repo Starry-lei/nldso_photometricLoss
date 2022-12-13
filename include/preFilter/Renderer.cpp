@@ -14,14 +14,14 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <GL/freeglut.h> // we use glut here as window manager
 
-#include "Renderer.h"
-#include "Mesh.h"
-#include "ShaderNode.h"
+#include "FileTools.h"
 #include "LoadOBJ.h"
 #include "Matrix.h"
-#include "FileTools.h"
+#include "Mesh.h"
+#include "Renderer.h"
+#include "ShaderNode.h"
 #include "StringTools.h"
-#include "preComputeSetting.h"
+#include "settings/preComputeSetting.h"
 
 using namespace std;
 using namespace gsn;
@@ -32,10 +32,6 @@ void print(T& A, T& B ){
 	cout<<" The value of first" << "is:"<< A<<endl;
 	cout<<" The value of second"<< "is:"<<  B<<endl;
 }
-
-
-
-
 
 Renderer::Renderer()
 {
@@ -59,7 +55,7 @@ void Renderer::init() {
     meshA.createQuad();
     // for image shaders, only the fragment shader code is required, 
     // the vertex shader is set to default
-    std::string f = FileTools::findFile("include/shaders/fragment_shader.txt");
+    std::string f = FileTools::findFile("include/shaders/fragment_shader.txt");//
     shaderNodeA.setShaderSourceFromFile("", f);
   } else {
     // for regular shaders, load the input mesh

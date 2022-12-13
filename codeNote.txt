@@ -1,3 +1,12 @@
+
+
+show new R12:
+   0.985971  -0.0206748    0.165574
+  0.0192452    0.999642    0.010485
+   -0.16578 -0.00715934    0.986018
+
+
+
  Show optimized rotation:
  0.944808 0.0197068 -0.327352
 0.0320588  0.987838  0.152298
@@ -62,28 +71,32 @@ vec3 specularIBL(vec3 F0 , float roughness, vec3 N, vec3 V) {
   float NoV = clamp(dot(N, V), 0.0, 1.0);
   vec3 R = reflect(-V, N);
   vec2 uv = directionToSphericalEnvmap(R);
+
   vec3 prefilteredColor = textureLod(prefilteredEnvmap, uv, roughness*float(mipCount)).rgb;
-
-
-
-
-
   vec4 brdfIntegration = texture(brdfIntegrationMap, vec2(NoV, roughness));
-
 
   return prefilteredColor * ( F0 * brdfIntegration.x + brdfIntegration.y );
 
 
 
-
 }
 
+
+
+
+
+
+
+
+
+
+
 vec3 diffuseIBL(vec3 normal) {
+
   vec2 uv = directionToSphericalEnvmap(normal);
   // added by lei
     vec2 uv_test_diffuse=vec2(0.5f, 0.5f);
   diffuse_check = texture(diffuseMap, uv_test_diffuse);
-
   return texture(diffuseMap, uv).rgb;
 }
 
@@ -106,27 +119,37 @@ void main() {
   } else {
     // render 3D mesh
 
-    // vec3 baseCol = pow(baseColor.rgb, vec3(2.2));
+
+
+                // vec3 baseCol = pow(baseColor.rgb, vec3(2.2));
+
     vec3 baseCol = pow(texture(baseColorTexture, texScale*tc).rgb, vec3(2.2)); //~~~
-    // F0 for dielectics in range [0.0, 0.16]
-    // default FO is (0.16 * 0.5^2) = 0.04
+
+                // F0 for dielectics in range [0.0, 0.16]
+                // default FO is (0.16 * 0.5^2) = 0.04
     vec3 f0 = vec3(0.16 * (reflectance * reflectance));
-    // in case of metals, baseColor contains F0
+                // in case of metals, baseColor contains F0
     f0 = mix(f0, baseCol, metallic);
-    // compute diffuse and specular factors
+                // compute diffuse and specular factors
     vec3 F = fresnelSchlick(max(dot(normal, viewDir), 0.0), f0);
     vec3 kS = F;
     vec3 kD = 1.0 - kS;
     kD *= 1.0 - metallic;
     vec3 specular = specularIBL(f0, roughness, normal, viewDir);
+
     vec3 diffuse = diffuseIBL(normal);
-    // shading front-facing
+                 // shading front-facing
     vec3 color = pow(kD * baseCol * diffuse + specular, vec3(1.0/2.2));
+
+
+
     // shading back-facing
     if(dot(viewDir, normal) < -0.1) {
       //discard;
       color = 0.1 * baseCol * diffuse;
     }
+
+
     if(checkBasecolor) {
       color = baseCol;
     }
@@ -153,6 +176,8 @@ void main() {
       color.g = diffuse_check.g;
       color.b =diffuse_check.b ;
     }
+
+
     outColor.rgb = color;
     outColor.a = 1.0;
   }
