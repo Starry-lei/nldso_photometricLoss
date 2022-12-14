@@ -31,4 +31,4 @@ namespace gli
 	bool save_dds(texture const & Texture, std::vector<char> & Memory);
 }//namespace gli
 
-#include "./core/save_dds.inl"
+#include "gli/gli/core/save_dds.inl"

@@ -42,7 +42,7 @@
 #pragma once
 
 // Dependency:
-#include "../glm.hpp"
+#include "gli/external/glm/glm/glm.hpp"
 #include <cfloat>
 #include <limits>
 

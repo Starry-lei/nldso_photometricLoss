@@ -8,7 +8,7 @@
 #include <Eigen/Core>
 #include <sophus/se3.hpp>
 #include <cmath>
-#include <math.h> /* fmod */
+#include <math.h>
 #include <opencv2/core/mat.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <unordered_map>
@@ -53,6 +53,7 @@ namespace DSONL
                 Vec3f specularIBL(Vec3f F0, float roughness, Vec3f N, Vec3f V, const Eigen::Matrix3d Camera1_c2w);
                 Vec3f specularIBLCheck(Vec3f F0, float roughness, Vec3f N, Vec3f V, const Eigen::Matrix3d Camera1_c2w);
 
+		        Vec3f ACESFilm(Vec3f radiance);
 
                 Vec3f diffuseIBL(Vec3f normal);
                 Vec3f fresnelSchlick(float cosTheta, Vec3f F0);
@@ -72,7 +73,9 @@ namespace DSONL
 
         void updateDelta(
             const Eigen::Matrix3d Camera1_c2w,
-            const Sophus::SE3d& CurrentT,
+			// const Sophus::SE3d& CurrentT,
+            Sophus::SO3d& Rotation,
+            Eigen::Matrix<double, 3, 1>& Translation,
             const Eigen::Matrix3f& K,
             const Mat& image_baseColor,
             const Mat depth_map,

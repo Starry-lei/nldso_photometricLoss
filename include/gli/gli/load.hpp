@@ -24,4 +24,4 @@ namespace gli
 	texture load(char const * Data, std::size_t Size);
 }//namespace gli
 
-#include "./core/load.inl"
+#include "gli/gli/core/load.inl"

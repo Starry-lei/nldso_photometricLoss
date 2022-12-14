@@ -30,8 +30,8 @@
 /// @author Christophe Riccio
 ///////////////////////////////////////////////////////////////////////////////////
 
+#include "gli/external/glm/glm/gtc/constants.hpp"
 #include <limits>
-#include "../gtc/constants.hpp"
 
 namespace glm
 {

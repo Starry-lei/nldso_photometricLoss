@@ -93,4 +93,4 @@ namespace gli
 	};
 }//namespace gli
 
-#include "./core/texture3d.inl"
+#include "gli/gli/core/texture3d.inl"

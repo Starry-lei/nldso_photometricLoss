@@ -41,8 +41,8 @@
 #pragma once
 
 // Dependency:
-#include "../glm.hpp"
-#include "../detail/type_vec1.hpp"
+#include "gli/external/glm/glm/detail/type_vec1.hpp"
+#include "gli/external/glm/glm/glm.hpp"
 
 #if(defined(GLM_MESSAGES) && !defined(GLM_EXT_INCLUDED))
 #	pragma message("GLM: GLM_GTC_vec1 extension included")

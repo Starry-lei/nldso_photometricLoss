@@ -1,15 +1,15 @@
 #pragma once
 
-#include "../type.hpp"
-#include "../texture1d.hpp"
-#include "../texture1d_array.hpp"
-#include "../texture2d.hpp"
-#include "../texture2d_array.hpp"
-#include "../texture3d.hpp"
-#include "../texture_cube.hpp"
-#include "../texture_cube_array.hpp"
-#include <gli/external/glm/glm/gtc/packing.hpp>
-#include <gli/external/glm/glm/gtc/color_space.hpp>
+#include "gli/external/glm/glm/gtc/color_space.hpp"
+#include "gli/external/glm/glm/gtc/packing.hpp"
+#include "gli/gli/texture1d.hpp"
+#include "gli/gli/texture1d_array.hpp"
+#include "gli/gli/texture2d.hpp"
+#include "gli/gli/texture2d_array.hpp"
+#include "gli/gli/texture3d.hpp"
+#include "gli/gli/texture_cube.hpp"
+#include "gli/gli/texture_cube_array.hpp"
+#include "gli/gli/type.hpp"
 #include <limits>
 
 namespace gli{

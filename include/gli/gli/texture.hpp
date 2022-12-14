@@ -193,5 +193,4 @@ namespace gli
 
 }//namespace gli
 
-#include "./core/texture.inl"
-
+#include "gli/gli/core/texture.inl"

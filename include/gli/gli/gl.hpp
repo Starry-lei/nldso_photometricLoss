@@ -368,4 +368,4 @@ namespace gli
 	};
 }//namespace gli
 
-#include "./core/gl.inl"
+#include "gli/gli/core/gl.inl"

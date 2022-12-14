@@ -32,7 +32,7 @@
 
 #pragma once
 
-#include "detail/type_mat2x3.hpp"
+#include "gli/external/glm/glm/detail/type_mat2x3.hpp"
 
 namespace glm
 {

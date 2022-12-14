@@ -42,7 +42,7 @@
 #pragma once
 
 // Dependency:
-#include "../glm.hpp"
+#include "gli/external/glm/glm/glm.hpp"
 #include <cstdlib>
 
 #if(defined(GLM_MESSAGES) && !defined(GLM_EXT_INCLUDED))

@@ -30,7 +30,7 @@
 /// @author Christophe Riccio
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "../geometric.hpp"
+#include "gli/external/glm/glm/geometric.hpp"
 #include <limits>
 
 namespace glm{

@@ -32,4 +32,4 @@
 
 #pragma once
 
-#include "detail/func_integer.hpp"
+#include "gli/external/glm/glm/detail/func_integer.hpp"

@@ -94,4 +94,4 @@ namespace gli
 	};
 }//namespace gli
 
-#include "./core/texture2d_array.inl"
+#include "gli/gli/core/texture2d_array.inl"

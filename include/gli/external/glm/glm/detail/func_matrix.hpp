@@ -44,21 +44,21 @@
 #pragma once
 
 // Dependencies
-#include "../detail/precision.hpp"
-#include "../detail/setup.hpp"
-#include "../detail/type_mat.hpp"
-#include "../vec2.hpp"
-#include "../vec3.hpp"
-#include "../vec4.hpp"
-#include "../mat2x2.hpp"
-#include "../mat2x3.hpp"
-#include "../mat2x4.hpp"
-#include "../mat3x2.hpp"
-#include "../mat3x3.hpp"
-#include "../mat3x4.hpp"
-#include "../mat4x2.hpp"
-#include "../mat4x3.hpp"
-#include "../mat4x4.hpp"
+#include "gli/external/glm/glm/mat2x2.hpp"
+#include "gli/external/glm/glm/mat2x3.hpp"
+#include "gli/external/glm/glm/mat2x4.hpp"
+#include "gli/external/glm/glm/mat3x2.hpp"
+#include "gli/external/glm/glm/mat3x3.hpp"
+#include "gli/external/glm/glm/mat3x4.hpp"
+#include "gli/external/glm/glm/mat4x2.hpp"
+#include "gli/external/glm/glm/mat4x3.hpp"
+#include "gli/external/glm/glm/mat4x4.hpp"
+#include "gli/external/glm/glm/vec2.hpp"
+#include "gli/external/glm/glm/vec3.hpp"
+#include "gli/external/glm/glm/vec4.hpp"
+#include "precision.hpp"
+#include "setup.hpp"
+#include "type_mat.hpp"
 
 namespace glm{
 namespace detail

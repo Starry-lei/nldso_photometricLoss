@@ -141,8 +141,6 @@ set(dsonl_SOURCE_FILES
 
   include/settings/setting.cpp
 
-  include/dataLoader/stb_image.h
-
 
   include/dataLoader/PFMReadWrite.cpp
   include/preFilter/preFilter.h
@@ -151,13 +149,14 @@ set(dsonl_SOURCE_FILES
   # include/numType.h
   include/preFilter/FileTools.cpp
   include/preFilter/Renderer.cpp
-  include/preFilter/specular_mask_Renderer.cpp
+
   include/preFilter/Matrix.cpp
   include/preFilter/Mesh.cpp
   include/preFilter/ShaderNode.cpp
   include/preFilter/StringTools.cpp
   include/preFilter/LoadOBJ.cpp
 
+  include/preFilter/specular_mask_Renderer.cpp
   include/diffuseMap/Renderer_diffuse.cpp
   include/diffuseMap/diffuse_mask_Renderer.cpp
 
@@ -172,11 +171,8 @@ set(dsonl_SOURCE_FILES
   include/cameraProjection/photometricBA.h
   include/dataLoader/dataLoader.h
 
-
-
-
-
-)
+#  include/wrapperHeader.h
+        )
 
 add_library(dsonl ${dsonl_SOURCE_FILES})
 

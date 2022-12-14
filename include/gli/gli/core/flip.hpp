@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../texture2d.hpp"
-#include "../texture2d_array.hpp"
+#include "gli/gli/texture2d.hpp"
+#include "gli/gli/texture2d_array.hpp"
 
 namespace gli
 {

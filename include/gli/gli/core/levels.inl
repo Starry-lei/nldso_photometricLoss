@@ -1,5 +1,5 @@
-#include <gli/external/glm/glm/gtc/integer.hpp>
-#include <gli/external/glm/glm/gtx/component_wise.hpp>
+#include "gli/external/glm/glm/gtc/integer.hpp"
+#include "gli/external/glm/glm/gtx/component_wise.hpp"
 
 namespace gli
 {

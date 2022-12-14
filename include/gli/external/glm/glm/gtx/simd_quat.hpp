@@ -42,14 +42,14 @@
 #pragma once
 
 // Dependency:
-#include "../glm.hpp"
-#include "../gtc/quaternion.hpp"
-#include "../gtx/fast_trigonometry.hpp"
+#include "fast_trigonometry.hpp"
+#include "gli/external/glm/glm/glm.hpp"
+#include "gli/external/glm/glm/gtc/quaternion.hpp"
 
 #if(GLM_ARCH != GLM_ARCH_PURE)
 
 #if(GLM_ARCH & GLM_ARCH_SSE2)
-#   include "../gtx/simd_mat4.hpp"
+#   include "simd_mat4.hpp"
 #else
 #	error "GLM: GLM_GTX_simd_quat requires compiler support of SSE2 through intrinsics"
 #endif

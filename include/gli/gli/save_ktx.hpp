@@ -31,4 +31,4 @@ namespace gli
 	bool save_ktx(texture const & Texture, std::vector<char> & Memory);
 }//namespace gli
 
-#include "./core/save_ktx.inl"
+#include "gli/gli/core/save_ktx.inl"

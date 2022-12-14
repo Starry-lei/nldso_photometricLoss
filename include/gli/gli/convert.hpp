@@ -22,4 +22,4 @@ namespace gli
 
 }//namespace gli
 
-#include "./core/convert.inl"
+#include "gli/gli/core/convert.inl"

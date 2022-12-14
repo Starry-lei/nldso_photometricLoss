@@ -30,11 +30,11 @@
 /// @author Christophe Riccio
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "../geometric.hpp"
-#include "../exponential.hpp"
+#include "gli/external/glm/glm/exponential.hpp"
+#include "gli/external/glm/glm/geometric.hpp"
+#include <cassert>
 #include <cstdlib>
 #include <ctime>
-#include <cassert>
 
 namespace glm{
 namespace detail

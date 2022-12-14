@@ -93,7 +93,7 @@ namespace DSONL {
 		// rescale factor
 		const T rescale = 1 / pt[2];
 
-		// if the point was in the range [0, Inf] in camera1
+		// if the point was in the range [0, Inf] in camera1,
 		// it has to be also in the same range in camera2
 		// This allows using negative inverse depth values
 		// i.e. same iDepth sign in both cameras

@@ -71,4 +71,4 @@ namespace gli
 #include "gl.hpp"
 #include "dx.hpp"
 
-#include "./core/flip.hpp"
+#include "gli/gli/core/flip.hpp"

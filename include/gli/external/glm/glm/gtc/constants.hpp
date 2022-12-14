@@ -43,7 +43,7 @@
 #pragma once
 
 // Dependencies
-#include "../detail/setup.hpp"
+#include "gli/external/glm/glm/detail/setup.hpp"
 
 #if(defined(GLM_MESSAGES) && !defined(GLM_EXT_INCLUDED))
 #	pragma message("GLM: GLM_GTC_constants extension included")

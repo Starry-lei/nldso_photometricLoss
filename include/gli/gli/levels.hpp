@@ -45,4 +45,4 @@ namespace gli
 */
 }//namespace gli
 
-#include "./core/levels.inl"
+#include "gli/gli/core/levels.inl"

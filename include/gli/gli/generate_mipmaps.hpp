@@ -66,4 +66,4 @@ namespace gli
 		filter Minification);
 }//namespace gli
 
-#include "./core/generate_mipmaps.inl"
+#include "gli/gli/core/generate_mipmaps.inl"

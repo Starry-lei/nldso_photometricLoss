@@ -30,9 +30,9 @@
 /// @author Christophe Riccio
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "../geometric.hpp"
-#include "../trigonometric.hpp"
-#include "../matrix.hpp"
+#include "gli/external/glm/glm/geometric.hpp"
+#include "gli/external/glm/glm/matrix.hpp"
+#include "gli/external/glm/glm/trigonometric.hpp"
 
 namespace glm
 {

@@ -30,7 +30,7 @@
 /// @author Miguel Ángel Pérez Martínez
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "../trigonometric.hpp"
+#include "gli/external/glm/glm/trigonometric.hpp"
 
 namespace glm
 {

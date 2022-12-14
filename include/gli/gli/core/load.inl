@@ -1,6 +1,6 @@
-#include "../load_dds.hpp"
-#include "../load_kmg.hpp"
-#include "../load_ktx.hpp"
+#include "gli/gli/load_dds.hpp"
+#include "gli/gli/load_kmg.hpp"
+#include "gli/gli/load_ktx.hpp"
 
 namespace gli
 {

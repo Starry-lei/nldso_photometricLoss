@@ -43,9 +43,9 @@
 #pragma once
 
 // Dependency:
-#include "../vec3.hpp"
-#include "../mat3x3.hpp"
-#include "../geometric.hpp"
+#include "gli/external/glm/glm/geometric.hpp"
+#include "gli/external/glm/glm/mat3x3.hpp"
+#include "gli/external/glm/glm/vec3.hpp"
 
 #if(defined(GLM_MESSAGES) && !defined(GLM_EXT_INCLUDED))
 #	pragma message("GLM: GLM_GTX_orthonormalize extension included")

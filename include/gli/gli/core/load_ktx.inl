@@ -1,6 +1,6 @@
-#include "../gl.hpp"
-#include <cstdio>
+#include "gli/gli/gl.hpp"
 #include <cassert>
+#include <cstdio>
 
 namespace gli{
 namespace detail

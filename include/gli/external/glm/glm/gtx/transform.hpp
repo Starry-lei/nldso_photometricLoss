@@ -45,8 +45,8 @@
 #pragma once
 
 // Dependency:
-#include "../glm.hpp"
-#include "../gtc/matrix_transform.hpp"
+#include "gli/external/glm/glm/glm.hpp"
+#include "gli/external/glm/glm/gtc/matrix_transform.hpp"
 
 #if(defined(GLM_MESSAGES) && !defined(GLM_EXT_INCLUDED))
 #	pragma message("GLM: GLM_GTX_transform extension included")

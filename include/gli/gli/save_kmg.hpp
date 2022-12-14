@@ -31,4 +31,4 @@ namespace gli
 	bool save_kmg(texture const & Texture, std::vector<char> & Memory);
 }//namespace gli
 
-#include "./core/save_kmg.inl"
+#include "gli/gli/core/save_kmg.inl"

@@ -41,13 +41,13 @@
 #pragma once
 
 // Dependencies
-#include "../detail/setup.hpp"
+#include "gli/external/glm/glm/detail/setup.hpp"
 
 #if !GLM_HAS_RANGE_FOR
 #	error "GLM_GTX_range requires C++11 suppport or 'range for'"
 #endif
 
-#include "../gtc/type_ptr.hpp"
+#include "gli/external/glm/glm/gtc/type_ptr.hpp"
 
 namespace glm{
 namespace detail

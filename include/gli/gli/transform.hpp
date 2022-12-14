@@ -84,4 +84,4 @@ namespace gli
 	
 }//namespace gli
 
-#include "./core/transform.inl"
+#include "gli/gli/core/transform.inl"

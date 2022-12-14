@@ -43,8 +43,8 @@
 #pragma once
 
 // Dependency:
-#include "../glm.hpp"
-#include "../gtx/closest_point.hpp"
+#include "closest_point.hpp"
+#include "gli/external/glm/glm/glm.hpp"
 
 #if(defined(GLM_MESSAGES) && !defined(GLM_EXT_INCLUDED))
 #	pragma message("GLM: GLM_GTX_closest_point extension included")

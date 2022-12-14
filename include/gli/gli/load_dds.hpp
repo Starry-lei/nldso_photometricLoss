@@ -24,4 +24,4 @@ namespace gli
 	texture load_dds(char const* Data, std::size_t Size);
 }//namespace gli
 
-#include "./core/load_dds.inl"
+#include "gli/gli/core/load_dds.inl"

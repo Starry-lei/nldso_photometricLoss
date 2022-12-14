@@ -1,7 +1,7 @@
+#include "gli/external/glm/glm/gtc/round.hpp"
+#include "gli/gli/filter.hpp"
+#include "gli/gli/load_kmg.hpp"
 #include <cstdio>
-#include <gli/external/glm/glm/gtc/round.hpp>
-#include "../load_kmg.hpp"
-#include "../filter.hpp"
 
 namespace gli
 {

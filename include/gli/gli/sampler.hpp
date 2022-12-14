@@ -3,7 +3,7 @@
 
 #pragma once
 
-#include <gli/gli/filter.hpp>
+#include "filter.hpp"
 
 namespace gli
 {
@@ -46,4 +46,4 @@ namespace gli
 	};
 }//namespace gli
 
-#include "./core/sampler.inl"
+#include "gli/gli/core/sampler.inl"

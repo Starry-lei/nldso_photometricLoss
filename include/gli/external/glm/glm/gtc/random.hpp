@@ -44,8 +44,8 @@
 #pragma once
 
 // Dependency:
-#include "../vec2.hpp"
-#include "../vec3.hpp"
+#include "gli/external/glm/glm/vec2.hpp"
+#include "gli/external/glm/glm/vec3.hpp"
 
 #if(defined(GLM_MESSAGES) && !defined(GLM_EXT_INCLUDED))
 #	pragma message("GLM: GLM_GTC_random extension included")

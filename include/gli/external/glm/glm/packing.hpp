@@ -32,4 +32,4 @@
 
 #pragma once
 
-#include "detail/func_packing.hpp"
+#include "gli/external/glm/glm/detail/func_packing.hpp"

@@ -1,5 +1,5 @@
-#include "../levels.hpp"
-#include "../index.hpp"
+#include "gli/gli/index.hpp"
+#include "gli/gli/levels.hpp"
 
 namespace gli
 {

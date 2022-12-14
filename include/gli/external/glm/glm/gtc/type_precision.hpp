@@ -47,20 +47,20 @@
 #pragma once
 
 // Dependency:
-#include "../gtc/quaternion.hpp"
-#include "../gtc/vec1.hpp"
-#include "../vec2.hpp"
-#include "../vec3.hpp"
-#include "../vec4.hpp"
-#include "../mat2x2.hpp"
-#include "../mat2x3.hpp"
-#include "../mat2x4.hpp"
-#include "../mat3x2.hpp"
-#include "../mat3x3.hpp"
-#include "../mat3x4.hpp"
-#include "../mat4x2.hpp"
-#include "../mat4x3.hpp"
-#include "../mat4x4.hpp"
+#include "gli/external/glm/glm/mat2x2.hpp"
+#include "gli/external/glm/glm/mat2x3.hpp"
+#include "gli/external/glm/glm/mat2x4.hpp"
+#include "gli/external/glm/glm/mat3x2.hpp"
+#include "gli/external/glm/glm/mat3x3.hpp"
+#include "gli/external/glm/glm/mat3x4.hpp"
+#include "gli/external/glm/glm/mat4x2.hpp"
+#include "gli/external/glm/glm/mat4x3.hpp"
+#include "gli/external/glm/glm/mat4x4.hpp"
+#include "gli/external/glm/glm/vec2.hpp"
+#include "gli/external/glm/glm/vec3.hpp"
+#include "gli/external/glm/glm/vec4.hpp"
+#include "quaternion.hpp"
+#include "vec1.hpp"
 
 #if(defined(GLM_MESSAGES) && !defined(GLM_EXT_INCLUDED))
 #	pragma message("GLM: GLM_GTC_type_precision extension included")

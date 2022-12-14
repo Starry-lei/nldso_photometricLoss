@@ -31,12 +31,12 @@
 ///////////////////////////////////////////////////////////////////////////////////
 
 // Dependency:
+#include "gli/external/glm/glm/common.hpp"
+#include "gli/external/glm/glm/vec2.hpp"
+#include "gli/external/glm/glm/vec3.hpp"
+#include "gli/external/glm/glm/vec4.hpp"
+#include "gli/external/glm/glm/vector_relational.hpp"
 #include "quaternion.hpp"
-#include "../vector_relational.hpp"
-#include "../common.hpp"
-#include "../vec2.hpp"
-#include "../vec3.hpp"
-#include "../vec4.hpp"
 
 namespace glm
 {

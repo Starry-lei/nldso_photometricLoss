@@ -43,8 +43,8 @@
 #pragma once
 
 // Dependency:
-#include "../glm.hpp"
-#include "../gtx/projection.hpp"
+#include "gli/external/glm/glm/glm.hpp"
+#include "projection.hpp"
 
 #if(defined(GLM_MESSAGES) && !defined(GLM_EXT_INCLUDED))
 #	pragma message("GLM: GLM_GTX_perpendicular extension included")

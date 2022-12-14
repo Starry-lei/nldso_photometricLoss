@@ -8,9 +8,9 @@
 
 // GLM
 #define GLM_FORCE_EXPLICIT_CTOR
-#include <gli/external/glm/glm/glm.hpp>
-#include <gli/external/glm/glm/gtc/vec1.hpp>
-#include <gli/external/glm/glm/gtx/std_based_type.hpp>
+#include "gli/external/glm/glm/glm.hpp"
+#include "gli/external/glm/glm/gtc/vec1.hpp"
+#include "gli/external/glm/glm/gtx/std_based_type.hpp"
 
 //#include "gli/external/glm/glm/glm.hpp"
 

@@ -29,4 +29,4 @@ namespace detail
 	};
 }//namespace gli
 
-#include "./core/filter.inl"
+#include "gli/gli/core/filter.inl"

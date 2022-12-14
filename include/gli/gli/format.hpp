@@ -303,4 +303,4 @@ namespace gli
 	size_t component_count(format Format);
 }//namespace gli
 
-#include "./core/format.inl"
+#include "gli/gli/core/format.inl"

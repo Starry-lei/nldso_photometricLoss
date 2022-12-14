@@ -43,8 +43,8 @@
 #pragma once
 
 // Dependency:
-#include "../glm.hpp"
-#include "../gtx/vector_query.hpp"
+#include "gli/external/glm/glm/glm.hpp"
+#include "vector_query.hpp"
 #include <limits>
 
 #if(defined(GLM_MESSAGES) && !defined(GLM_EXT_INCLUDED))

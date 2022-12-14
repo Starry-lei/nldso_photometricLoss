@@ -44,9 +44,9 @@
 #pragma once
 
 // Dependency:
-#include "../common.hpp"
-#include "../exponential.hpp"
-#include "../geometric.hpp"
+#include "gli/external/glm/glm/common.hpp"
+#include "gli/external/glm/glm/exponential.hpp"
+#include "gli/external/glm/glm/geometric.hpp"
 
 #if(defined(GLM_MESSAGES) && !defined(GLM_EXT_INCLUDED))
 #	pragma message("GLM: GLM_GTX_fast_square_root extension included")

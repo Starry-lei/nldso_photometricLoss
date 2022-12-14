@@ -42,8 +42,8 @@
 #pragma once
 
 // Dependency:
-#include "../glm.hpp"
-#include "../gtc/integer.hpp"
+#include "gli/external/glm/glm/glm.hpp"
+#include "gli/external/glm/glm/gtc/integer.hpp"
 
 #if(defined(GLM_MESSAGES) && !defined(GLM_EXT_INCLUDED))
 #	pragma message("GLM: GLM_GTX_integer extension included")

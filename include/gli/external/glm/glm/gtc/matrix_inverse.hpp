@@ -41,11 +41,11 @@
 #pragma once
 
 // Dependencies
-#include "../detail/setup.hpp"
-#include "../matrix.hpp"
-#include "../mat2x2.hpp"
-#include "../mat3x3.hpp"
-#include "../mat4x4.hpp"
+#include "gli/external/glm/glm/detail/setup.hpp"
+#include "gli/external/glm/glm/mat2x2.hpp"
+#include "gli/external/glm/glm/mat3x3.hpp"
+#include "gli/external/glm/glm/mat4x4.hpp"
+#include "gli/external/glm/glm/matrix.hpp"
 
 #if(defined(GLM_MESSAGES) && !defined(GLM_EXT_INCLUDED))
 #	pragma message("GLM: GLM_GTC_matrix_inverse extension included")

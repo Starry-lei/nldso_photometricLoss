@@ -78,4 +78,4 @@ namespace gli
 		texture_cube_array::size_type BaseLevel, texture_cube_array::size_type MaxLevel);
 }//namespace gli
 
-#include "./core/view.inl"
+#include "gli/gli/core/view.inl"

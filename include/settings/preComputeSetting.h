@@ -11,7 +11,9 @@
 #include <string>
 #include <iostream>
 #include <thread>
-#include "gli/gli/sampler2d.hpp"
+#include "wrapperHeader.h"
+
+//#include "gli/gli/sampler2d.hpp"
 
 using namespace cv;
 

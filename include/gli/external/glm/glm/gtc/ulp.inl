@@ -37,9 +37,9 @@
 /// is preserved.
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "../detail/type_int.hpp"
-#include <cmath>
+#include "gli/external/glm/glm/detail/type_int.hpp"
 #include <cfloat>
+#include <cmath>
 #include <limits>
 
 #if(GLM_COMPILER & GLM_COMPILER_VC)

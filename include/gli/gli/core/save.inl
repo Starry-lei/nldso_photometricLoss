@@ -1,6 +1,6 @@
-#include "../save_dds.hpp"
-#include "../save_kmg.hpp"
-#include "../save_ktx.hpp"
+#include "gli/gli/save_dds.hpp"
+#include "gli/gli/save_kmg.hpp"
+#include "gli/gli/save_ktx.hpp"
 
 namespace gli
 {

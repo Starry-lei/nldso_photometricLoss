@@ -1,4 +1,4 @@
-#include <gli/external/glm/glm/gtx/wrap.hpp>
+#include "gli/external/glm/glm/gtx/wrap.hpp"
 
 namespace gli{
 namespace detail

@@ -78,7 +78,7 @@
 /// @ingroup core
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "detail/_fixes.hpp"
+#include "gli/external/glm/glm/detail/_fixes.hpp"
 
 #pragma once
 

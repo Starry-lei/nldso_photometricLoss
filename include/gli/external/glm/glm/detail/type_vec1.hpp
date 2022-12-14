@@ -32,7 +32,7 @@
 
 #pragma once
 
-#include "../fwd.hpp"
+#include "gli/external/glm/glm/fwd.hpp"
 #include "type_vec.hpp"
 #ifdef GLM_SWIZZLE
 #	if GLM_HAS_ANONYMOUS_UNION

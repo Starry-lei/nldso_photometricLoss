@@ -1,196 +1,140 @@
 
+baseline01
 
-show new R12:
-   0.985971  -0.0206748    0.165574
-  0.0192452    0.999642    0.010485
-   -0.16578 -0.00715934    0.986018
+//	Show GT rotation:
+//	        0.985965  -0.0206977    0.165662
+//	        0.0192086    0.999759   0.0105864
+//	        -0.165842 -0.00725571    0.986126
+//	        Show GT translation:
+//	    -0.521127
+//	    -0.0333027
+//	    0.026783
+
+failed
+
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>baseline02:<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+ Show GT rotation:
+   0.99591 -0.0112016  0.0896566
+0.00618961   0.998412  0.0559856
+-0.0901414 -0.0552016   0.994398
+ Show GT translation:
+ -0.282036
+ -0.176114
+-0.0627667
 
 
+Show initial rotation:
+1 0 0
+0 1 0
+0 0 1
+ Show initial translation:
+0
+0
+0
+
+----------------------------------------->without Delta:---------------------ceres iterations: 600----------
+round 1:
+Ceres Solver Report: Iterations: 601, Initial cost: 3.069262e+02, Final cost: 2.155964e+02, Termination: NO_CONVERGENCE
 
  Show optimized rotation:
- 0.944808 0.0197068 -0.327352
-0.0320588  0.987838  0.152298
- 0.326374 -0.154383  0.932685
+  0.999559 -0.0357067  -0.147004
+ 0.0359123    0.99995  0.0362074
+  0.146954 -0.0364102   0.999558
  Show optimized translation:
-  1.04102
--0.484238
-0.0806567
+ 0.365216
+ -0.11999
+-0.033442
+
+ Show Rotational error :10.7513(degree).
+ Show translational error :192.194(%)
+ Show depth error :0
+
+round 2:
+Ceres Solver Report: Iterations: 366, Initial cost: 2.149725e+02, Final cost: 5.681261e+01, Termination: CONVERGENCE
+Show optimized rotation:
+          1 -0.00852337   0.0944078
+ 0.00852335           1   0.0538385
+ -0.0944078  -0.0538385           1
+ Show optimized translation:
+ -0.294701
+   -0.1703
+-0.0675924
+
+ Show Rotational error :0(degree).
+ Show translational error :4.35822(%)
+ Show depth error :0
 
 
-#version 300 es
-precision highp float;
-precision highp int;
-out vec4 outColor;
+------------------------------------------>using Delta:-----------------------------ceres iterations: 600--------------
+Round 1:
 
-#define PI 3.1415926535897932384626433832795
+Ceres Solver Report: Iterations: 601, Initial cost: 3.069262e+02, Final cost: 2.155964e+02, Termination: NO_CONVERGENCE
 
-in vec2 tc; // texture coordinate of pixel (interpolated)
-in vec3 wfn; // fragment normal of pixel (interpolated)
-in vec3 vertPos; // fragment vertex position (interpolated)
-uniform sampler2D envMapImage; // min_filter="LINEAR_MIPMAP_NEAREST" mag_filter="LINEAR"
-uniform sampler2D prefilteredEnvmap; // min_filter="LINEAR_MIPMAP_LINEAR" mag_filter="LINEAR"
-uniform sampler2D brdfIntegrationMap;
-uniform sampler2D diffuseMap; // min_filter="LINEAR" mag_filter="LINEAR"
-uniform vec4 baseColor;  // description="albedo for dielectrics or specular color for metals" defaultval ="1.0, 0.9, 0.62, 1.0"
+ Show optimized rotation:
+  0.999559 -0.0357067  -0.147004
+ 0.0359123    0.99995  0.0362074
+  0.146954 -0.0364102   0.999558
+ Show optimized translation:
+ 0.365216
+ -0.11999
+-0.033442
 
-uniform sampler2D baseColorTexture; // wrap_s="REPEAT" wrap_t="REPEAT"
-uniform float texScale;  // description="scaling factor of the texture coordinates" defaultval="2.0"
+ Show Rotational error :10.7513(degree).
+ Show translational error :192.194(%)
+ Show depth error :0
 
-uniform float roughness; // description="roughness in range [0.0, 1.0]" defaultval ="0.2"
-uniform float metallic; // description="metallic parameter, 0.0 for dielectrics, 1.0 for metals" defaultval ="1.0"
-uniform float reflectance; // description="Fresnel reflectance for non-metallic materials in range [0.0, 1.0]" defaultval ="0.5"
-uniform bool showBackground; // defaultval="true"
-uniform vec3 cameraPos; // description="camera position in global coordinate system"
-uniform int mipCount; // description="number of usable mipmap levels in the prefilteredEnvmap" defaultval ="5"
-uniform int gsnMeshGroup;
-uniform bool checkMR;
-uniform bool checkBasecolor;
-uniform bool checkNorm;
+ Round 2:
+ Ceres Solver Report: Iterations: 393, Initial cost: 2.632817e+02, Final cost: 1.177233e+02, Termination: CONVERGENCE
 
- vec3 CheckTexLod;
- vec4 brdfIntegration_check;
- vec4 diffuse_check;
-uniform bool showCheckTexLod;
-uniform bool showCheckTexBrdf;
-uniform bool showCheckTexDiffuse;
+Show optimized rotation:
+         1 -0.0085422  0.0943216
+0.00854212          1  0.0541296
+-0.0943216 -0.0541296          1
+ Show optimized translation:
+ -0.294519
+ -0.171071
+-0.0678004
 
+ Show Rotational error :0(degree).
+ Show translational error :4.24762(%)
+ Show depth error :0
 
+Round 3:
 
-vec2 directionToSphericalEnvmap(vec3 dir) {
-  float s = 1.0 - mod(1.0 / (2.0*PI) * atan(dir.y, dir.x), 1.0);
-  float t = 1.0 / (PI) * acos(-dir.z);
-  return vec2(s, t);
-}
+ Ceres Solver Report: Iterations: 7, Initial cost: 1.164073e+02, Final cost: 1.163510e+02, Termination: CONVERGENCE
 
-// adapted from "Real Shading in Unreal Engine 4", Brian Karis, Epic Games
-// https://cdn2.unrealengine.com/Resources/files/2013SiggraphPresentationsNotes-26915738.pdf
+Show optimized rotation:
+          1 -0.00869374   0.0940704
+ 0.00869366           1   0.0538242
+ -0.0940704  -0.0538242           1
+ Show optimized translation:
+ -0.293877
+ -0.170281
+-0.0671339
 
-
-vec3 specularIBL(vec3 F0 , float roughness, vec3 N, vec3 V) {
-
-  float NoV = clamp(dot(N, V), 0.0, 1.0);
-  vec3 R = reflect(-V, N);
-  vec2 uv = directionToSphericalEnvmap(R);
-
-  vec3 prefilteredColor = textureLod(prefilteredEnvmap, uv, roughness*float(mipCount)).rgb;
-  vec4 brdfIntegration = texture(brdfIntegrationMap, vec2(NoV, roughness));
-
-  return prefilteredColor * ( F0 * brdfIntegration.x + brdfIntegration.y );
-
-
-
-}
-
-
-
-
-
-
-
-
-
-
-
-vec3 diffuseIBL(vec3 normal) {
-
-  vec2 uv = directionToSphericalEnvmap(normal);
-  // added by lei
-    vec2 uv_test_diffuse=vec2(0.5f, 0.5f);
-  diffuse_check = texture(diffuseMap, uv_test_diffuse);
-  return texture(diffuseMap, uv).rgb;
-}
-
-vec3 fresnelSchlick(float cosTheta, vec3 F0) {
-  return F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0);
-}
-
-void main() {
-  vec3 normal = normalize(wfn);
-  vec3 viewDir = normalize(cameraPos - vertPos);
-
-  if(gsnMeshGroup == 0) { // render envmap
-    if(showBackground) {
-      // color of envmap sphere
-      outColor.rgb = texture(envMapImage, vec2(1.0-tc.x, tc.y)).rgb;
-      outColor.a = 1.0;
-    } else {
-      discard;
-    }
-  } else {
-    // render 3D mesh
+ Show Rotational error :0(degree).
+ Show translational error :4.10879(%)
+ Show depth error :0
 
 
 
-                // vec3 baseCol = pow(baseColor.rgb, vec3(2.2));
+ // 0.25 and red mask
 
-    vec3 baseCol = pow(texture(baseColorTexture, texScale*tc).rgb, vec3(2.2)); //~~~
-
-                // F0 for dielectics in range [0.0, 0.16]
-                // default FO is (0.16 * 0.5^2) = 0.04
-    vec3 f0 = vec3(0.16 * (reflectance * reflectance));
-                // in case of metals, baseColor contains F0
-    f0 = mix(f0, baseCol, metallic);
-                // compute diffuse and specular factors
-    vec3 F = fresnelSchlick(max(dot(normal, viewDir), 0.0), f0);
-    vec3 kS = F;
-    vec3 kD = 1.0 - kS;
-    kD *= 1.0 - metallic;
-    vec3 specular = specularIBL(f0, roughness, normal, viewDir);
-
-    vec3 diffuse = diffuseIBL(normal);
-                 // shading front-facing
-    vec3 color = pow(kD * baseCol * diffuse + specular, vec3(1.0/2.2));
+ Ceres Solver Report: Iterations: 14, Initial cost: 6.060373e+01, Final cost: 5.993930e+01, Termination: CONVERGENCE
+ Ceres Solver Report: Iterations: 8, Initial cost: 6.128625e+01, Final cost: 6.115889e+01, Termination: CONVERGENCE
 
 
+ // 0.25 and red mask and tone mapping
 
-    // shading back-facing
-    if(dot(viewDir, normal) < -0.1) {
-      //discard;
-      color = 0.1 * baseCol * diffuse;
-    }
+ Ceres Solver Report: Iterations: 14, Initial cost: 6.060373e+01, Final cost: 5.993930e+01, Termination: CONVERGENCE
+ Ceres Solver Report: Iterations: 9, Initial cost: 4.635071e+01, Final cost: 4.629125e+01, Termination: CONVERGENCE
 
+ // 0.25 and Tone mapping
+Ceres Solver Report: Iterations: 14, Initial cost: 6.060373e+01, Final cost: 5.993930e+01, Termination: CONVERGENCE
+Ceres Solver Report: Iterations: 9, Initial cost: 4.543574e+01, Final cost: 4.535555e+01, Termination: CONVERGENCE
 
-    if(checkBasecolor) {
-      color = baseCol;
-    }
-    if(checkMR) {
-      color.r = metallic;
-      color.g = roughness;
-      color.b = 0.0;
-    }
-    if(checkNorm){
-      color = normal;
-    }
-    if(showCheckTexLod){
-     color.r = CheckTexLod.r;
-      color.g =CheckTexLod.g;
-      color.b =CheckTexLod.b;
-    }
-    if(showCheckTexBrdf){
-      color.r = brdfIntegration_check.x;
-      color.g = brdfIntegration_check.y;
-      color.b = 0.0;
-    }
-    if(showCheckTexDiffuse){
-      color.r = diffuse_check.r;
-      color.g = diffuse_check.g;
-      color.b =diffuse_check.b ;
-    }
-
-
-    outColor.rgb = color;
-    outColor.a = 1.0;
-  }
-}
-
-
-
-  template <typename T> int sign(T val) {
-      return (T(0) < val) - (val < T(0));
-    }
-
-    float atan2_r( float y,  float x)
-    {
-      return x == 0.0 ? sign(y)*M_PI/2 : std::atan2(y, x);
-    }
+ // Tone mapping
+ Ceres Solver Report: Iterations: 14, Initial cost: 6.060373e+01, Final cost: 5.993930e+01, Termination: CONVERGENCE
+ Ceres Solver Report: Iterations: 9, Initial cost: 4.269470e+01, Final cost: 4.256403e+01, Termination: CONVERGENCE
 

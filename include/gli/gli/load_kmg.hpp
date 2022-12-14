@@ -24,4 +24,4 @@ namespace gli
 	texture load_kmg(char const* Data, std::size_t Size);
 }//namespace gli
 
-#include "./core/load_kmg.inl"
+#include "gli/gli/core/load_kmg.inl"

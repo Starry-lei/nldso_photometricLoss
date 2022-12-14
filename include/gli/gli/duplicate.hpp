@@ -67,4 +67,4 @@ namespace gli
 		texture_cube_array::size_type BaseLevel, texture_cube_array::size_type MaxLevel);
 }//namespace gli
 
-#include "./core/duplicate.inl"
+#include "gli/gli/core/duplicate.inl"

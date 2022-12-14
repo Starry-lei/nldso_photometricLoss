@@ -44,10 +44,10 @@
 #pragma once
 
 // Dependency:
-#include "../glm.hpp"
-#include "../gtc/epsilon.hpp"
-#include "../gtx/quaternion.hpp"
-#include "../gtx/rotate_vector.hpp"
+#include "gli/external/glm/glm/glm.hpp"
+#include "gli/external/glm/glm/gtc/epsilon.hpp"
+#include "quaternion.hpp"
+#include "rotate_vector.hpp"
 
 #if(defined(GLM_MESSAGES) && !defined(GLM_EXT_INCLUDED))
 #	pragma message("GLM: GLM_GTX_vector_angle extension included")

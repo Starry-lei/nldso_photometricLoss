@@ -1,6 +1,6 @@
-#include "../dx.hpp"
-#include <cstdio>
+#include "gli/gli/dx.hpp"
 #include <cassert>
+#include <cstdio>
 
 namespace gli{
 namespace detail

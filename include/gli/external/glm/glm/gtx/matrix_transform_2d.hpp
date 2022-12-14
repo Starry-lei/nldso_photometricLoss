@@ -42,8 +42,8 @@
 #pragma once
 
 // Dependency:
-#include "../mat3x3.hpp"
-#include "../vec2.hpp"
+#include "gli/external/glm/glm/mat3x3.hpp"
+#include "gli/external/glm/glm/vec2.hpp"
 
 
 #if(defined(GLM_MESSAGES) && !defined(GLM_EXT_INCLUDED))

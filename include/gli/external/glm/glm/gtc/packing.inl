@@ -30,11 +30,11 @@
 /// @author Christophe Riccio
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "../common.hpp"
-#include "../vec2.hpp"
-#include "../vec3.hpp"
-#include "../vec4.hpp"
-#include "../detail/type_half.hpp"
+#include "gli/external/glm/glm/common.hpp"
+#include "gli/external/glm/glm/detail/type_half.hpp"
+#include "gli/external/glm/glm/vec2.hpp"
+#include "gli/external/glm/glm/vec3.hpp"
+#include "gli/external/glm/glm/vec4.hpp"
 #include <cstring>
 #include <limits>
 

@@ -42,8 +42,8 @@
 #pragma once
 
 // Dependencies
-#include "../detail/setup.hpp"
-#include "../detail/type_int.hpp"
+#include "gli/external/glm/glm/detail/setup.hpp"
+#include "gli/external/glm/glm/detail/type_int.hpp"
 
 #if(defined(GLM_MESSAGES) && !defined(GLM_EXT_INCLUDED))
 #	pragma message("GLM: GLM_GTX_raw_data extension included")

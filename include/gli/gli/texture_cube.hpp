@@ -92,4 +92,4 @@ namespace gli
 	};
 }//namespace gli
 
-#include "./core/texture_cube.inl"
+#include "gli/gli/core/texture_cube.inl"

@@ -30,7 +30,7 @@
 /// @author Maksim Vorobiev (msomeone@gmail.com)
 ///////////////////////////////////////////////////////////////////////////////////
 
-#include "../geometric.hpp"
+#include "gli/external/glm/glm/geometric.hpp"
 #include <limits>
 
 namespace glm

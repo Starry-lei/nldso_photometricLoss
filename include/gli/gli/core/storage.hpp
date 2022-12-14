@@ -9,16 +9,16 @@
 #include <cstring>
 #include <memory>
 
-#include "../type.hpp"
-#include "../format.hpp"
+#include "gli/gli/format.hpp"
+#include "gli/gli/type.hpp"
 
 // GLM
-#include <gli/external/glm/glm/gtc/round.hpp>
-#include <gli/external/glm/glm/gtx/component_wise.hpp>
-#include <gli/external/glm/glm/gtx/integer.hpp>
-#include <gli/external/glm/glm/gtx/bit.hpp>
-#include <gli/external/glm/glm/gtx/raw_data.hpp>
-#include <gli/external/glm/glm/gtx/wrap.hpp>
+#include "gli/external/glm/glm/gtc/round.hpp"
+#include "gli/external/glm/glm/gtx/bit.hpp"
+#include "gli/external/glm/glm/gtx/component_wise.hpp"
+#include "gli/external/glm/glm/gtx/integer.hpp"
+#include "gli/external/glm/glm/gtx/raw_data.hpp"
+#include "gli/external/glm/glm/gtx/wrap.hpp"
 
 static_assert(GLM_VERSION >= 97, "GLI requires at least GLM 0.9.7");
 

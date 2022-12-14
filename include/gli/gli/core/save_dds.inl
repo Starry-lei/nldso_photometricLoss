@@ -1,5 +1,5 @@
+#include "gli/gli/load_dds.hpp"
 #include <cstdio>
-#include "../load_dds.hpp"
 
 namespace gli{
 namespace detail

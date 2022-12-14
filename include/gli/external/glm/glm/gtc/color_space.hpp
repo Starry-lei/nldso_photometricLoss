@@ -43,11 +43,11 @@
 #pragma once
 
 // Dependencies
-#include "../detail/setup.hpp"
-#include "../detail/precision.hpp"
-#include "../exponential.hpp"
-#include "../vec3.hpp"
-#include "../vec4.hpp"
+#include "gli/external/glm/glm/detail/precision.hpp"
+#include "gli/external/glm/glm/detail/setup.hpp"
+#include "gli/external/glm/glm/exponential.hpp"
+#include "gli/external/glm/glm/vec3.hpp"
+#include "gli/external/glm/glm/vec4.hpp"
 #include <limits>
 
 #if(defined(GLM_MESSAGES) && !defined(GLM_EXT_INCLUDED))

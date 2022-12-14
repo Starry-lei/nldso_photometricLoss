@@ -24,4 +24,4 @@ namespace gli
 	texture load_ktx(char const * Data, std::size_t Size);
 }//namespace gli
 
-#include "./core/load_ktx.inl"
+#include "gli/gli/core/load_ktx.inl"

@@ -32,10 +32,10 @@
 
 #pragma once
 
-#include "detail/type_int.hpp"
-#include "detail/type_float.hpp"
-#include "detail/type_vec.hpp"
-#include "detail/type_mat.hpp"
+#include "gli/external/glm/glm/detail/type_float.hpp"
+#include "gli/external/glm/glm/detail/type_int.hpp"
+#include "gli/external/glm/glm/detail/type_mat.hpp"
+#include "gli/external/glm/glm/detail/type_vec.hpp"
 
 //////////////////////
 // GLM_GTC_quaternion

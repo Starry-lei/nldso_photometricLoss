@@ -42,13 +42,13 @@
 #pragma once
 
 // Dependencies
-#include "../detail/setup.hpp"
+#include "gli/external/glm/glm/detail/setup.hpp"
 
 #if(GLM_ARCH != GLM_ARCH_PURE)
 
 #if(GLM_ARCH & GLM_ARCH_SSE2)
-#	include "../detail/intrinsic_matrix.hpp"
-#	include "../gtx/simd_vec4.hpp"
+#	include "gli/external/glm/glm/detail/intrinsic_matrix.hpp"
+#	include "simd_vec4.hpp"
 #else
 #	error "GLM: GLM_GTX_simd_mat4 requires compiler support of SSE2 through intrinsics"
 #endif

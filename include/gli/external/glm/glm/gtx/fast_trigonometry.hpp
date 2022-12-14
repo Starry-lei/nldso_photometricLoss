@@ -42,7 +42,7 @@
 #pragma once
 
 // Dependency:
-#include "../gtc/constants.hpp"
+#include "gli/external/glm/glm/gtc/constants.hpp"
 
 #if(defined(GLM_MESSAGES) && !defined(GLM_EXT_INCLUDED))
 #	pragma message("GLM: GLM_GTX_fast_trigonometry extension included")

@@ -32,4 +32,4 @@
 
 #pragma once
 
-#include "detail/type_vec4.hpp"
+#include "gli/external/glm/glm/detail/type_vec4.hpp"

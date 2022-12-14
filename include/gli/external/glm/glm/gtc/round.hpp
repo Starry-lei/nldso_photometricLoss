@@ -43,11 +43,11 @@
 #pragma once
 
 // Dependencies
-#include "../detail/setup.hpp"
-#include "../detail/precision.hpp"
-#include "../detail/_vectorize.hpp"
-#include "../vector_relational.hpp"
-#include "../common.hpp"
+#include "gli/external/glm/glm/common.hpp"
+#include "gli/external/glm/glm/detail/_vectorize.hpp"
+#include "gli/external/glm/glm/detail/precision.hpp"
+#include "gli/external/glm/glm/detail/setup.hpp"
+#include "gli/external/glm/glm/vector_relational.hpp"
 #include <limits>
 
 #if(defined(GLM_MESSAGES) && !defined(GLM_EXT_INCLUDED))

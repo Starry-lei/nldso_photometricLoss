@@ -42,11 +42,11 @@
 #pragma once
 
 // Dependencies
-#include "../mat4x4.hpp"
-#include "../vec3.hpp"
-#include "../vec4.hpp"
-#include "../gtc/quaternion.hpp"
-#include "../gtc/matrix_transform.hpp"
+#include "gli/external/glm/glm/gtc/matrix_transform.hpp"
+#include "gli/external/glm/glm/gtc/quaternion.hpp"
+#include "gli/external/glm/glm/mat4x4.hpp"
+#include "gli/external/glm/glm/vec3.hpp"
+#include "gli/external/glm/glm/vec4.hpp"
 
 #if(defined(GLM_MESSAGES) && !defined(GLM_EXT_INCLUDED))
 #	pragma message("GLM: GLM_GTX_matrix_decompose extension included")

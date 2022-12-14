@@ -31,8 +31,8 @@
 ///////////////////////////////////////////////////////////////////////////////////
 
 #include "func_common.hpp"
+#include "gli/external/glm/glm/fwd.hpp"
 #include "type_half.hpp"
-#include "../fwd.hpp"
 
 namespace glm
 {

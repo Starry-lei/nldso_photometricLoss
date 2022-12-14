@@ -32,11 +32,11 @@
 
 #pragma once
 
-#include "../fwd.hpp"
-#include "type_vec4.hpp"
+#include "gli/external/glm/glm/fwd.hpp"
 #include "type_mat.hpp"
-#include <limits>
+#include "type_vec4.hpp"
 #include <cstddef>
+#include <limits>
 
 namespace glm
 {

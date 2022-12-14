@@ -487,4 +487,4 @@ namespace gli
 	bool is_dds_ext(target Target, format Format);
 }//namespace gli
 
-#include "./core/dx.inl"
+#include "gli/gli/core/dx.inl"

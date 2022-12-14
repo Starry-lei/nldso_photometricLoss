@@ -27,4 +27,4 @@ namespace gli
 	bool operator!=(texture const & A, texture const & B);
 }//namespace gli
 
-#include "./core/comparison.inl"
+#include "gli/gli/core/comparison.inl"

@@ -3,10 +3,10 @@
 
 #pragma once
 
+#include "gli/gli/core/convert_func.hpp"
+#include "gli/gli/core/mipmaps_compute.hpp"
 #include "sampler.hpp"
 #include "texture3d.hpp"
-#include "core/mipmaps_compute.hpp"
-#include "core/convert_func.hpp"
 
 namespace gli
 {
@@ -68,4 +68,4 @@ namespace gli
 	typedef sampler3d<int> isampler3D;
 }//namespace gli
 
-#include "./core/sampler3d.inl"
+#include "gli/gli/core/sampler3d.inl"

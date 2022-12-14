@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../type.hpp"
+#include "gli/gli/type.hpp"
 
 namespace gli{
 namespace detail

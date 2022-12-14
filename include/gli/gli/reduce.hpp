@@ -92,4 +92,4 @@ namespace gli
 	vec_type reduce(texture_type const & In0, texture_type const & In1, typename reduce_func<vec_type>::type TexelFunc, typename reduce_func<vec_type>::type ReduceFunc);
 }//namespace gli
 
-#include "./core/reduce.inl"
+#include "gli/gli/core/reduce.inl"

@@ -7,7 +7,7 @@
 // File    : glm/gtx/intersect.inl
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-#include "../geometric.hpp"
+#include "gli/external/glm/glm/geometric.hpp"
 #include <cfloat>
 #include <limits>
 

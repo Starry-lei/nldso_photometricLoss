@@ -78,16 +78,16 @@ void main() {
   
   
     // added by lei
-  if(result.r>1.0f){
-    result.r= 1.0f;
-  }
+    // if(result.r>1.0f){
+      // result.r= 1.0f;
+    // }
   
-  if(result.g>1.0f){
-    result.g= 1.0f;
-  }
-    if(result.b>1.0f){
-    result.b= 1.0f;
-  }
+    // if(result.g>1.0f){
+     //  result.g= 1.0f;
+    // }
+     //  if(result.b>1.0f){
+     //  result.b= 1.0f;
+    // }
   
   
   

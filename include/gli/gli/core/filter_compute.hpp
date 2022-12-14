@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../filter.hpp"
 #include "coord.hpp"
+#include "gli/gli/filter.hpp"
 
 namespace gli{
 namespace detail

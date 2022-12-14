@@ -25,4 +25,4 @@ namespace gli
 	bool save(texture const & Texture, std::string const & Path);
 }//namespace gli
 
-#include "./core/save.inl"
+#include "gli/gli/core/save.inl"

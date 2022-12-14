@@ -44,11 +44,11 @@
 #pragma once
 
 // Dependency:
-#include "../mat3x3.hpp"
-#include "../mat4x4.hpp"
-#include "../vec3.hpp"
-#include "../vec4.hpp"
-#include "../gtc/constants.hpp"
+#include "constants.hpp"
+#include "gli/external/glm/glm/mat3x3.hpp"
+#include "gli/external/glm/glm/mat4x4.hpp"
+#include "gli/external/glm/glm/vec3.hpp"
+#include "gli/external/glm/glm/vec4.hpp"
 
 #if(defined(GLM_MESSAGES) && !defined(GLM_EXT_INCLUDED))
 #	pragma message("GLM: GLM_GTC_quaternion extension included")
