@@ -312,6 +312,8 @@ namespace DSONL {
 
 		Mat radianceMap_left(deltaMap.rows, deltaMap.cols, CV_32FC3, Scalar(0));
 
+        // TODO(Binghui): to be parallelized
+
 		for (int u = 0; u < depth_map.rows; u++)// colId, cols: 0 to 480
 		{
 			for (int v = 0; v < depth_map.cols; v++)// rowId,  rows: 0 to 640

@@ -155,7 +155,7 @@ namespace DSONL {
 
 
 				if (!project((float) v, (float) u, (float) depth_ref.at<double>(u, v), (int) cols_, (int) rows_, KRKi, Kt, pt2d)) {  counter_outlier+=1;
-                    cout<<"show counter_outlier:"<< counter_outlier<<endl;
+//                    cout<<"show counter_outlier:"<< counter_outlier<<endl;
 
                     continue; }
 

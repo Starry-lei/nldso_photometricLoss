@@ -21,13 +21,16 @@ using namespace DSONL;
 
 int main(int argc, char **argv) {
 
-
-
+// TODO(Binghui): A and B to be parallelized
+    // A: line: 26-27
     dataLoader *dataLoader = new DSONL::dataLoader();
 	dataLoader->Init();
 
-    // TODO: The following three threads needs to be parallelized
 
+
+
+
+    //B: line: 34- 45
     EnvMapLookup *EnvMapLookup=new DSONL::EnvMapLookup(argc,argv);
     EnvMapLookup->makeMipMap();
     delete EnvMapLookup;
@@ -244,7 +247,7 @@ int main(int argc, char **argv) {
 				PhotometricBA(IRef, I, options, Klvl, Rotation, Translation, inv_depth_ref, deltaMap, depth_upper_bound,depth_lower_bound, statusMap, statusMapB);
 			}
 
-//			DSONL::updateDelta(Camera1_c2w,Rotation,Translation,Klvl,image_ref_baseColor,inv_depth_ref,image_ref_metallic ,image_ref_roughness,deltaMap,newNormalMap,up_new, butt_new);
+			DSONL::updateDelta(Camera1_c2w,Rotation,Translation,Klvl,image_ref_baseColor,inv_depth_ref,image_ref_metallic ,image_ref_roughness,deltaMap,newNormalMap,up_new, butt_new);
 
 //			Mat deltaMapGT_res= deltaMapGT(grayImage_ref,depth_ref,grayImage_target,depth_target,K.cast<double>(),distanceThres,xi_GT, upper, buttom, deltaMap);
 //			Mat showGTdeltaMap=colorMap(deltaMapGT_res, upper, buttom);
