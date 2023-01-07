@@ -53,12 +53,14 @@ namespace DSONL
                 Vec3f specularIBL(Vec3f F0, float roughness, Vec3f N, Vec3f V, const Eigen::Matrix3d Camera1_c2w);
                 Vec3f specularIBLCheck(Vec3f F0, float roughness, Vec3f N, Vec3f V, const Eigen::Matrix3d Camera1_c2w);
 
+		        Vec3f RRTAndODTFit( Vec3f v);
 		        Vec3f ACESFilm(Vec3f radiance);
 
                 Vec3f diffuseIBL(Vec3f normal);
                 Vec3f fresnelSchlick(float cosTheta, Vec3f F0);
                 Vec3f ibl_radiance_val;
-                Vec3f solveForRadiance(Vec3f viewDir, Vec3f normal,  const float& roughnessValue,
+                Vec3f solveForRadiance(Vec3f viewDir, Vec3f normal,
+                                       const float& roughnessValue,
                                        const float& metallicValue,
                                        const float &reflectance,
                                        const Vec3f& baseColorValue,
@@ -79,8 +81,8 @@ namespace DSONL
             const Eigen::Matrix3f& K,
             const Mat& image_baseColor,
             const Mat depth_map,
-            const float& image_metallic,
-            const float& image_roughnes,
+            const Mat& image_metallic,
+            const Mat& image_roughnes,
             Mat& deltaMap,
             Mat& newNormalMap,
             float& upper_b,

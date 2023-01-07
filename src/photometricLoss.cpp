@@ -26,7 +26,8 @@ int main(int argc, char **argv) {
     dataLoader *dataLoader = new DSONL::dataLoader();
 	dataLoader->Init();
 
-        // TODO: The following three threads needs to be parallelized
+    // TODO: The following three threads needs to be parallelized
+
     EnvMapLookup *EnvMapLookup=new DSONL::EnvMapLookup(argc,argv);
     EnvMapLookup->makeMipMap();
     delete EnvMapLookup;
@@ -41,8 +42,8 @@ int main(int argc, char **argv) {
     delete diffuseMap;
 
 
-    float image_ref_metallic = dataLoader->image_ref_metallic;
-    float image_ref_roughness = dataLoader->image_ref_roughness;
+    Mat image_ref_metallic = dataLoader->image_ref_metallic;
+    Mat image_ref_roughness = dataLoader->image_ref_roughness;
 
 	Mat grayImage_target, grayImage_ref, depth_ref, depth_target, image_ref_baseColor, image_target_baseColor;
 	grayImage_ref = dataLoader->grayImage_ref;
@@ -56,7 +57,6 @@ int main(int argc, char **argv) {
 	//        imshow("image_ref_baseColor",image_ref_baseColor);
 	//        waitKey(0);
 	image_target_baseColor = dataLoader->image_target_baseColor;
-
     Mat normal_map_GT;
     normal_map_GT = dataLoader->normal_map_GT;
 
@@ -68,7 +68,7 @@ int main(int argc, char **argv) {
 
 
 
-	//        grayImage_ref
+	// grayImage_ref
     double min_radiance_val, max_radiance_val;
     cv::minMaxLoc(grayImage_ref, &min_radiance_val, &max_radiance_val);
     cout << "\n show original grayImage_ref min, max:\n" << min_radiance_val << "," << max_radiance_val << endl;
@@ -78,7 +78,7 @@ int main(int argc, char **argv) {
 
 	imshow("grayImage_ref",grayImage_ref);
 	imshow("grayImage_target",grayImage_target);
-//	waitKey(0);
+	waitKey(0);
 
 
 	// ----------------------------------------optimization variable: R, t--------------------------------------
@@ -149,21 +149,19 @@ int main(int argc, char **argv) {
 	options.optimize_depth = false;
 	options.useFilterController = false; // control the number of optimized depth
 	options.optimize_pose = true;
-	options.use_huber = true;
+	options.use_huber = false;
 	options.lambertianCase = false;
 	options.usePixelSelector = false;
 	dataLoader->options_.remove_outlier_manually = false;
 	options.huber_parameter = 0.25*4.0 / 255.0;   /// 0.25*4/255 :   or 4/255
 
-	// -----------------------------------------initialize the pose xi with GT or just use the default value---------------------
-
-	Eigen::Vector3d initial_translation;
-	initial_translation<< -0.2, -0.1, 0;
-
-
+	// -----------------------------------------Initialize the pose xi with GT or just use the default value---------------------
+//	Eigen::Vector3d initial_translation;
+//	initial_translation<< -0.2, -0.1, 0;
 
 	xi.setRotationMatrix(perturbedRotation);
 	xi.translation() = perturbedTranslation;
+
 //	xi.translation() = initial_translation;
 
 	Sophus::SO3d Rotation(xi.rotationMatrix());
@@ -174,6 +172,7 @@ int main(int argc, char **argv) {
 //	FrameHessian* newFrame_ref=NULL;
 //	FrameHessian* newFrame_tar=NULL;
 //	FrameHessian* depthMap_ref=NULL;
+
 	float *color_ref = NULL;
 	float *color_tar = NULL;
 	float *depthMapArray_ref = NULL;
@@ -243,19 +242,16 @@ int main(int argc, char **argv) {
 				//				//				waitKey(0);
 			} else {
 				PhotometricBA(IRef, I, options, Klvl, Rotation, Translation, inv_depth_ref, deltaMap, depth_upper_bound,depth_lower_bound, statusMap, statusMapB);
-				//imshow(depth_ref_name, inv_depth_ref_for_show);
-				//waitKey(0);
 			}
 
-			//			imshow("deltaMap before"+ to_string(i), deltaMap);
-			DSONL::updateDelta(Camera1_c2w,Rotation,Translation,Klvl,image_ref_baseColor,inv_depth_ref,image_ref_metallic ,image_ref_roughness,deltaMap,newNormalMap,up_new, butt_new);
-			//			imshow("deltaMap after "+ to_string(i), deltaMap);
+//			DSONL::updateDelta(Camera1_c2w,Rotation,Translation,Klvl,image_ref_baseColor,inv_depth_ref,image_ref_metallic ,image_ref_roughness,deltaMap,newNormalMap,up_new, butt_new);
 
+//			Mat deltaMapGT_res= deltaMapGT(grayImage_ref,depth_ref,grayImage_target,depth_target,K.cast<double>(),distanceThres,xi_GT, upper, buttom, deltaMap);
+//			Mat showGTdeltaMap=colorMap(deltaMapGT_res, upper, buttom);
+//			Mat showESdeltaMap=colorMap(deltaMap, upper, buttom);
+//			imshow("show GT deltaMap", showGTdeltaMap);
+//			imshow("show ES deltaMap", showESdeltaMap);
 
-
-			Mat deltaMapGT_res= deltaMapGT(grayImage_ref,depth_ref,grayImage_target,depth_target,K.cast<double>(),distanceThres,xi_GT, upper, buttom, deltaMap);
-			Mat showGTdeltaMap=colorMap(deltaMapGT_res, upper, buttom);
-			Mat showESdeltaMap=colorMap(deltaMap, upper, buttom);
 
 //			/// TEMP TEST BEGIN
 //			for (int x = 0; x < deltaMapGT_res.rows; ++x) {
@@ -266,20 +262,13 @@ int main(int argc, char **argv) {
 //			double max_n_1, min_n_1;
 //			cv::minMaxLoc(deltaMapGT_res, &min_n_1, &max_n_1);
 //			cout << "->>>>>>>>>>>>>>>>>show max and min of deltaMapGT_res<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<:" << max_n_1 << "," << min_n_1 << endl;
-//			//->>>>>>>>>>>>>>>>>show max and min of deltaMapGT_res<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<:8.7931,0.141176
-//			// deltaMap=deltaMapGT_res.clone();// !!!!!!!!!!!!!!!!!!!!!!!!!!!!test!!!!!!!!!!!!!!!!!!!!!!!!!!!11
+			//->>>>>>>>>>>>>>>>>show max and min of deltaMapGT_res<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<:8.7931,0.141176
+//			 deltaMap=deltaMapGT_res.clone();// !!!!!!!!!!!!!!!!!!!!!!!!!!!!test!!!!!!!!!!!!!!!!!!!!!!!!!!!11
 //            /// TEMP TEST END
-
-
-
-
-			imshow("show GT deltaMap", showGTdeltaMap);
-			imshow("show ES deltaMap", showESdeltaMap);
 
 //			imwrite("GT_deltaMap.exr", showGTdeltaMap);
 //			imwrite("ES_deltaMap.exr", showESdeltaMap);
 
-////
 			cout << "\n show depth_ref min, max:\n" << min_gt_special << "," << max_gt_special << endl;
 			cout << "\n Show optimized rotation:\n" << Rotation.matrix() << "\n Show optimized translation:\n"<< Translation << endl;
 			cout << "\n Show Rotational error :" << rotationErr(xi_GT.rotationMatrix(), Rotation.matrix())

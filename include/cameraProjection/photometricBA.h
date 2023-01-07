@@ -48,7 +48,22 @@ namespace DSONL {
 		//		at (240, 189)  B value is: 36  G value is: 25  R value is: 22
 		//		at (233, 146)  B value is: 35  G value is: 27  R value is: 23
 
-		inliers_filter.emplace(240, 189);///(233, 146)
+//        at (339, 266)  B value is: 0.225064  G value is: 0.237635  R value is: 0.180505
+//        at (343, 247)  B value is: 0.247288  G value is: 0.253032  R value is: 0.196374
+
+//        at (243, 518)  B value is: 0.0998543  G value is: 0.17071  R value is: 0.330281
+//        at (245, 496)  B value is: 0.0882254  G value is: 0.151583  R value is: 0.278097
+
+// 10 to 14
+
+//        at (339, 266)  B value is: 0.225064  G value is: 0.237635  R value is: 0.180505
+//        at (355, 229)  B value is: 0.178958  G value is: 0.182782  R value is: 0.134759
+
+
+//        at (232, 122)  B value is: 0.101819  G value is: 0.0435376  R value is: 0.0233006
+//        at (251, 80)  B value is: 0.0512972  G value is: 0.0257137  R value is: 0.0161647
+
+		inliers_filter.emplace(339, 266);///(355, 229)
 
 		int counter = 0;
 		for (int u = 0; u < image.rows; u++)// colId, cols: 0 to 480
@@ -75,6 +90,8 @@ namespace DSONL {
 		//		int pixelSkip = 0;
 
 		// use pixels,depth and delta to optimize pose and depth itself
+        int counter_outlier= 0;
+
 		for (int u = 0; u < image.rows; u++)// colId, cols: 0 to 480
 		{
 			for (int v = 0; v < image.cols; v++)// rowId,  rows: 0 to 640
@@ -96,7 +113,7 @@ namespace DSONL {
 
 
 				float iDepth = depth_ref.at<double>(u, v);
-				if (round(1.0 / iDepth) == 15.0) { continue; }
+//				if (round(1.0 / iDepth) == 15.0) { continue; }
 				if (depth_ref.at<double>(u, v) <0.0) { continue; }
 
 
@@ -135,7 +152,12 @@ namespace DSONL {
 				double newIDepth;
 				//cout << "show parameter before:<<\n" << Rotation.matrix() << "," << Translation << endl;
 				//if (!project((double) v, (double) u,depth_ref.at<double>(u, v), cols_, rows_, pt2d, Rotation,Translation)) { continue; }
-				if (!project((float) v, (float) u, (float) depth_ref.at<double>(u, v), (int) cols_, (int) rows_, KRKi, Kt, pt2d)) { continue; }
+
+
+				if (!project((float) v, (float) u, (float) depth_ref.at<double>(u, v), (int) cols_, (int) rows_, KRKi, Kt, pt2d)) {  counter_outlier+=1;
+                    cout<<"show counter_outlier:"<< counter_outlier<<endl;
+
+                    continue; }
 
 				if (options.use_huber) {
 					problem.AddResidualBlock(new ceres::AutoDiffCostFunction<PhotometricCostFunctor, 9, Sophus::SO3d::num_parameters, 3, 1>(

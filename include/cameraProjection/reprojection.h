@@ -109,7 +109,6 @@ namespace DSONL {
 
 
 	struct PhotometricCostFunctor {
-
 		EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
 		PhotometricCostFunctor(
@@ -143,10 +142,8 @@ namespace DSONL {
 				T *residual
 		) const {
 
-
 			Eigen::Map<Sophus::SO3<T> const> const Rotation(sRotation);
 			Eigen::Map<Eigen::Matrix<T, 3, 1> const> const Translation(sTranslation);
-
 
 			T u_, v_;
 			v_ = (T) pixelCoor_(0);
@@ -164,19 +161,16 @@ namespace DSONL {
 			pt2d[0] = pt[0] * rescale;
 			pt2d[1] = pt[1] * rescale;
 
-
 			for (int i = 0; i < 9; ++i) {
-
 				int m = i / 3;
 				int n = i % 3;
-
 				T pixel_gray_val_out, u_l, v_l;
-
 				u_l = pt2d.y() + T(m - 1);
 				v_l = pt2d.x() + T(n - 1);
 				get_pixel_gray_val->Evaluate(u_l, v_l, &pixel_gray_val_out);
 				residual[i] = T(delta_val[i]) * T(gray_Image_ref_val[i]) - pixel_gray_val_out;
-			}
+			int a=0;
+            }
 			return true;
 		}
 

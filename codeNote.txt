@@ -138,3 +138,299 @@ Ceres Solver Report: Iterations: 9, Initial cost: 4.543574e+01, Final cost: 4.53
  Ceres Solver Report: Iterations: 14, Initial cost: 6.060373e+01, Final cost: 5.993930e+01, Termination: CONVERGENCE
  Ceres Solver Report: Iterations: 9, Initial cost: 4.269470e+01, Final cost: 4.256403e+01, Termination: CONVERGENCE
 
+ // Tone mapping from  Stephen Hill.
+ Ceres Solver Report: Iterations: 14, Initial cost: 6.060373e+01, Final cost: 5.993930e+01, Termination: CONVERGENCE
+ Ceres Solver Report: Iterations: 8, Initial cost: 4.288441e+01, Final cost: 4.251046e+01, Termination: CONVERGENCE
+
+
+// ----------------------==---------------------->perturbation Exp1:<--------------------------------------------------
+
+R: 0.0, 0.0, 0.0
+T:0.05, 0.05, 0.05
+
+Round 1:
+Ceres Solver Report: Iterations: 211, Initial cost: 8.740319e+01, Final cost: 3.007422e+01, Termination: CONVERGENCE
+------->show max and min of estimated deltaMap<-----------------:5.38586,0.00138332
+------->show max and min of estimated radianceMap_left<-----------------:1,0
+show max and min of deltaMapGT:<---------------8.7931,-1
+Show optimized rotation:
+  0.996226 -0.0107971  0.0906116
+ 0.0061948   0.998552  0.0562136
+-0.0910421 -0.0555136   0.994843
+ Show optimized translation:
+ -0.284495
+ -0.176492
+-0.0625634
+
+ Show Rotational error :0(degree).
+ Show translational error :0.73763(%)
+ Show depth error :0
+
+Round 2:
+Ceres Solver Report: Iterations: 9, Initial cost: 2.160214e+01, Final cost: 2.153017e+01, Termination: CONVERGENCE
+Show optimized rotation:
+  0.996097 -0.0109403  0.0904109
+0.00618204   0.998502  0.0561057
+-0.0908604 -0.0553748   0.994668
+ Show optimized translation:
+ -0.283975
+ -0.176296
+-0.0627681
+
+ Show Rotational error :0(degree).
+ Show translational error :0.575464(%)
+ Show depth error :0
+
+ // -----------------use tone mapping from stepha hill
+
+ round 1:
+ Ceres Solver Report: Iterations: 211, Initial cost: 8.740319e+01, Final cost: 3.007422e+01, Termination: CONVERGENCE
+ ------->show max and min of estimated deltaMap<-----------------:12.8907,0
+ ------->show max and min of estimated radianceMap_left<-----------------:0.970807,0
+  show max and min of deltaMapGT:<---------------8.7931,-1
+
+
+  round 2:
+  Ceres Solver Report: Iterations: 9, Initial cost: 2.170346e+01, Final cost: 2.150441e+01, Termination: CONVERGENCE
+  ------->show max and min of estimated deltaMap<-----------------:12.9273,0
+  ------->show max and min of estimated radianceMap_left<-----------------:0.970807,0
+
+   show max and min of deltaMapGT:<---------------8.7931,-1
+   Show optimized rotation:
+     0.996066 -0.0110124  0.0903403
+   0.00621761   0.998491   0.056059
+   -0.0907964 -0.0553173   0.994627
+    Show optimized translation:
+    -0.283797
+    -0.176218
+   -0.0628885
+    Show Rotational error :0(degree).
+    Show translational error :0.522613(%)
+    Show depth error :0
+
+    // ----------------------==---------------------->perturbation Exp2:<--------------------------------------------------
+    R: 1.0, 1.0, 1.0 // degree
+    T: 0.05, 0.05, 0.05// percentage
+
+
+
+    Round 1:
+
+    Ceres Solver Report: Iterations: 301, Initial cost: 2.386797e+02, Final cost: 1.217514e+02, Termination: NO_CONVERGENCE
+    ------->show max and min of estimated deltaMap<-----------------:19.8019,0
+     show max and min of deltaMapGT:<---------------8.7931,-1
+
+     Show optimized rotation:
+       0.965939 -0.0312591   0.115722
+      0.0183409   0.997258  0.0301051
+      -0.118458 -0.0162963   0.966122
+      Show optimized translation:
+       -0.34095
+      -0.116096
+     -0.0506127
+
+      Show Rotational error :13.4014(degree).
+      Show translational error :25.1123(%)
+      Show depth error :0
+
+      Round 2:
+
+      Ceres Solver Report: Iterations: 86, Initial cost: 1.311994e+02, Final cost: 5.491961e+01, Termination: CONVERGENCE
+
+      ------->show max and min of estimated deltaMap<-----------------:12.8619,0
+       show max and min of deltaMapGT:<---------------8.7931,-1
+
+       Show optimized rotation:
+         0.996211 -0.0109315  0.0905037
+       0.00630164   0.998539  0.0562841
+       -0.0909434 -0.0555708   0.994818
+        Show optimized translation:
+        -0.284248
+        -0.176735
+       -0.0627704
+
+        Show Rotational error :0(degree).
+        Show translational error :0.678828(%)
+        Show depth error :0
+
+
+// ----------------------==---------------------->perturbation Exp3:<--------------------------------------------------
+
+R:1.0, 1.0, 1.0 // degree
+T: 0.1, 0.1, 0.1// percentage
+
+
+Show current rotation perturbation error :1.47143
+ Show current translation perturbation error : 0.1
+
+ Round 1:
+ Ceres Solver Report: Iterations: 301, Initial cost: 2.425265e+02, Final cost: 1.535030e+02, Termination: NO_CONVERGENCE
+------->show max and min of estimated deltaMap<-----------------:12.4098,0
+------->show max and min of estimated radianceMap_left<-----------------:0.970807,0
+ show max and min of deltaMapGT:<---------------8.7931,-1
+
+ Show optimized rotation:
+   0.954275 -0.0298418   0.109309
+  0.0248286   0.997192  0.0171066
+  -0.110556 0.00430853   0.956792
+  Show optimized translation:
+  -0.322935
+ -0.0918924
+ -0.0590748
+
+  Show Rotational error :16.1593(degree).
+  Show translational error :27.6907(%)
+  Show depth error :0
+
+
+  Round 2:
+  Ceres Solver Report: Iterations: 165, Initial cost: 1.617474e+02, Final cost: 5.305928e+01, Termination: CONVERGENCE
+------->show max and min of estimated deltaMap<-----------------:12.766,0
+------->show max and min of estimated radianceMap_left<-----------------:0.970807,0
+ show max and min of deltaMapGT:<---------------8.7931,-1
+
+  Show optimized rotation:
+   0.996316 -0.0109027  0.0904585
+ 0.00637671   0.998564  0.0565517
+ -0.0908897 -0.0558559   0.994946
+  Show optimized translation:
+  -0.284142
+  -0.177397
+ -0.0628054
+
+  Show Rotational error :0(degree).
+  Show translational error :0.728867(%)
+  Show depth error :0
+
+
+// ----------------------==---------------------->perturbation Exp4:<--------------------------------------------------
+
+Show current rotation perturbation error :1.47143
+ Show current translation perturbation error : 0.1
+
+ Ceres Solver Report: Iterations: 301, Initial cost: 2.425265e+02, Final cost: 1.535030e+02, Termination: NO_CONVERGENCE
+
+
+ Show optimized rotation:
+   0.954275 -0.0298418   0.109309
+  0.0248286   0.997192  0.0171066
+  -0.110556 0.00430853   0.956792
+  Show optimized translation:
+  -0.322935
+ -0.0918924
+ -0.0590748
+
+  Show Rotational error :16.1593(degree).
+  Show translational error :27.6907(%)
+  Show depth error :0
+
+  Ceres Solver Report: Iterations: 176, Initial cost: 1.575348e+02, Final cost: 5.787259e+01, Termination: CONVERGENCE
+
+  Show optimized rotation:
+    0.996311 -0.0107985  0.0904803
+  0.00627393   0.998568  0.0564534
+  -0.0909061 -0.0557651   0.994944
+   Show optimized translation:
+   -0.284164
+     -0.1771
+  -0.0625848
+
+   Show Rotational error :0(degree).
+   Show translational error :0.695207(%)
+   Show depth error :0
+
+
+   // ----------------------==---------------------->perturbation Exp5:<-----No DeltaMap---------------------------------------------
+
+   Show current rotation perturbation error :2.26951
+    Show current translation perturbation error : 0.115698
+
+
+   Show initial rotation:
+     0.991875 -0.0299498   0.123642
+    0.0250763   0.998853  0.0407864
+    -0.124722 -0.0373546   0.991488
+    Show initial translation:
+     -0.31024
+    -0.202531
+   -0.0690434
+
+   Show current rotation perturbation error :2.26951
+    Show current translation perturbation error : 0.115698
+   Show current depth perturbation error :0
+
+Ceres Solver Report: Iterations: 301, Initial cost: 2.729515e+02, Final cost: 2.277412e+02, Termination: NO_CONVERGENCE
+
+Show optimized rotation:
+  0.949948 -0.0327358  0.0624751
+ 0.0458943   0.982987  0.0121156
+-0.0535582  0.0343721   0.964437
+ Show optimized translation:
+-0.169918
+ -0.10487
+0.0782316
+
+ Show Rotational error :17.9781(degree).
+ Show translational error :57.2489(%)
+
+
+   Round 2:
+
+   Ceres Solver Report: Iterations: 301, Initial cost: 2.340151e+02, Final cost: 1.776886e+02, Termination: NO_CONVERGENCE
+   Show optimized rotation:
+      0.909289 -0.00471712   0.0915912
+     0.0860158     0.94011 0.000693506
+    -0.0318197   0.0858891    0.913055
+    Show optimized translation:
+    -0.264718
+   -0.0435495
+     0.170276
+
+    Show Rotational error :24.6366(degree).
+    Show translational error :79.3983(%)
+
+
+    // ----------------------==---------------------->perturbation Exp5:<-----Use DeltaMap---------------------------------------------
+Failed
+
+  // ----------------------==---------------------->perturbation Exp6:<-----No DeltaMap---------------------------------------------
+
+Show current rotation perturbation error :2.20628
+ Show current translation perturbation error : 0.15
+
+
+Ceres Solver Report: Iterations: 301, Initial cost: 2.709208e+02, Final cost: 2.375857e+02, Termination: NO_CONVERGENCE
+Show optimized rotation:
+  0.979293 -0.0378631  0.0971452
+ 0.0236451   0.995515  0.0432242
+ -0.101547 -0.0315247   0.978429
+ Show optimized translation:
+-0.288685
+  -0.2082
+0.0169182
+
+ Show Rotational error :10.2381(degree).
+ Show translational error :25.4624(%)
+
+ Round 2:
+ Ceres Solver Report: Iterations: 301, Initial cost: 2.479769e+02, Final cost: 1.968560e+02, Termination: NO_CONVERGENCE
+
+ Show optimized rotation:
+   0.988494 -0.0220326   0.111856
+  0.0162876   0.998937  0.0307693
+  -0.112836 -0.0269555   0.988081
+  Show optimized translation:
+   -0.333398
+   -0.144522
+ -0.00276274
+
+  Show Rotational error :6.12211(degree).
+  Show translational error :25.14(%)
+  Show depth error :0
+
+
+  // ----------------------==---------------------->perturbation Exp6:<-----Use DeltaMap---------------------------------------------
+
+ falied
+ Show Rotational error :5.64606(degree).
+ Show translational error :25.6692(%)

@@ -496,11 +496,11 @@ namespace DSONL {
 		for (int x = 0; x < depth_left.rows; ++x) {
 			for (int y = 0; y < depth_left.cols; ++y) {
 
-				if (round(depth_left.at<double>(x, y)) == 15.0) {continue;}
+//				if (round(depth_left.at<double>(x, y)) == 15.0) {continue;}
 
 				double d_r = depth_right.at<double>(x, y);
 				// Mark: skip depth=15
-				if (round(d_r) == 15.0f) {continue;}
+//				if (round(d_r) == 15.0f) {continue;}
 
 				Eigen::Matrix<double, 3, 1> p_3d_no_d_r;
 				p_3d_no_d_r << (y - cx) / fx, (x - cy) / fy, 1.0;
@@ -540,7 +540,7 @@ namespace DSONL {
 				double d = depth_left.at<double>(x, y);
 
 				// Mark: skip depth=15
-				if (round(d) == 15.0) { continue; }
+//				if (round(d) == 15.0) { continue; }
 
 
 				Eigen::Matrix<double, 3, 1> p_3d_no_d;
@@ -549,7 +549,7 @@ namespace DSONL {
 
 				Eigen::Vector3d point_Trans = ExtrinsicPose.rotationMatrix() * p_c1 + ExtrinsicPose.translation();
 
-//				cloud->push_back(pcl::PointXYZ(point_Trans.x(), point_Trans.y(), point_Trans.z()));
+				cloud->push_back(pcl::PointXYZ(point_Trans.x(), point_Trans.y(), point_Trans.z()));
 				pcl::PointXYZ searchPoint(point_Trans.x(), point_Trans.y(), point_Trans.z());
 				if (kdtree.radiusSearch(searchPoint, radius, pointIdxRadiusSearch, pointRadiusSquaredDistance) > 0) {
 					//					for (std::size_t i = 0; i < pointIdxRadiusSearch.size (); ++i)
@@ -607,8 +607,8 @@ namespace DSONL {
 
 		showMinus(minus_original, minus_adjust, minus_mask);
 
-		// writer.write("PointCloud_Transformed.pcd",*cloud, false);// do we need the sensor acquisition origin?
-		// writer.write("PointCloud_right_HD.pcd",*cloud_rig, false);// do we need the sensor acquisition origin?
+		 writer.write("PointCloud_Transformed.pcd",*cloud, false);// do we need the sensor acquisition origin?
+		 writer.write("PointCloud_right_HD.pcd",*cloud_rig, false);// do we need the sensor acquisition origin?
 
 		double max_n, min_n;
 		cv::minMaxLoc(deltaMapGT, &min_n, &max_n);

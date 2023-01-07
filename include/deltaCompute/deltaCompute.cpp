@@ -7,6 +7,9 @@
 
 namespace DSONL {
 
+
+
+
 	float dot(const Eigen::Vector3f x, const Eigen::Vector3f y) {
 		float ans = x.dot(y);
 		return ans;
@@ -199,7 +202,7 @@ namespace DSONL {
 	                                     const Vec3f &baseColorValue,
 	                                     const Eigen::Matrix3d Camera1_c2w) {
 
-		// vec3 baseCol = pow(texture(baseColorTexture, texScale*tc).rgb, vec3(2.2)); //~~~??????????????????????
+		// !!!!!!!!  vec3 baseCol = pow(texture(baseColorTexture, texScale*tc).rgb, vec3(2.2)); // this is gamma correction!
 
 		Vec3f One = Vec3f(1.0f, 1.0f, 1.0f);
 		Vec3f f0 = 0.16 * (reflectance * reflectance) * One;
@@ -231,25 +234,56 @@ namespace DSONL {
 
 		return color;
 	}
-	Vec3f IBL_Radiance::ACESFilm(Vec3f radiance) {
-		// https://computergraphics.stackexchange.com/questions/11018/how-to-change-a-rgb-value-using-a-radiance-value
 
-			float a = 2.51f;
-			float b = 0.03f;
-			float c = 2.43f;
-			float d = 0.59f;
-			float e = 0.14f;
+	Vec3f IBL_Radiance::RRTAndODTFit(Vec3f v) {
+		Vec3f One = Vec3f(1.0f, 1.0f, 1.0f);
 
-//			return saturate((x*(a*x+b))/(x*(c*x+d)+e));
+		Vec3f a = v .mul(v + 0.0245786f*One ) - 0.000090537f*One;
+		Vec3f b = v.mul (0.983729f * v + 0.4329510f*One) + 0.238081f*One;
 
-		    Vec3f One = Vec3f(1.0f, 1.0f, 1.0f);
+		Vec3f inv_v= Vec3f (1.0f/b.val[0],  1.0f/b.val[1],1.0f/b.val[2] );
 
-		    Vec3f sndVecor= Vec3f(1.0/(radiance.mul(c*radiance+d*One)+e*One).val[0],
-		                           1.0/(radiance.mul(c*radiance+d*One)+e*One).val[1],
-		                           1.0/(radiance.mul(c*radiance+d*One)+e*One).val[2]);
+		return a.mul(inv_v);
 
-		return  clamp_vec3f((radiance.mul(a*radiance+b*One)) .mul(sndVecor));
 	}
+
+	Vec3f IBL_Radiance::ACESFilm(Vec3f radiance) {
+
+		// https://computergraphics.stackexchange.com/questions/11018/how-to-change-a-rgb-value-using-a-radiance-value
+		// https://github.com/TheRealMJP/BakingLab/blob/master/BakingLab/ACES.hlsl
+		// method 1
+
+		float adapted_lum=1.0;
+		radiance*= adapted_lum;
+		Eigen::Matrix3f ACESInputMat, ACESOutputMat;
+		Eigen::Vector3f r1, r2;
+		ACESInputMat <<  0.59719, 0.35458, 0.04823, 0.07600, 0.90834, 0.01566, 0.02840, 0.13383, 0.83777;
+		ACESOutputMat <<  1.60475, -0.53108, -0.07367 , -0.10208,  1.10813, -0.00605 ,-0.00327, -0.07276,  1.07602;
+
+		r1= ACESInputMat* Eigen::Vector3f(radiance.val[0], radiance.val[1],radiance.val[2] );
+		radiance=RRTAndODTFit(Vec3f(r1.x(),r1.y(),r1.z()));
+		r2= ACESOutputMat*Eigen::Vector3f(radiance.val[0], radiance.val[1],radiance.val[2] );
+
+		radiance=Vec3f(r2.x(),r2.y(),r2.z());
+		// method 2
+		//			float a = 2.51f;
+		//			float b = 0.03f;
+		//			float c = 2.43f;
+		//			float d = 0.59f;
+		//			float e = 0.14f;
+		//		    Vec3f One = Vec3f(1.0f, 1.0f, 1.0f);
+		//		    Vec3f sndVecor= Vec3f(1.0/(radiance.mul(c*radiance+d*One)+e*One).val[0],
+		//		                           1.0/(radiance.mul(c*radiance+d*One)+e*One).val[1],
+		//		                           1.0/(radiance.mul(c*radiance+d*One)+e*One).val[2]);
+		//		return  clamp_vec3f((radiance.mul(a*radiance+b*One)) .mul(sndVecor));
+
+		// method 1 output
+		return clamp_vec3f(radiance);
+
+	}
+
+
+
 
 
 	void updateDelta(
@@ -260,8 +294,8 @@ namespace DSONL {
 	        const Eigen::Matrix3f &K,
 	        const Mat &image_baseColor,
 	        const Mat depth_map,
-	        const float &image_metallic,
-	        const float &image_roughnes,
+	        const Mat &image_metallic_,
+	        const Mat &image_roughnes_,
 	        Mat &deltaMap,
 	        Mat &newNormalMap,
 	        float &upper_b,
@@ -287,10 +321,19 @@ namespace DSONL {
 				// if(inliers_filter[u]!=v ){continue;}// ~~~~~~~~~~~~~~Filter~~~~~~~~~~~~~~
 				//cout<<"show delta:"<<deltaMap.at<double>(u,v)<<endl;
 
+
+                // get image_roughnes
+
+                float image_roughnes= image_roughnes_.at<float>(u,v);
+                float image_metallic= image_metallic_.at<float>(u,v);
+
+
+
+
 				// ===================================PROJECTION====================================
 				Eigen::Vector2f pixelCoord((float) v, (float) u);//  u is the row id , v is col id
 				float iDepth = depth_map.at<double>(u, v);
-				if (round(1.0 / iDepth) == 15.0) { continue; }
+//				if (round(1.0 / iDepth) == 15.0) { continue; }
 
 
 
@@ -333,6 +376,7 @@ namespace DSONL {
 				radianceMap_left.at<Vec3f>(u, v) = radiance_beta;
 
 				//  ===================================TONE MAPPING===========================================
+				// remark: Yes, you need to multiply by exposure before the tone mapping and do the gamma correction after.
 // TODO: use a good tone mapping so that we can get closer to GT delta map like clamp in [0,1.2]
 
 
@@ -356,7 +400,7 @@ namespace DSONL {
 		cv::minMaxLoc(radianceMap_left, &min_n_radiance, &max_n_radiance);
 		std::cout << "------->show max and min of estimated radianceMap_left<-----------------:" << max_n_radiance << "," << min_n_radiance << std::endl;
 
-		//	 imshow("radianceMap_left", radianceMap_left);
+		imshow("radianceMap_left", radianceMap_left);
 		//	 DiffuseMAP
 		//	 show image_ref_path_PFM range:0.0321633,2.18064
 		//	 min_depth_val0.0313726max_depth_val2.17949
