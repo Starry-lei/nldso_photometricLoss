@@ -34,6 +34,13 @@ using namespace cv;
 
 namespace DSONL {
 
+
+//    struct
+
+
+
+
+
 	static Renderer *renderer = NULL;
 	static specular_Mask_Renderer *renderer_specular = NULL;
 	static Renderer_diffuse *render_diffuse = NULL;
@@ -193,8 +200,9 @@ namespace DSONL {
 		float _roughness;
 		Mat outColor;
 		Mat envMapImage;
-		void Init(int argc, char **argv);
+		void Init(int argc, char **argv, string parameter_path);
 	};
+
 	preFilterSpecularMask::preFilterSpecularMask(float &roughness) {
 
 		_roughness = roughness;
@@ -221,9 +229,9 @@ namespace DSONL {
 
 	preFilterSpecularMask::~preFilterSpecularMask() {}
 
-	void preFilterSpecularMask::Init(int argc, char **argv) {
+	void preFilterSpecularMask::Init(int argc, char **argv,string parameter_path) {
 
-		renderer_specular = new specular_Mask_Renderer;
+		renderer_specular = new specular_Mask_Renderer(parameter_path);
 
 		renderer_specular->roughness = _roughness;
 		glutInit(&argc, argv);
@@ -269,8 +277,8 @@ namespace DSONL {
 		float _roughness;
 		Mat outColor;
 		Mat envMapImage;
-		//                    void modify_shader_file(string, string) const;
-		void Init(int argc, char **argv);// int argc, char** argv
+		// void modify_shader_file(string, string) const;
+		void Init(int argc, char **argv,string parameter_path);// int argc, char** argv
 	private:
 		Eigen::Matrix<float, 2, 1> tc;
 		int samples;
@@ -362,8 +370,8 @@ namespace DSONL {
 	}
 	preFilter::~preFilter() {}
 
-	void preFilter::Init(int argc, char **argv) {
-		renderer = new Renderer;
+	void preFilter::Init(int argc, char **argv, string parameter_path) {
+		renderer = new Renderer(parameter_path);
 		renderer->roughness = _roughness;
 		glutInit(&argc, argv);
 		glutInitDisplayMode(GLUT_DEPTH | GLUT_DOUBLE | GLUT_RGBA);
@@ -401,7 +409,7 @@ namespace DSONL {
 
 	class EnvMapLookup {
 	public:
-		EnvMapLookup(int argc, char **argv);
+		EnvMapLookup(int argc, char **argv, string parameter_path);
 		~EnvMapLookup();
 		std::vector<cv::Mat> image_pyramid_mask;
 		std::vector<cv::Mat> image_pyramid;
@@ -412,13 +420,15 @@ namespace DSONL {
 	private:
 	};
 
-	EnvMapLookup::EnvMapLookup(int argc, char **argv) {
+	EnvMapLookup::EnvMapLookup(int argc, char **argv, string parameter_path) {
 
 		float roughness_i = 0.0;
 		for (int i = 0; i < 6; ++i) {
 			roughness_i = i / 5.0;
 			preFilterSpecularMask env_map_preFilterMask(roughness_i);
-			env_map_preFilterMask.Init(argc, argv);
+//            string parameter_path_envmask="include/preFilter_data/parameters_envmapMask.csv";
+//			env_map_preFilterMask.Init(argc, argv, parameter_path_envmask);
+            env_map_preFilterMask.Init(argc, argv, parameter_path);
 		}
 
 		image_pyramid_mask = img_pyramid_mask;
@@ -427,7 +437,7 @@ namespace DSONL {
 		for (int i = 0; i < 6; ++i) {
 			roughness_i = i / 5.0;
 			preFilter env_mpa_preFilter(roughness_i);
-			env_mpa_preFilter.Init(argc, argv);
+			env_mpa_preFilter.Init(argc, argv, parameter_path);
 		}
 		image_pyramid = img_pyramid;
 
@@ -495,18 +505,22 @@ namespace DSONL {
 	class brdfIntegrationMap {
 
 	public:
-		brdfIntegrationMap();
+		brdfIntegrationMap(string map_path);
 		~brdfIntegrationMap();
 		void makebrdfIntegrationMap();
 		Mat brdfIntegration_Map;
 
+        string brdf_path;
+
 	private:
 	};
 
-	brdfIntegrationMap::brdfIntegrationMap() {
+	brdfIntegrationMap::brdfIntegrationMap(string map_path) {
 
-		string brdfIntegrationMap_path = "../include/brdfIntegrationMap/brdfIntegrationMap.pfm";
-		brdfIntegration_Map = loadPFM(brdfIntegrationMap_path);
+        brdf_path=map_path;
+
+//		string brdfIntegrationMap_path = "../include/brdfIntegrationMap/brdfIntegrationMap.pfm";
+		brdfIntegration_Map = loadPFM(brdf_path);
 
 	}
 
@@ -526,7 +540,7 @@ namespace DSONL {
 	public:
 		diffuseMapMask();
 		~diffuseMapMask();
-		void Init(int argc, char **argv);
+		void Init(int argc, char **argv,string parameters_path);
 		cv::Mat diffuse_Map_Mask;
 		void makeDiffuseMask();
 
@@ -537,10 +551,10 @@ namespace DSONL {
 
 	diffuseMapMask::~diffuseMapMask() {}
 
-	void diffuseMapMask::Init(int argc, char **argv) {
+	void diffuseMapMask::Init(int argc, char **argv,string parameters_path) {
 		int diffuseMapMaskWidth = 256;
 		int diffuseMapMaskHeight = 128;
-		render_diffuse_mask = new diffuse_Mask_Renderer;
+		render_diffuse_mask = new diffuse_Mask_Renderer( parameters_path);
 		glutInit(&argc, argv);
 		glutInitDisplayMode(GLUT_DEPTH | GLUT_DOUBLE | GLUT_RGBA);
 		glutInitWindowPosition(100, 100);
@@ -589,7 +603,7 @@ namespace DSONL {
 		diffuseMap();
 		~diffuseMap();
 
-		void Init(int argc, char **argv);
+		void Init(int argc, char **argv, string parameters_path);
 		cv::Mat diffuse_Map;
 		cv::Mat diffuse_MaskMap;
 		cv::Mat diffuse_Final_Map;
@@ -604,12 +618,12 @@ namespace DSONL {
 
 	diffuseMap::diffuseMap() {}
 	diffuseMap::~diffuseMap() {}
-	void diffuseMap::Init(int argc, char **argv) {
+	void diffuseMap::Init(int argc, char **argv, string parameters_path) {
 
 		int diffuseMapWidth = 256;
 		int diffuseMapHeight = 128;
 
-		render_diffuse = new Renderer_diffuse;
+		render_diffuse = new Renderer_diffuse(parameters_path);
 		glutInit(&argc, argv);
 		glutInitDisplayMode(GLUT_DEPTH | GLUT_DOUBLE | GLUT_RGBA);
 		glutInitWindowPosition(100, 100);
@@ -633,7 +647,7 @@ namespace DSONL {
 		diffuse_Map = img_diffuseMap;
 		// get diffuse mask map
 		diffuseMapMask *DiffuseMaskMap = new diffuseMapMask;
-		DiffuseMaskMap->Init(argc, argv);
+		DiffuseMaskMap->Init(argc, argv,parameters_path);
 		// DiffuseMaskMap->makeDiffuseMask();
 		diffuse_MaskMap = DiffuseMaskMap->diffuse_Map_Mask;
 		//                imshow("diffuse_Map",diffuse_Map);

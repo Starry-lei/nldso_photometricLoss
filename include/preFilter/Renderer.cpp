@@ -33,13 +33,14 @@ void print(T& A, T& B ){
 	cout<<" The value of second"<< "is:"<<  B<<endl;
 }
 
-Renderer::Renderer()
+Renderer::Renderer(std::string parameter_path)
 {
   t = 0.0;
   windowWidth = 0;
   windowHeight = 0;
   selectedOutput = 0;
   roughness=0;
+  parameter_path_=parameter_path;
 }
 
 Renderer::~Renderer() {
@@ -48,7 +49,9 @@ Renderer::~Renderer() {
 void Renderer::init() {
 
   // Initialize shader A
-  shaderSettingsA = loadShaderSettings(FileTools::findFile("include/preFilter_data/parameters.csv"));
+//  shaderSettingsA = loadShaderSettings(FileTools::findFile("include/preFilter_data/parameters.csv"));
+    shaderSettingsA = loadShaderSettings(FileTools::findFile(parameter_path_));
+
 
   if (shaderSettingsA.nodeClassName == "ImageShaderPluginNode") {
     // for image shaders, no mesh is required but a screen-aligned quad, !!!! what is the preoblem here!!!!
@@ -58,17 +61,18 @@ void Renderer::init() {
     std::string f = FileTools::findFile("include/shaders/fragment_shader.txt");//
     shaderNodeA.setShaderSourceFromFile("", f);
   } else {
-    // for regular shaders, load the input mesh
-    LoadOBJ::load(FileTools::findFile("data/Mesh.obj"), meshA);// TODO: remained to be deleted?????????????????
-    // for regular shaders, a fragment and a vertex shader is required
-    std::string v = FileTools::findFile("shaders/vertex_shader.txt");
-    std::string f = FileTools::findFile("shaders/fragment_shader.txt");
-    shaderNodeA.setShaderSourceFromFile(v, f);
+//    // for regular shaders, load the input mesh
+//    LoadOBJ::load(FileTools::findFile("data/Mesh.obj"), meshA);//
+//    // for regular shaders, a fragment and a vertex shader is required
+//    std::string v = FileTools::findFile("shaders/vertex_shader.txt");
+//    std::string f = FileTools::findFile("shaders/fragment_shader.txt");
+//    shaderNodeA.setShaderSourceFromFile(v, f);
   }
   
-  shaderNodeA.setUniformsFromFile(FileTools::findFile("include/preFilter_data/parameters.csv"));
-  
-  // Initialize shader B
+//  shaderNodeA.setUniformsFromFile(FileTools::findFile("include/preFilter_data/parameters.csv"));
+    shaderNodeA.setUniformsFromFile(FileTools::findFile(parameter_path_));
+
+    // Initialize shader B
   // Shader B is an image shader that renders a screen-aligned quad
   // with the output of shader A as texture
   std::string fragSrc;

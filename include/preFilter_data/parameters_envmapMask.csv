@@ -1,4 +1,0 @@
-envMapImage,Image
-NodeClassName,Text,ImageShaderPluginNode
-NodeName,Text,PreFiltered EnvmapMask
-samples,Integer,128

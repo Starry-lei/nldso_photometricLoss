@@ -28,13 +28,14 @@
 using namespace std;
 using namespace gsn;
 
-specular_Mask_Renderer::specular_Mask_Renderer()
+specular_Mask_Renderer::specular_Mask_Renderer(string parameter_path)
 {
   t = 0.0;
   windowWidth = 0;
   windowHeight = 0;
   selectedOutput = 0;
   roughness=0;
+  parameter_path_=parameter_path;
 }
 
 specular_Mask_Renderer::~specular_Mask_Renderer() {
@@ -42,8 +43,9 @@ specular_Mask_Renderer::~specular_Mask_Renderer() {
 
 void specular_Mask_Renderer::init() {
 
-  // Initialize shader A
-  shaderSettingsA = loadShaderSettings(FileTools::findFile("include/preFilter_data/parameters_envmapMask.csv"));
+  // Initialize shader A   parameter_path="include/preFilter_data/parameters_envmapMask.csv";
+//  shaderSettingsA = loadShaderSettings(FileTools::findFile("include/preFilter_data/parameters_envmapMask.csv"));
+    shaderSettingsA = loadShaderSettings(FileTools::findFile(parameter_path_));
 
   if (shaderSettingsA.nodeClassName == "ImageShaderPluginNode") {
     // for image shaders, no mesh is required but a screen-aligned quad
@@ -61,7 +63,9 @@ void specular_Mask_Renderer::init() {
     shaderNodeA.setShaderSourceFromFile(v, f);
   }
   
-  shaderNodeA.setUniformsFromFile(FileTools::findFile("include/preFilter_data/parameters_envmapMask.csv"));
+//  shaderNodeA.setUniformsFromFile(FileTools::findFile("include/preFilter_data/parameters_envmapMask.csv"));
+
+    shaderNodeA.setUniformsFromFile(FileTools::findFile(parameter_path_));
   
   // Initialize shader B
   // Shader B is an image shader that renders a screen-aligned quad

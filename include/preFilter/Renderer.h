@@ -19,7 +19,7 @@ namespace gsn {
 
   public:
     //! constructor
-    Renderer();
+    Renderer(std::string parameter_path);
     //! destructor
     ~Renderer();
   public:
@@ -31,6 +31,8 @@ namespace gsn {
     void display();
     //! release all rendering resources
     void dispose();
+
+    std::string parameter_path_;
 
   public:
     float t;

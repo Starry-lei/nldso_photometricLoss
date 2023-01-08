@@ -19,7 +19,7 @@ namespace gsn {
   public:
 
     //! constructor
-    diffuse_Mask_Renderer();
+    diffuse_Mask_Renderer(std::string parameters_path);
 
     //! destructor
     ~diffuse_Mask_Renderer();
@@ -40,6 +40,7 @@ namespace gsn {
   public:
     float t;
     int selectedOutput;
+    std::string parameters_path_;
 
   private:
     int windowWidth;

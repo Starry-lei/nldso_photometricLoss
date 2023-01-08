@@ -19,7 +19,7 @@ namespace gsn {
   public:
 
     //! constructor
-    specular_Mask_Renderer();
+    specular_Mask_Renderer(std::string parameter_path);
 
     //! destructor
     ~specular_Mask_Renderer();
@@ -41,6 +41,7 @@ namespace gsn {
     float t;
     int selectedOutput;
     float roughness;
+    std:: string parameter_path_;
   private:
     int windowWidth;
     int windowHeight;

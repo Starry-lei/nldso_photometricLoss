@@ -19,14 +19,28 @@ using namespace cv;
 
 namespace DSONL{
 
+
+//    extern struct envMap {
+//            Sophus::SE3f* envMapPose_world; //Sophus::SE3f* envMapPose_camera;
+//            struct pointBase{ float x, y,z;};
+//            gli::sampler2d<float>* prefilteredEnvmapSampler;
+//            gli::sampler2d<float>* diffuseSampler;
+//    };
+
+
+
+
+
+
 	extern std::vector<cv::Mat> img_pyramid;
     extern std::vector<cv::Mat> img_pyramid_mask;
 
 	extern  cv::Mat img_diffuseMap;
 	extern  cv::Mat img_diffuseMapMask;
+
     extern  gli::sampler2d<float>* prefilteredEnvmapSampler;
-    extern  gli::sampler2d<float>* brdfSampler;
     extern  gli::sampler2d<float>* diffuseSampler;
+    extern  gli::sampler2d<float>* brdfSampler;
 
 
 

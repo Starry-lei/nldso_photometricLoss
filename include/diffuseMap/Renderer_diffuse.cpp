@@ -26,12 +26,13 @@
 using namespace std;
 using namespace gsn;
 
-Renderer_diffuse::Renderer_diffuse()
+Renderer_diffuse::Renderer_diffuse(std::string parameters_path)
 {
   t = 0.0;
   windowWidth = 0;
   windowHeight = 0;
   selectedOutput = 0;
+  parameters_path_=parameters_path;
 }
 
 Renderer_diffuse::~Renderer_diffuse() {
@@ -39,8 +40,9 @@ Renderer_diffuse::~Renderer_diffuse() {
 
 void Renderer_diffuse::init() {
 
+    // parameters_path_= "include/diffuseMap/parameters.csv";
   // Initialize shader A
-  shaderSettingsA = loadShaderSettings(FileTools::findFile("include/diffuseMap/parameters.csv"));
+  shaderSettingsA = loadShaderSettings(FileTools::findFile(parameters_path_));
 
   if (shaderSettingsA.nodeClassName == "ImageShaderPluginNode") {
     // for image shaders, no mesh is required but a screen-aligned quad
@@ -50,15 +52,16 @@ void Renderer_diffuse::init() {
     std::string f = FileTools::findFile("include/shaders/diffuse_fragment_shader.txt");
     shaderNodeA.setShaderSourceFromFile("", f);
   } else {
-    // for regular shaders, load the input mesh
-    LoadOBJ::load(FileTools::findFile("data/Mesh.obj"), meshA);
-    // for regular shaders, a fragment and a vertex shader is required
-    std::string v = FileTools::findFile("shaders/vertex_shader.txt");
-    std::string f = FileTools::findFile("shaders/fragment_shader.txt");
-    shaderNodeA.setShaderSourceFromFile(v, f);
+//    // for regular shaders, load the input mesh
+//    LoadOBJ::load(FileTools::findFile("data/Mesh.obj"), meshA);
+//    // for regular shaders, a fragment and a vertex shader is required
+//    std::string v = FileTools::findFile("shaders/vertex_shader.txt");
+//    std::string f = FileTools::findFile("shaders/fragment_shader.txt");
+//    shaderNodeA.setShaderSourceFromFile(v, f);
   }
   
-  shaderNodeA.setUniformsFromFile(FileTools::findFile("include/diffuseMap/parameters.csv"));
+//  shaderNodeA.setUniformsFromFile(FileTools::findFile("include/diffuseMap/parameters.csv"));
+    shaderNodeA.setUniformsFromFile(FileTools::findFile(parameters_path_));
   
   // Initialize shader B
   // Shader B is an image shader that renders a screen-aligned quad

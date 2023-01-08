@@ -25,12 +25,13 @@
 using namespace std;
 using namespace gsn;
 
-diffuse_Mask_Renderer::diffuse_Mask_Renderer()
+diffuse_Mask_Renderer::diffuse_Mask_Renderer(std::string parameters_path)
 {
   t = 0.0;
   windowWidth = 0;
   windowHeight = 0;
   selectedOutput = 0;
+  parameters_path_=parameters_path;
 }
 
 diffuse_Mask_Renderer::~diffuse_Mask_Renderer() {
@@ -40,7 +41,8 @@ diffuse_Mask_Renderer::~diffuse_Mask_Renderer() {
 void diffuse_Mask_Renderer::init() {
 
   // Initialize shader A
-  shaderSettingsA = loadShaderSettings(FileTools::findFile("include/diffuseMap/parameters.csv"));
+//  shaderSettingsA = loadShaderSettings(FileTools::findFile("include/diffuseMap/parameters.csv"));
+    shaderSettingsA = loadShaderSettings(FileTools::findFile(parameters_path_));
 
   if (shaderSettingsA.nodeClassName == "ImageShaderPluginNode") {
     // for image shaders, no mesh is required but a screen-aligned quad
@@ -58,8 +60,10 @@ void diffuse_Mask_Renderer::init() {
     shaderNodeA.setShaderSourceFromFile(v, f);
   }
   
-  shaderNodeA.setUniformsFromFile(FileTools::findFile("include/diffuseMap/parameters.csv"));
-  
+//  shaderNodeA.setUniformsFromFile(FileTools::findFile("include/diffuseMap/parameters.csv"));
+
+    shaderNodeA.setUniformsFromFile(FileTools::findFile(parameters_path_));
+
   // Initialize shader B
   // Shader B is an image shader that renders a screen-aligned quad
   // with the output of shader A as texture

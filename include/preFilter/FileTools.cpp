@@ -203,6 +203,7 @@ bool FileTools::loadAlphaPFM(const std::string& filename, int& width, int& heigh
     data[i * 4 + 1] = dataRGB[countRGB++];
     data[i * 4 + 2] = dataRGB[countRGB++];
     data[i * 4 + 3] = dataAlpha[countAlpha++];
+//    cout<<"!!!!!!!!!!!!!!!!!!1Show  data[i * 4 + 3]:"<< data[i * 4 + 3]<<endl;// all alpha vals are 1
   }
 
   return true;

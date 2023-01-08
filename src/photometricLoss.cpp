@@ -19,30 +19,69 @@ using namespace std;
 using namespace DSONL;
 
 
+void GetFileNames(string path,vector<string>& filenames)
+{
+    DIR *pDir;
+    struct dirent* ptr;
+    if(!(pDir = opendir(path.c_str()))){
+        cout<<"Folder doesn't Exist!"<<endl;
+        return;
+    }
+    while((ptr = readdir(pDir))!=0) {
+        if (strcmp(ptr->d_name, ".") != 0 && strcmp(ptr->d_name, "..") != 0){
+            filenames.push_back(path + "/" + ptr->d_name);
+        }
+    }
+    closedir(pDir);
+}
+
+
+
 int main(int argc, char **argv) {
 
-// TODO(Binghui): A and B to be parallelized
+    // TODO(Binghui): A and B to be parallelized
+
     // A: line: 26-27
     dataLoader *dataLoader = new DSONL::dataLoader();
 	dataLoader->Init();
 
 
+// load env light maps
 
+//    std::string envMap_Folder="/media/lei/Data/Simulation Dataset/newpanorama";
+//
+//    std::vector<string> fileNames;
+//    GetFileNames(envMap_Folder,fileNames);
+//    cout<<" \n Show fileNames.size():"<<fileNames.size()<< endl;
 
 
     //B: line: 34- 45
-    EnvMapLookup *EnvMapLookup=new DSONL::EnvMapLookup(argc,argv);
+    string  parameter_path = "include/EnvLight_Data/envMap01/parameters.csv";
+    EnvMapLookup *EnvMapLookup=new DSONL::EnvMapLookup(argc,argv, parameter_path);
     EnvMapLookup->makeMipMap();
     delete EnvMapLookup;
 
-    brdfIntegrationMap *brdfIntegrationMap= new DSONL::brdfIntegrationMap;
+    string parameters_path = "include/EnvLight_Data/envMap01/parameters_env_diffuse.csv";
+    diffuseMap *diffuseMap = new DSONL::diffuseMap;
+    diffuseMap->Init(argc,argv, parameters_path);
+    diffuseMap->makeDiffuseMap();
+    delete diffuseMap;
+
+    string brdfIntegrationMap_path = "../include/brdfIntegrationMap/brdfIntegrationMap.pfm";
+    brdfIntegrationMap *brdfIntegrationMap= new DSONL::brdfIntegrationMap(brdfIntegrationMap_path);
     brdfIntegrationMap->makebrdfIntegrationMap();
     delete brdfIntegrationMap;
 
-    diffuseMap *diffuseMap = new DSONL::diffuseMap;
-    diffuseMap->Init(argc,argv);
-    diffuseMap->makeDiffuseMap();
-    delete diffuseMap;
+
+
+
+
+
+
+
+
+
+
 
 
     Mat image_ref_metallic = dataLoader->image_ref_metallic;
@@ -68,8 +107,6 @@ int main(int argc, char **argv) {
 	double min_depth_val, max_depth_val;
 	cv::minMaxLoc(depth_ref, &min_depth_val, &max_depth_val);
 	cout << "\n show original depth_ref min, max:\n" << min_depth_val << "," << max_depth_val << endl;
-
-
 
 	// grayImage_ref
     double min_radiance_val, max_radiance_val;

@@ -20,10 +20,12 @@ namespace gsn {
   public:
 
     //! constructor
-    Renderer_diffuse();
+    Renderer_diffuse(std::string parameters_path);
 
     //! destructor
     ~Renderer_diffuse();
+
+    std::string parameters_path_;
 
   public:
     //! initialize all rendering resources
