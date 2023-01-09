@@ -242,7 +242,7 @@ int main(int argc, char **argv) {
 				//				//				showScaledImage(depth_ref_gt, inv_depth_ref);
 				//				//				waitKey(0);
 			} else {
-				PhotometricBA(IRef, I, options, Klvl, Rotation, Translation, inv_depth_ref, deltaMap, depth_upper_bound,depth_lower_bound, statusMap, statusMapB);
+//				PhotometricBA(IRef, I, options, Klvl, Rotation, Translation, inv_depth_ref, deltaMap, depth_upper_bound,depth_lower_bound, statusMap, statusMapB);
 				//imshow(depth_ref_name, inv_depth_ref_for_show);
 				//waitKey(0);
 			}

@@ -356,7 +356,7 @@ namespace DSONL {
 		cv::minMaxLoc(radianceMap_left, &min_n_radiance, &max_n_radiance);
 		std::cout << "------->show max and min of estimated radianceMap_left<-----------------:" << max_n_radiance << "," << min_n_radiance << std::endl;
 
-		//	 imshow("radianceMap_left", radianceMap_left);
+        imshow("radianceMap_left", radianceMap_left);
 		//	 DiffuseMAP
 		//	 show image_ref_path_PFM range:0.0321633,2.18064
 		//	 min_depth_val0.0313726max_depth_val2.17949
