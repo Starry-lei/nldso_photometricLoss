@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "sophus/se3.hpp"
 #include <opencv2/core/mat.hpp>
 #include <opencv2/imgproc.hpp>
 #include <GL/glew.h>
@@ -20,12 +21,12 @@ using namespace cv;
 namespace DSONL{
 
 
-//    extern struct envMap {
-//            Sophus::SE3f* envMapPose_world; //Sophus::SE3f* envMapPose_camera;
-//            struct pointBase{ float x, y,z;};
-//            gli::sampler2d<float>* prefilteredEnvmapSampler;
-//            gli::sampler2d<float>* diffuseSampler;
-//    };
+     struct envMap {
+            Sophus::SE3f envMapPose_world; //Sophus::SE3f* envMapPose_camera;
+            cv::Point3f pointBase; // i.e. envMapPose_world.translation();
+            gli::sampler2d<float>* prefilteredEnvmapSampler;
+            gli::sampler2d<float>* diffuseSampler;
+    };
 
 
 

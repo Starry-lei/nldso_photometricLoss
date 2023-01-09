@@ -13,4 +13,6 @@ namespace DSONL{
       gli::sampler2d<float>* brdfSampler= NULL;
       gli::sampler2d<float>* diffuseSampler= NULL;
 
+
+
 }
