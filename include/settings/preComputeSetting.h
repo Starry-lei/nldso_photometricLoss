@@ -20,13 +20,13 @@ using namespace cv;
 namespace DSONL{
 
 	extern std::vector<cv::Mat> img_pyramid;
-        extern std::vector<cv::Mat> img_pyramid_mask;
+    extern std::vector<cv::Mat> img_pyramid_mask;
 
 	extern  cv::Mat img_diffuseMap;
 	extern  cv::Mat img_diffuseMapMask;
-        extern  gli::sampler2d<float>* prefilteredEnvmapSampler;
-        extern  gli::sampler2d<float>* brdfSampler;
-        extern  gli::sampler2d<float>* diffuseSampler;
+    extern  gli::sampler2d<float>* prefilteredEnvmapSampler;
+    extern  gli::sampler2d<float>* brdfSampler;
+    extern  gli::sampler2d<float>* diffuseSampler;
 
 
 

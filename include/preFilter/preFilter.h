@@ -409,6 +409,10 @@ namespace DSONL {
 		void mergeImagePyramid();
 		void makeMipMap();
 
+        vector< gli::sampler2d<float>> testSampler;
+
+//        gli::sampler2d<float> test();
+
 	private:
 	};
 
@@ -483,8 +487,15 @@ namespace DSONL {
 			std::vector<float> img_array = image_pyramid[level].isContinuous() ? flat : flat.clone();
 			memcpy(newTex.data(0, 0, level), img_array.data(), newTex.size(level));
 		}
-		static gli::sampler2d<float> Sampler(newTex, gli::WRAP_CLAMP_TO_EDGE, gli::FILTER_LINEAR, gli::FILTER_LINEAR, gli::vec4(1.0f, 0.5f, 0.0f, 1.0f));
-		prefilteredEnvmapSampler = &Sampler;
+
+//		static gli::sampler2d<float> Sampler(newTex, gli::WRAP_CLAMP_TO_EDGE, gli::FILTER_LINEAR, gli::FILTER_LINEAR, gli::vec4(1.0f, 0.5f, 0.0f, 1.0f));
+
+         gli::sampler2d<float> Sampler_test(newTex, gli::WRAP_CLAMP_TO_EDGE, gli::FILTER_LINEAR, gli::FILTER_LINEAR, gli::vec4(1.0f, 0.5f, 0.0f, 1.0f));
+
+        testSampler.push_back(Sampler_test);
+
+
+//        prefilteredEnvmapSampler = &Sampler;
 
 		//                gli::vec4 SampleA = Sampler.texture_lod(gli::fsampler2D::normalized_type(0.5f,0.75f), 0.0f); // transform the texture coordinate
 		//                cout << "\n============SampleA val------------------------(RGBA):\n" << SampleA.b << "," << SampleA.g << "," << SampleA.r << "," <<SampleA.a << endl;

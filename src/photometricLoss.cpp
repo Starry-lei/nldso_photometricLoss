@@ -26,10 +26,18 @@ int main(int argc, char **argv) {
     dataLoader *dataLoader = new DSONL::dataLoader();
 	dataLoader->Init();
 
-        // TODO: The following three threads needs to be parallelized
-    EnvMapLookup *EnvMapLookup=new DSONL::EnvMapLookup(argc,argv);
+
+    // define a global env light variable
+    // gli::sampler2d<float>* prefilteredEnvmap (new gli::sampler2d<float> ) ;
+
+    // TODO: The following three threads needs to be parallelized
+    EnvMapLookup *EnvMapLookup= new DSONL::EnvMapLookup(argc,argv);
     EnvMapLookup->makeMipMap();
-    delete EnvMapLookup;
+
+    prefilteredEnvmapSampler= & EnvMapLookup->testSampler[0];
+
+
+//    delete EnvMapLookup;
 
     brdfIntegrationMap *brdfIntegrationMap= new DSONL::brdfIntegrationMap;
     brdfIntegrationMap->makebrdfIntegrationMap();
