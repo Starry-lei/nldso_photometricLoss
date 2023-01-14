@@ -1,92 +1,28 @@
 
+#include <algorithm>
 #include <sophus/se3.hpp>
 #include <unordered_map>
 #include <Eigen/Core>
 #include <opencv2/core/core.hpp>
 #include <opencv2/core/mat.hpp>
 
-
-#include "preFilter/preFilter.h"
 #include "dataLoader/dataLoader.h"
-#include "deltaCompute/deltaCompute.h"
 #include "utils/ultils.h"
 #include "cameraProjection/reprojection.h"
 #include "cameraProjection/photometricBA.h"
 
-#include <algorithm>
+
+
+
+
+#include "deltaCompute/deltaCompute.h"
+
+
+
 using namespace cv;
 using namespace std;
 using namespace DSONL;
 
-void ReadData(string fileName, vector<Sophus::SE3f, Eigen::aligned_allocator<Sophus::SE3f>>& pose) {
-
-    ifstream trajectory(fileName);
-    if (!trajectory.is_open()) {
-        cout << "No controlPointPose data!" << fileName << endl;
-        return;
-    }
-
-    float  qw, qx, qy, qz, tx, ty, tz;
-    string line;
-    while (getline(trajectory, line)) {
-        stringstream lineStream(line);
-        lineStream >> qw >> qx >> qy >> qz>> tx >> ty >> tz;
-
-        Eigen::Vector3f t(tx, ty, tz);
-        Eigen::Quaternionf q = Eigen::Quaternionf(qw, qx, qy, qz).normalized();
-        Sophus::SE3f SE3_qt(q, t);
-        pose.push_back(SE3_qt);
-    }
-
-}
-
-
-
-void GetFileNames(string path,vector<string>& filenames)
-{
-    DIR *pDir;
-    struct dirent* ptr;
-    if(!(pDir = opendir(path.c_str()))){
-        cout<<"Folder doesn't Exist!"<<endl;
-        return;
-    }
-    while((ptr = readdir(pDir))!=0) {
-        if (strcmp(ptr->d_name, ".") != 0 && strcmp(ptr->d_name, "..") != 0){
-            filenames.push_back(path + "/" + ptr->d_name);
-        }
-    }
-    closedir(pDir);
-}
-
-template <class T>
-struct hash3d
-{
-    size_t operator()(const T &key) const
-    {
-        float mult = 10000.0;
-        size_t hash = 137 * std::round(mult * (key.x+10.0)) + 149 * std::round(mult * (key.y+10.0)) + 163 * std::round(mult * (key.z+10.0));
-        return hash;
-    }
-};
-
-template <class T>
-struct equalTo
-{
-    bool operator()(const T &key1, const T &key2) const
-    {
-        return key1.x == key2.x && key1.y == key2.y && key1.z == key2.z;
-    }
-};
-
-
-
-//extern struct pointEnvlight {
-//            Sophus::SE3f envMapPose_world; //Sophus::SE3f* envMapPose_camera;
-//            cv::Point3f pointBase; // i.e. envMapPose_world.translation();
-//            gli::sampler2d<float>* prefilteredEnvmapSampler;
-//            gli::sampler2d<float>* diffuseSampler;
-//    };
-//extern struct envMap pointEnvMap;
 
 
 
@@ -102,111 +38,18 @@ int main(int argc, char **argv) {
 
     // ===========================Environment Light preprocessing module===========================================
 
-//    // load env light maps
-//
-//    std::string envMap_Folder="/media/lei/Data/datasetProcessing/ToolBox/data/formattedEnvMap";
-//    string controlPointPose_path= "../include/EnvLight_Data/controlPoints/kitchen_control_cam_pose.txt";
-//    std::vector<string> fileNames;
-//    GetFileNames(envMap_Folder,fileNames);
-//    cout<<" \n Show fileNames.size():"<<fileNames.size()<< endl;
-//
-//
-//    // Load Control pointCloud into Kd-tree
-//    string control_pointCloud_path= "../include/EnvLight_Data/controlPoints/origins.pcd";
-//
-//    pcl::PointCloud<pcl::PointXYZ>::Ptr control_pointCloud (new pcl::PointCloud<pcl::PointXYZ>);
-//
-////    if (pcl::io::loadPCDFile<pcl::PointXYZ> (control_pointCloud_path, *control_pointCloud) == -1)
-////      {
-////           PCL_ERROR ("Couldn't read file control_pointCloud.pcd \n");
-////           return (-1);
-////      }
-////    std::cout << "Number of loaded data points:"<< control_pointCloud->width * control_pointCloud->height<< std::endl;
-////
-////
-////    for (const auto& point: *control_pointCloud)
-////            std::cout << "    " << point.x
-////                      << " "    << point.y
-////                      << " "    << point.z << std::endl;
-////
-//
-//    pcl::KdTreeFLANN<pcl::PointXYZ> kdtree;
-//    kdtree.setInputCloud(control_pointCloud);
-//
-//
-//    // Load EnvMap into Unordered-map
-//    std::unordered_map<cv::Point3f, int, hash3d<cv::Point3f>, equalTo<cv::Point3f>> envLightMap;
-//
-//    vector<Sophus::SE3f, Eigen::aligned_allocator<Sophus::SE3f>> controlPointPoses;
-//    ReadData(controlPointPose_path,controlPointPoses);
-//
-//
-//
-//
-//
-//    for (int i = 1; i <= fileNames.size()-2018; ++i) {
-//
-//        stringstream ss;
-//        ss << i;
-//        string img_idx_str;
-//        ss >> img_idx_str;
-//        string name_prefix = "/envMap";
-//
-//
-//        string  envMap_parameter_path = envMap_Folder+ name_prefix+img_idx_str+ "/parameters.csv";
-//        string  envMap_diffuse_parameter_path = envMap_Folder+ name_prefix+img_idx_str+ "/parameters_env_diffuse.csv";
-//
-//        fstream parameters_file(envMap_diffuse_parameter_path);
-//
-//        if (!parameters_file.is_open()){cout << "Error open shader_txt" << endl;}
-//
-//        char buff[256];
-//        while (!parameters_file.eof()) {
-//            parameters_file.getline(buff, 100);
-//            string new_string =buff;
-//            cout << new_string << endl;
-//        }
-//
-//
-//        EnvMapLookup *EnvMapLookup=new DSONL::EnvMapLookup(argc,argv, envMap_parameter_path);
-//        EnvMapLookup->makeMipMap();
-//        delete EnvMapLookup;
-//
-//
-//        diffuseMap *diffuseMap = new DSONL::diffuseMap;
-//        diffuseMap->Init(argc,argv, envMap_diffuse_parameter_path);
-//        diffuseMap->makeDiffuseMap();
-//        delete diffuseMap;
-//
-//
-//
-//
-//    }
+    // load env light maps
+    std::string envMap_Folder="/media/lei/Data/datasetProcessing/ToolBox/data/formattedEnvMap";
+    string controlPointPose_path= "../include/EnvLight_Data/controlPoints/kitchen_control_cam_pose.txt";
 
 
-//    //B: line: 34- 45
-    string  parameter_path = "include/EnvLight_Data/envMap01/parameters.csv";
-    EnvMapLookup *EnvMapLookup=new DSONL::EnvMapLookup(argc,argv, parameter_path);
-    EnvMapLookup->makeMipMap();
-    delete EnvMapLookup;
-
-    string parameters_path = "include/EnvLight_Data/envMap01/parameters_env_diffuse.csv";
-    diffuseMap *diffuseMap = new DSONL::diffuseMap;
-    diffuseMap->Init(argc,argv, parameters_path);
-    diffuseMap->makeDiffuseMap();
-    delete diffuseMap;
-
-    string brdfIntegrationMap_path = "../include/brdfIntegrationMap/brdfIntegrationMap.pfm";
-    brdfIntegrationMap *brdfIntegrationMap= new DSONL::brdfIntegrationMap(brdfIntegrationMap_path);
-    brdfIntegrationMap->makebrdfIntegrationMap();
-    delete brdfIntegrationMap;
-
-
-
-
-
-
-
+    // TODO(parallelization)
+    std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
+    envLight  *EnvLight= new envLight(argc, argv, envMap_Folder,controlPointPose_path);
+    std::chrono::steady_clock::time_point t2 = std::chrono::steady_clock::now();
+    std::chrono::duration<double> time_used =std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1);
+    cout << "construct the normals: " << time_used.count() << " seconds." << endl;
+    cout<<"\n The preComputation of EnvMap is ready!"<<endl;
 
 
 
@@ -274,7 +117,7 @@ int main(int argc, char **argv) {
 		for (int v = 0; v < depth_ref.cols; v++) // rowId,  rows: 0 to 640
 		{
 
-			if (depth_ref.at<float>(u,v)==15.0f){ continue; }
+//			if (depth_ref.at<float>(u,v)==15.0f){ continue; }
 			Eigen::Vector3f normal_new(normal_map_GT.at<cv::Vec3f>(u, v)[2], normal_map_GT.at<cv::Vec3f>(u, v)[1],normal_map_GT.at<cv::Vec3f>(u, v)[0]);
 			normal_new = (dataLoader->R1.cast<float>()).transpose()* normal_new;
 			Eigen::Vector3f principal_axis(0, 0, 1);
@@ -390,7 +233,7 @@ int main(int argc, char **argv) {
 			double max_n_, min_n_;
 			cv::minMaxLoc(deltaMap, &min_n_, &max_n_);
 			cout << "->>>>>>>>>>>>>>>>>show max and min of estimated deltaMap:" << max_n_ << "," << min_n_ << endl;
-			Mat mask = cv::Mat(deltaMap != deltaMap);
+            Mat mask = cv::Mat(deltaMap != deltaMap);
 			deltaMap.setTo(1.0, mask);
 			if (i == 1) {
 				cout << "depthErr(depth_ref_gt, inv_depth_ref).val[0]:" << depthErr(depth_ref_gt, inv_depth_ref).val[0]<< endl;
@@ -410,10 +253,10 @@ int main(int argc, char **argv) {
 				//				//				showScaledImage(depth_ref_gt, inv_depth_ref);
 				//				//				waitKey(0);
 			} else {
-//				PhotometricBA(IRef, I, options, Klvl, Rotation, Translation, inv_depth_ref, deltaMap, depth_upper_bound,depth_lower_bound, statusMap, statusMapB);
+				PhotometricBA(IRef, I, options, Klvl, Rotation, Translation, inv_depth_ref, deltaMap, depth_upper_bound,depth_lower_bound, statusMap, statusMapB);
 			}
 
-			DSONL::updateDelta(Camera1_c2w,Rotation,Translation,Klvl,image_ref_baseColor,inv_depth_ref,image_ref_metallic ,image_ref_roughness,deltaMap,newNormalMap,up_new, butt_new);
+			DSONL::updateDelta( EnvLight, Camera1_c2w,Rotation,Translation,Klvl,image_ref_baseColor,inv_depth_ref,image_ref_metallic ,image_ref_roughness,deltaMap,newNormalMap,up_new, butt_new);
 
 //			Mat deltaMapGT_res= deltaMapGT(grayImage_ref,depth_ref,grayImage_target,depth_target,K.cast<double>(),distanceThres,xi_GT, upper, buttom, deltaMap);
 //			Mat showGTdeltaMap=colorMap(deltaMapGT_res, upper, buttom);
@@ -445,7 +288,6 @@ int main(int argc, char **argv) {
 			     << 100 * translationErr(xi_GT.translation(), Translation) << "(%) "
 			     << "\n Show depth error :" << depthErr(depth_ref_gt, inv_depth_ref).val[0]
 			     << endl;// !!!!!!!!!!!!!!!!!!!!!!!!
-
 			i += 1;
 
 		}
@@ -453,7 +295,6 @@ int main(int argc, char **argv) {
 		     << "\nShow current translation perturbation error : " << trErr
 		     << "\nShow current depth perturbation error :" << depth_Error << endl;
 //		waitKey(0);
-
 	}
 
 	// tidy up
@@ -544,3 +385,36 @@ int main(int argc, char **argv) {
 //        // GSN: image_ref_path_PFM blue,green and red channel value: [0.0339334, 0.0683846, 0.120991]
 //        Vec3f testRadianceVal_testfreshSchlick=  radiance_beta_vec.fresnelSchlick(0.5, Vec3f(0.5,0.5,0.5));
 //        cout<<"=======show testRadianceVal_testfreshSchlick:"<<testRadianceVal_testfreshSchlick<<endl;
+
+
+//    cout<<"\n show new outside envMapPose_world:\n "<< EnvLight->envLightMap[key4Search].envMapPose_world.matrix()<<endl;
+//     cout<<"show EnvLight->brdfSampler size:"<< EnvLight->brdfSampler.size()<<endl;
+//     cout<<"show size of EnvLight->envLightMap[firstPoint].EnvmapSampler size:"<<EnvLight->envLightMap[key4Search].EnvmapSampler.size()<<endl;
+//    gli::vec4 SampleAAAAAA =EnvLight->envLightMap[key4Search].EnvmapSampler[0].texture_lod(gli::fsampler2D::normalized_type(0.6f,0.8f), 0.0f); // transform the texture coordinate
+//    cout << "\n============SampleAAAAAA val(RGBA):\n"<< SampleAAAAAA.b << "," << SampleAAAAAA.g << "," <<SampleAAAAAA.r << "," << SampleAAAAAA.a << endl;
+
+//    // Load Control pointCloud into Kd-tree
+//    string control_pointCloud_path= "../include/EnvLight_Data/controlPoints/origins.pcd";
+//
+//    pcl::PointCloud<pcl::PointXYZ>::Ptr control_pointCloud (new pcl::PointCloud<pcl::PointXYZ>);
+//
+////    if (pcl::io::loadPCDFile<pcl::PointXYZ> (control_pointCloud_path, *control_pointCloud) == -1)
+////      {
+////           PCL_ERROR ("Couldn't read file control_pointCloud.pcd \n");
+////           return (-1);
+////      }
+////    std::cout << "Number of loaded data points:"<< control_pointCloud->width * control_pointCloud->height<< std::endl;
+////
+////
+////    for (const auto& point: *control_pointCloud)
+////            std::cout << "    " << point.x
+////                      << " "    << point.y
+////                      << " "    << point.z << std::endl;
+////
+//
+//    pcl::KdTreeFLANN<pcl::PointXYZ> kdtree;
+//    kdtree.setInputCloud(control_pointCloud);
+//
+//
+//    // Load EnvMap into Unordered-map
+//    std::unordered_map<cv::Point3f, int, hash3d<cv::Point3f>, equalTo<cv::Point3f>> envLightMap;

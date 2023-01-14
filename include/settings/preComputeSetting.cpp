@@ -9,9 +9,9 @@ namespace DSONL{
 
       cv::Mat img_diffuseMap;
       cv::Mat img_diffuseMapMask;
-      gli::sampler2d<float>* prefilteredEnvmapSampler =NULL;
-      gli::sampler2d<float>* brdfSampler= NULL;
-      gli::sampler2d<float>* diffuseSampler= NULL;
+    const gli::sampler2d<float>* prefilteredEnvmapSampler =NULL;
+    const gli::sampler2d<float>* brdfSampler_=NULL;
+    const  gli::sampler2d<float>* diffuseSampler= NULL;
 
 
 

@@ -3,7 +3,7 @@
 //
 
 #pragma once
-#include "iostream"
+//#include <iostream>
 #include "settings/preComputeSetting.h"
 #include <Eigen/Core>
 #include <sophus/se3.hpp>
@@ -12,6 +12,11 @@
 #include <opencv2/core/mat.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <unordered_map>
+
+
+#include "envLightPreProcessing/envLightPreProcessing.h"
+
+
 
 using namespace cv;
 namespace DSONL
@@ -74,6 +79,7 @@ namespace DSONL
         };
 
         void updateDelta(
+                envLight* EnvLight,
             const Eigen::Matrix3d Camera1_c2w,
 			// const Sophus::SE3d& CurrentT,
             Sophus::SO3d& Rotation,

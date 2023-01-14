@@ -109,9 +109,6 @@ namespace DSONL {
 				// pixelSkip++;
 
 
-
-
-
 				float iDepth = depth_ref.at<double>(u, v);
 //				if (round(1.0 / iDepth) == 15.0) { continue; }
 				if (depth_ref.at<double>(u, v) <0.0) { continue; }

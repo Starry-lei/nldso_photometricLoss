@@ -21,15 +21,6 @@ using namespace cv;
 namespace DSONL{
 
 
-     struct envMap {
-            Sophus::SE3f envMapPose_world; //Sophus::SE3f* envMapPose_camera;
-            cv::Point3f pointBase; // i.e. envMapPose_world.translation();
-            gli::sampler2d<float>* prefilteredEnvmapSampler;
-            gli::sampler2d<float>* diffuseSampler;
-    };
-
-
-
 
 
 
@@ -39,9 +30,9 @@ namespace DSONL{
 	extern  cv::Mat img_diffuseMap;
 	extern  cv::Mat img_diffuseMapMask;
 
-    extern  gli::sampler2d<float>* prefilteredEnvmapSampler;
-    extern  gli::sampler2d<float>* diffuseSampler;
-    extern  gli::sampler2d<float>* brdfSampler;
+    extern const  gli::sampler2d<float>* prefilteredEnvmapSampler;
+    extern  const gli::sampler2d<float>* diffuseSampler;
+    extern  const gli::sampler2d<float>* brdfSampler_;
 
 
 

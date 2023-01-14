@@ -48,7 +48,7 @@ endif()
 # is currently the only viable option to avoid subtle bugs with Eigen.
 SET(CXX_MARCH native)
 
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
@@ -163,6 +163,11 @@ set(dsonl_SOURCE_FILES
   include/deltaCompute/deltaCompute.h
   include/deltaCompute/deltaCompute.cpp
 
+  include/envLightPreProcessing/envLightPreProcessing.h
+#  include/envLightPreProcessing/envLightPreProcessing.cpp
+
+
+
   include/settings/preComputeSetting.h
   include/settings/preComputeSetting.cpp
 
@@ -172,7 +177,10 @@ set(dsonl_SOURCE_FILES
   include/dataLoader/dataLoader.h
 
 #  include/wrapperHeader.h
-        )
+
+
+        include/envLightPreProcessing/envLightPreProcessing.cpp
+        include/preFilter/preFilterUtils.h include/preFilter/preFilter.cpp)
 
 add_library(dsonl ${dsonl_SOURCE_FILES})
 
@@ -188,14 +196,14 @@ target_link_libraries(photometricLoss
   ${GLEW_LIBRARIES}
 )
 
-add_executable(test_functions src/test_functions.cpp)
-target_link_libraries(test_functions
-  Ceres::ceres
-  TBB::tbb
-  OpenCV
-  ${PCL_LIBRARIES}
-  dsonl
-  ${OPENGL_LIBRARIES}
-  ${GLUT_LIBRARIES}
-  ${GLEW_LIBRARIES}
-)
+#add_executable(test_functions src/test_functions.cpp)
+#target_link_libraries(test_functions
+#  Ceres::ceres
+#  TBB::tbb
+#  OpenCV
+#  ${PCL_LIBRARIES}
+#  dsonl
+#  ${OPENGL_LIBRARIES}
+#  ${GLUT_LIBRARIES}
+#  ${GLEW_LIBRARIES}
+#)

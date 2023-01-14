@@ -5,6 +5,7 @@
 #include "deltaCompute.h"
 
 
+
 namespace DSONL {
 
 
@@ -190,7 +191,7 @@ namespace DSONL {
 	}
 
 	Vec2f IBL_Radiance::brdfIntegration(float NoV, float roughness) {
-		gli::vec4 SampleBrdf = brdfSampler->texture_lod(gli::fsampler2D::normalized_type(NoV, 1 - roughness), 0.0f);// transform the texture coordinate
+		gli::vec4 SampleBrdf = brdfSampler_->texture_lod(gli::fsampler2D::normalized_type(NoV, 1 - roughness), 0.0f);// transform the texture coordinate
 		                                                                                                            //     std::cout << "\n============SampleBrdf val(BGRA)!!!!!!!:\n" << SampleBrdf.b << "," << SampleBrdf.g << "," << SampleBrdf.r << "," << SampleBrdf.a << std::endl;
 		return Vec2f(SampleBrdf.b, SampleBrdf.g);                                                                   // x, y  SampleBrdf.b, SampleBrdf.g
 	}
@@ -287,6 +288,7 @@ namespace DSONL {
 
 
 	void updateDelta(
+			envLight* EnvLight,
 	        Eigen::Matrix3d Camera1_c2w,
 //	        const Sophus::SE3d &CurrentT,
 	        Sophus::SO3d& Rotation,
@@ -330,8 +332,6 @@ namespace DSONL {
                 float image_metallic= image_metallic_.at<float>(u,v);
 
 
-
-
 				// ===================================PROJECTION====================================
 				Eigen::Vector2f pixelCoord((float) v, (float) u);//  u is the row id , v is col id
 				float iDepth = depth_map.at<double>(u, v);
@@ -368,6 +368,43 @@ namespace DSONL {
 				Vec3f N_(normal(0), normal(1), normal(2));
 				Vec3f View_beta(beta(0), beta(1), beta(2));
 				Vec3f View_beta_prime(beta_prime(0), beta_prime(1), beta_prime(2));
+
+				// ===================================search for Env Light from control points===================
+
+//				Vec3f firstPoint(0.660882, -0.334907, 0.799127);
+//				pcl::PointXYZ searchPoint(firstPoint.val[0], firstPoint.val[1], firstPoint.val[2]);
+
+				pcl::PointXYZ searchPoint(p_c1.x(), p_c1.y(), p_c1.z());
+				float radius = 0.2;
+				std::vector<int> pointIdxRadiusSearch;
+				std::vector<float> pointRadiusSquaredDistance;
+
+				Vec3f key4Search;
+				if ( EnvLight->kdtree.radiusSearch(searchPoint, radius, pointIdxRadiusSearch, pointRadiusSquaredDistance) > 0) {
+					for (std::size_t i = 0; i < pointIdxRadiusSearch.size (); ++i)
+						std::cout << "\n------"<<       (*(EnvLight->ControlpointCloud))[ pointIdxRadiusSearch[0] ].x
+								  << " " << (*(EnvLight->ControlpointCloud))[ pointIdxRadiusSearch[0] ].y
+								  << " " << (*(EnvLight->ControlpointCloud))[ pointIdxRadiusSearch[0] ].z
+								  << " (squared distance: " << pointRadiusSquaredDistance[0] << ")" << std::endl;
+
+					float pointCorres_x = (*(EnvLight->ControlpointCloud))[pointIdxRadiusSearch[0]].x;
+					float pointCorres_y = (*(EnvLight->ControlpointCloud))[pointIdxRadiusSearch[0]].y;
+					float pointCorres_z = (*(EnvLight->ControlpointCloud))[pointIdxRadiusSearch[0]].z;
+
+					key4Search.val[0]= pointCorres_x;
+					key4Search.val[1]= pointCorres_y;
+					key4Search.val[2]= pointCorres_z;
+				}
+
+				//    std::cerr<<"\n show count of envLightMap"<<  EnvLight->envLightMap.count(key4Search)<<endl;
+				brdfSampler_ = & (EnvLight->brdfSampler[0]);
+				prefilteredEnvmapSampler= & (EnvLight->envLightMap[key4Search].EnvmapSampler[0]);
+				diffuseSampler = & (EnvLight->envLightMap[key4Search].EnvmapSampler[1]);
+
+
+
+
+
 
 				// ===================================RADIANCE-COMPUTATION====================================
 				IBL_Radiance *ibl_Radiance = new IBL_Radiance;

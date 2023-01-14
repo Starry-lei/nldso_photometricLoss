@@ -19,6 +19,7 @@
 #include <cmath>
 #include <iostream>
 #include <vector>
+#include <string>
 
 //#include <ceres/ceres.h>
 //#include <ceres/cubic_interpolation.h>
@@ -607,8 +608,8 @@ namespace DSONL {
 
 		showMinus(minus_original, minus_adjust, minus_mask);
 
-		 writer.write("PointCloud_Transformed.pcd",*cloud, false);// do we need the sensor acquisition origin?
-		 writer.write("PointCloud_right_HD.pcd",*cloud_rig, false);// do we need the sensor acquisition origin?
+		 writer.write("PointCloud_Transformed16.pcd",*cloud, false);// do we need the sensor acquisition origin?
+		 writer.write("PointCloud_right_HD16.pcd",*cloud_rig, false);// do we need the sensor acquisition origin?
 
 		double max_n, min_n;
 		cv::minMaxLoc(deltaMapGT, &min_n, &max_n);
