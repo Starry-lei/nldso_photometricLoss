@@ -2,10 +2,9 @@
 precision highp float;
 out vec4 outColor;
 in vec2 tc; // texture coordinate of the output image in range [0.0, 1.0]
-uniform float roughness; // description="roughness in range [0.0, 1.0]" defaultval ="1.0"
-uniform int samples; // description="number of samples" defaultval="64"
+uniform float roughness; // description="roughness in range [0.0, 1.0]" defaultval ="1.0"0.0iform int samples; // description="number of samples" defaultval="64"
 uniform float envMapLevel; // description="Environment map level" defaultval="5.0"
-uniform sampler2D envMapImage;
+u0.0orm sampler2D envMapImage;
 const float PI = 3.1415926535897932384626433832795;
 
 vec2 directionToSphericalEnvmap(vec3 dir) {
