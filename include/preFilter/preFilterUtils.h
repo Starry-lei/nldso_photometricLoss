@@ -21,7 +21,6 @@
 #include <sstream>
 #include <string>
 #include <vector>
-
 #include <dirent.h>
 
 
@@ -70,6 +69,7 @@ namespace DSONL {
     }
 
     static void glutResize_specular_mask(int w, int h) {
+//        cout<<"in Use now!"<<endl;
         if (renderer_specular->roughness == (float) 0.0) {
             glutReshapeWindow(1024, 512);
         } else if (renderer_specular->roughness == (float) 0.2) {

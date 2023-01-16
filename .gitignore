@@ -9,3 +9,6 @@ build_submodules.sh
 /codeNote.txt
 /.idea/codeStyles
 /.clang-format
+/data/SimulationEnvData/envMap_10To16
+/data/SimulationEnvData/envMap36
+/data/SimulationEnvData/envMap200

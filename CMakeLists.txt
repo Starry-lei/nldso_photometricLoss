@@ -130,9 +130,9 @@ find_package(GLUT REQUIRED)
 find_package(GLEW REQUIRED)
 include_directories(${OPENGL_INCLUDE_DIRS} ${GLEW_INCLUDE_DIRS})
 
-#
-# message(STATUS "show PCL-----PCL_INCLUDE_DIRS: ${PCL_INCLUDE_DIRS}")
-# message(STATUS "show PCL-----PCL_LIBRARY_DIRS: ${PCL_LIBRARY_DIRS}")
+
+# message(STATUS "show PCL-----${OPENGL_INCLUDE_DIRS}")
+ message(STATUS "show PCL-----${GLEW_INCLUDE_DIRS}")
 # message(STATUS "show PCL-----PCL_DEFINITIONS: ${PCL_DEFINITIONS}")
 # some output:
 message(STATUS "show IT: ${CMAKE_CURRENT_SOURCE_DIR}")
@@ -180,7 +180,14 @@ set(dsonl_SOURCE_FILES
 
 
         include/envLightPreProcessing/envLightPreProcessing.cpp
-        include/preFilter/preFilterUtils.h include/preFilter/preFilter.cpp)
+        include/preFilter/preFilterUtils.h
+        include/preFilter/preFilter.cpp
+        include/controlPointSelector/ctrlPointSelector.cpp
+        include/controlPointSelector/ctrlPointSelector.h
+
+#        include/settings/common.h
+
+        )
 
 add_library(dsonl ${dsonl_SOURCE_FILES})
 

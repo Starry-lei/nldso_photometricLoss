@@ -97,6 +97,12 @@ namespace DSONL {
 			for (int v = 0; v < image.cols; v++)// rowId,  rows: 0 to 640
 			{
 
+
+
+
+
+
+
 				// use DSO pixel selector
 				// if (statusMap!=NULL && statusMap[u*image.cols+v]==0 ){ continue;}
 

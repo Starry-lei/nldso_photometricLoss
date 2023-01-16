@@ -10,8 +10,7 @@
 #include "utils/ultils.h"
 #include "cameraProjection/reprojection.h"
 #include "cameraProjection/photometricBA.h"
-
-
+#include "controlPointSelector/ctrlPointSelector.h"
 
 
 
@@ -39,27 +38,12 @@ int main(int argc, char **argv) {
     // ===========================Environment Light preprocessing module===========================================
 
     // load env light maps
-    std::string envMap_Folder="/media/lei/Data/datasetProcessing/ToolBox/data/formattedEnvMap";
-    string controlPointPose_path= "../include/EnvLight_Data/controlPoints/kitchen_control_cam_pose.txt";
+    std::string envMap_Folder="../data/SimulationEnvData/envMap_10To16";
+    string controlPointPose_path= "../data/SimulationEnvData/scene0704_01_control_cam_pose.txt";
 
-
-    // TODO(parallelization)
-    std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
-    envLight  *EnvLight= new envLight(argc, argv, envMap_Folder,controlPointPose_path);
-    std::chrono::steady_clock::time_point t2 = std::chrono::steady_clock::now();
-    std::chrono::duration<double> time_used =std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1);
-    cout << "construct the normals: " << time_used.count() << " seconds." << endl;
-    cout<<"\n The preComputation of EnvMap is ready!"<<endl;
-
-
-
-
-
-
+    Mat grayImage_target, grayImage_ref, depth_ref, depth_target, image_ref_baseColor, image_target_baseColor;
     Mat image_ref_metallic = dataLoader->image_ref_metallic;
     Mat image_ref_roughness = dataLoader->image_ref_roughness;
-
-	Mat grayImage_target, grayImage_ref, depth_ref, depth_target, image_ref_baseColor, image_target_baseColor;
 	grayImage_ref = dataLoader->grayImage_ref;
 	grayImage_target = dataLoader->grayImage_target;
 	grayImage_ref.convertTo(grayImage_ref, CV_64FC1);
@@ -68,11 +52,44 @@ int main(int argc, char **argv) {
 	Mat depth_ref_GT = dataLoader->depth_map_ref;
 	depth_target = dataLoader->depth_map_target;
 	image_ref_baseColor = dataLoader->image_ref_baseColor;
-	//        imshow("image_ref_baseColor",image_ref_baseColor);
-	//        waitKey(0);
+
+
+    imshow("image_ref_baseColor",image_ref_baseColor);
+    waitKey(0);
+
+
+
 	image_target_baseColor = dataLoader->image_target_baseColor;
     Mat normal_map_GT;
     normal_map_GT = dataLoader->normal_map_GT;
+    Eigen::Matrix3f K;
+    K = dataLoader->camera_intrinsics;
+
+    // ----------------------------------------optimization variable: R, t--------------------------------------
+    Sophus::SE3d xi, xi_GT;
+    Eigen::Matrix3d Camera1_c2w= dataLoader->R1;
+    Eigen::Matrix<double,3,3> R;
+    R = dataLoader->q_12.normalized().toRotationMatrix();
+    xi_GT.setRotationMatrix(R);
+    xi_GT.translation() = dataLoader->t12;
+
+
+
+//    imshow("baseColor", image_ref_baseColor);
+//    waitKey(0);
+
+
+
+// ===========================ctrlPoint Selector==========================================
+    ctrlPointSelector  * ctrlPoint_Selector= new ctrlPointSelector(dataLoader->camPose1, controlPointPose_path,grayImage_ref, depth_ref_GT,K);
+    // TODO(parallelization)
+    std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
+    envLight  *EnvLight= new envLight(ctrlPoint_Selector->selectedIndex, argc, argv, envMap_Folder,controlPointPose_path);
+    std::chrono::steady_clock::time_point t2 = std::chrono::steady_clock::now();
+    std::chrono::duration<double> time_used =std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1);
+    cout << "construct the envMap: " << time_used.count() << " seconds." << endl;
+    cout<<"\n The preComputation of EnvMap is ready!"<<endl;
+
 
 
 	// show the depth image with noise
@@ -85,21 +102,13 @@ int main(int argc, char **argv) {
     cv::minMaxLoc(grayImage_ref, &min_radiance_val, &max_radiance_val);
     cout << "\n show original grayImage_ref min, max:\n" << min_radiance_val << "," << max_radiance_val << endl;
 
-	Eigen::Matrix3f K;
-	K = dataLoader->camera_intrinsics;
 
 	imshow("grayImage_ref",grayImage_ref);
 	imshow("grayImage_target",grayImage_target);
 	waitKey(0);
 
 
-	// ----------------------------------------optimization variable: R, t--------------------------------------
-	Sophus::SE3d xi, xi_GT;
-	Eigen::Matrix3d Camera1_c2w= dataLoader->R1;
-	Eigen::Matrix<double,3,3> R;
-	R = dataLoader->q_12.normalized().toRotationMatrix();
-	xi_GT.setRotationMatrix(R);
-	xi_GT.translation() = dataLoader->t12;
+
 
 
 	// ----------------------------------------optimization variable: depth --------------------------------------
@@ -117,9 +126,8 @@ int main(int argc, char **argv) {
 		for (int v = 0; v < depth_ref.cols; v++) // rowId,  rows: 0 to 640
 		{
 
-//			if (depth_ref.at<float>(u,v)==15.0f){ continue; }
-			Eigen::Vector3f normal_new(normal_map_GT.at<cv::Vec3f>(u, v)[2], normal_map_GT.at<cv::Vec3f>(u, v)[1],normal_map_GT.at<cv::Vec3f>(u, v)[0]);
-			normal_new = (dataLoader->R1.cast<float>()).transpose()* normal_new;
+			Eigen::Vector3f normal_new(normal_map_GT.at<cv::Vec3f>(u, v)[0], normal_map_GT.at<cv::Vec3f>(u, v)[1],normal_map_GT.at<cv::Vec3f>(u, v)[2]);
+            //			normal_new = (dataLoader->R1.cast<float>()).transpose()* normal_new;
 			Eigen::Vector3f principal_axis(0, 0, 1);
 			if (normal_new.dot(principal_axis) > 0) {normal_new = -normal_new;}
 			normal_map.at<Vec3f>(u, v)[0] = normal_new(0);
@@ -140,16 +148,16 @@ int main(int argc, char **argv) {
 	double trErr;
 	Eigen::Vector3d T_GT(xi_GT.translation());
 	Eigen::Vector3d perturbedTranslation = translation_pertabation(0.0, 0.0, 0.0, T_GT, trErr); // percentage
-
 	double Mean = 0.0, StdDev = 0;
 	//	float densities[] = {0.03, 0.003, 0.05, 0.15, 0.5, 1}; /// number of optimized depths,  current index is 1
 
 
 	PhotometricBAOptions options;
-	Mat newNormalMap = normal_map;
+    Mat newNormalMap = normal_map;
+//    Mat newNormalMap = normal_map_GT;
 	double distanceThres = 0.007;
-	float upper = 9.0;
-	float buttom = 0.002;
+	float upper = 2.0;
+	float buttom = 0.5;
 	float up_new = upper;
 	float butt_new = buttom;
 	Mat deltaMap(depth_ref.rows, depth_ref.cols, CV_32FC1, Scalar(1)); // storing delta
@@ -217,7 +225,6 @@ int main(int argc, char **argv) {
 
 
 	for (int lvl = 1; lvl >= 1; lvl--) {
-
 		cout << "\n Show the value of lvl:" << lvl << endl;
 		Mat IRef, DRef, I, D;
 		Eigen::Matrix3f Klvl, Klvl_ignore;
@@ -229,7 +236,7 @@ int main(int argc, char **argv) {
 		double min_gt_special, max_gt_special;
 
 		int i = 0;
-		while (i < 2) {
+		while (i < 1) {
 			double max_n_, min_n_;
 			cv::minMaxLoc(deltaMap, &min_n_, &max_n_);
 			cout << "->>>>>>>>>>>>>>>>>show max and min of estimated deltaMap:" << max_n_ << "," << min_n_ << endl;
@@ -253,16 +260,21 @@ int main(int argc, char **argv) {
 				//				//				showScaledImage(depth_ref_gt, inv_depth_ref);
 				//				//				waitKey(0);
 			} else {
-				PhotometricBA(IRef, I, options, Klvl, Rotation, Translation, inv_depth_ref, deltaMap, depth_upper_bound,depth_lower_bound, statusMap, statusMapB);
+//				PhotometricBA(IRef, I, options, Klvl, Rotation, Translation, inv_depth_ref, deltaMap, depth_upper_bound,depth_lower_bound, statusMap, statusMapB);
 			}
 
-			DSONL::updateDelta( EnvLight, Camera1_c2w,Rotation,Translation,Klvl,image_ref_baseColor,inv_depth_ref,image_ref_metallic ,image_ref_roughness,deltaMap,newNormalMap,up_new, butt_new);
 
-//			Mat deltaMapGT_res= deltaMapGT(grayImage_ref,depth_ref,grayImage_target,depth_target,K.cast<double>(),distanceThres,xi_GT, upper, buttom, deltaMap);
-//			Mat showGTdeltaMap=colorMap(deltaMapGT_res, upper, buttom);
-//			Mat showESdeltaMap=colorMap(deltaMap, upper, buttom);
-//			imshow("show GT deltaMap", showGTdeltaMap);
-//			imshow("show ES deltaMap", showESdeltaMap);
+            // show baseColor
+
+
+			DSONL::updateDelta(dataLoader->camPose1, EnvLight,Rotation,Translation,Klvl,image_ref_baseColor,inv_depth_ref,image_ref_metallic ,image_ref_roughness,deltaMap,newNormalMap,up_new, butt_new);
+			Mat deltaMapGT_res= deltaMapGT(grayImage_ref,depth_ref,grayImage_target,depth_target,K.cast<double>(),distanceThres,xi_GT, upper, buttom, deltaMap);
+
+            Mat showGTdeltaMap=colorMap(deltaMapGT_res, upper, buttom);
+			Mat showESdeltaMap=colorMap(deltaMap, upper, buttom);
+
+			imshow("show GT deltaMap", showGTdeltaMap);
+			imshow("show ES deltaMap", showESdeltaMap);
 
 
 //			/// TEMP TEST BEGIN
@@ -294,7 +306,7 @@ int main(int argc, char **argv) {
 		cout << "\nShow current rotation perturbation error :" << roErr
 		     << "\nShow current translation perturbation error : " << trErr
 		     << "\nShow current depth perturbation error :" << depth_Error << endl;
-//		waitKey(0);
+		waitKey(0);
 	}
 
 	// tidy up

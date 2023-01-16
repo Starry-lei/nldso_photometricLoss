@@ -310,9 +310,14 @@ namespace DSONL {
 		cout << "======================show Rotation projection============:" << Rotation.matrix() << endl;
 
 		Eigen::Matrix<double, 3, 3> K;
-		K << 1361.1, 0, 320,
-		        0, 1361.1, 240,
-		        0, 0, 1;
+
+//		K << 1361.1, 0, 320,
+//             0, 1361.1, 240,
+//             0,     0,    1;
+
+        K <<   577.8705, 0, 320,
+                0, 577.8705, 240,
+                0, 0, 1;
 
 		double fx = K(0, 0), cx = K(0, 2), fy = K(1, 1), cy = K(1, 2);
 		Eigen::Matrix<double, 3, 1> p_3d_no_d;
@@ -444,10 +449,19 @@ namespace DSONL {
 		Mat deltaMap_Color(deltaMap.rows, deltaMap.cols, CV_32FC3, Scalar(0, 0, 0));
 
 
+        Vec2i boundingBoxUpperLeft(0, 0);
+        Vec2i boundingBoxBotRight(240, 320);
+
+
 		for (int x = 0; x < deltaMap.rows; ++x) {
 			for (int y = 0; y < deltaMap.cols; ++y) {
 
-				float delta = deltaMap.at<float>(x, y);
+
+                if ( (y<boundingBoxUpperLeft.val[1] || y>boundingBoxBotRight.val[1]) || (x< boundingBoxUpperLeft.val[0] ||  x> boundingBoxBotRight.val[0])){ continue;}
+
+
+
+                float delta = deltaMap.at<float>(x, y);
 				if (delta < upper && delta > lower) {
 
 					delta = delta * (1.0 / (upper - lower)) + (-lower * (1.0 / (upper - lower)));
@@ -496,13 +510,10 @@ namespace DSONL {
 
 		for (int x = 0; x < depth_left.rows; ++x) {
 			for (int y = 0; y < depth_left.cols; ++y) {
-
-//				if (round(depth_left.at<double>(x, y)) == 15.0) {continue;}
-
+                // IOA setting
 				double d_r = depth_right.at<double>(x, y);
 				// Mark: skip depth=15
-//				if (round(d_r) == 15.0f) {continue;}
-
+                // if (round(d_r) == 15.0f) {continue;}
 				Eigen::Matrix<double, 3, 1> p_3d_no_d_r;
 				p_3d_no_d_r << (y - cx) / fx, (x - cy) / fy, 1.0;
 				Eigen::Matrix<double, 3, 1> p_c2 = d_r * p_3d_no_d_r;
@@ -523,33 +534,41 @@ namespace DSONL {
 
 
 		inliers_filter.emplace(213, 295);//yes
-
 		std::vector<int> pointIdxRadiusSearch;
 		std::vector<float> pointRadiusSquaredDistance;
 
 		float radius = thres;
-
 		Mat minus_original(depth_left.rows, depth_left.cols, CV_32FC1, Scalar(0));
 		Mat minus_adjust(depth_left.rows, depth_left.cols, CV_32FC1, Scalar(0));
 		Mat minus_mask(depth_left.rows, depth_left.cols, CV_8UC1, Scalar(0));
 
-		for (int x = 0; x < depth_left.rows; ++x) {
+        Vec2i boundingBoxUpperLeft(0, 0);
+        Vec2i boundingBoxBotRight(240, 320);
+
+
+
+        for (int x = 0; x < depth_left.rows; ++x) {
 			for (int y = 0; y < depth_left.cols; ++y) {
+
 				//				if(inliers_filter.count(x)==0){continue;}// ~~~~~~~~~~~~~~Filter~~~~~~~~~~~~~~~~~~~~~~~
 				//				if(inliers_filter[x]!=y ){continue;}// ~~~~~~~~~~~~~~Filter~~~~~~~~~~~~~~
-				// calculate 3D point of left camera
+
+                if ( (y<boundingBoxUpperLeft.val[1] || y>boundingBoxBotRight.val[1]) || (x< boundingBoxUpperLeft.val[0] ||  x> boundingBoxBotRight.val[0])){ continue;}
+
+
+
+
+                // calculate 3D point of left camera
 				double d = depth_left.at<double>(x, y);
-
 				// Mark: skip depth=15
-//				if (round(d) == 15.0) { continue; }
+                //if (round(d) == 15.0) { continue; }
 
 
+                // projection
 				Eigen::Matrix<double, 3, 1> p_3d_no_d;
 				p_3d_no_d << (y - cx) / fx, (x - cy) / fy, 1.0;
 				Eigen::Matrix<double, 3, 1> p_c1 = d * p_3d_no_d;
-
 				Eigen::Vector3d point_Trans = ExtrinsicPose.rotationMatrix() * p_c1 + ExtrinsicPose.translation();
-
 				cloud->push_back(pcl::PointXYZ(point_Trans.x(), point_Trans.y(), point_Trans.z()));
 				pcl::PointXYZ searchPoint(point_Trans.x(), point_Trans.y(), point_Trans.z());
 				if (kdtree.radiusSearch(searchPoint, radius, pointIdxRadiusSearch, pointRadiusSquaredDistance) > 0) {
@@ -608,8 +627,8 @@ namespace DSONL {
 
 		showMinus(minus_original, minus_adjust, minus_mask);
 
-		 writer.write("PointCloud_Transformed16.pcd",*cloud, false);// do we need the sensor acquisition origin?
-		 writer.write("PointCloud_right_HD16.pcd",*cloud_rig, false);// do we need the sensor acquisition origin?
+//		 writer.write("PointCloud_Transformed16.pcd",*cloud, false);// do we need the sensor acquisition origin?
+//		 writer.write("PointCloud_right_HD16.pcd",*cloud_rig, false);// do we need the sensor acquisition origin?
 
 		double max_n, min_n;
 		cv::minMaxLoc(deltaMapGT, &min_n, &max_n);

@@ -55,11 +55,15 @@ namespace DSONL
                 Vec3f prefilteredColor(float u, float v, float level);
                 Vec2f brdfIntegration(float NoV,float roughness );
                 Vec2f directionToSphericalEnvmap(Vec3f dir);
-                Vec3f specularIBL(Vec3f F0, float roughness, Vec3f N, Vec3f V, const Eigen::Matrix3d Camera1_c2w);
+                Vec3f specularIBL(Vec3f F0, float roughness, Vec3f N, Vec3f V, const Eigen::Matrix3d Camera1_c2w,
+                                  Sophus::SO3f enterEnv_Rotation);
                 Vec3f specularIBLCheck(Vec3f F0, float roughness, Vec3f N, Vec3f V, const Eigen::Matrix3d Camera1_c2w);
 
 		        Vec3f RRTAndODTFit( Vec3f v);
 		        Vec3f ACESFilm(Vec3f radiance);
+
+                Vec3f diffusity;
+                Vec3f Specularity;
 
                 Vec3f diffuseIBL(Vec3f normal);
                 Vec3f fresnelSchlick(float cosTheta, Vec3f F0);
@@ -69,7 +73,9 @@ namespace DSONL
                                        const float& metallicValue,
                                        const float &reflectance,
                                        const Vec3f& baseColorValue,
-                                       const Eigen::Matrix3d Transformation_wc
+                                       const Eigen::Matrix3d Transformation_wc,
+                                       Sophus::SO3f enterEnv_Rotation
+
                                        );
 
 
@@ -79,9 +85,8 @@ namespace DSONL
         };
 
         void updateDelta(
-                envLight* EnvLight,
-            const Eigen::Matrix3d Camera1_c2w,
-			// const Sophus::SE3d& CurrentT,
+            Sophus::SE3d& Camera1_c2w,
+            envLight* EnvLight,
             Sophus::SO3d& Rotation,
             Eigen::Matrix<double, 3, 1>& Translation,
             const Eigen::Matrix3f& K,

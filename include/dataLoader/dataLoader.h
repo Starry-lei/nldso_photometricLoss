@@ -5,7 +5,6 @@
 #pragma once
 
 #include "settings/setting.h"
-
 #include <opencv2/core.hpp>
 #include <opencv2/core/core.hpp>
 #include <opencv2/core/mat.hpp>
@@ -73,6 +72,7 @@ namespace DSONL {
 		Eigen::Quaterniond q_12;
 		Eigen::Matrix3d R1;
 		Eigen::Matrix3d R2;
+        Sophus::SE3d camPose1;
 		int rows;
 		int cols;
 
@@ -86,8 +86,6 @@ namespace DSONL {
             camera_intrinsics <<   577.8705, 0, 320,
                                     0, 577.8705, 240,
                                     0, 0, 1;
-
-
 			Eigen::Matrix3d S_x;
 			S_x << 1.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, -1.0;
 
@@ -98,8 +96,7 @@ namespace DSONL {
 				string depth_ref_path;
                 string image_ref_metallic_path;
                 string image_ref_roughness_path;
-
-
+                string image_normal_GT_path;
 
 //                image_ref_path =            "../data/SimulationEnvData/leftImage/origfov_10.pfm";
 //                image_ref_baseColor_path =  "../data/SimulationEnvData/leftImage/bgrbaseColor_10.pfm";
@@ -110,57 +107,42 @@ namespace DSONL {
                 image_ref_path =            "../data/SimulationEnvData/leftImage/bgr_10.png";
                 depth_ref_path =            "../data/SimulationEnvData/leftImage/origfovdepth_10.png";
 
-                image_ref_baseColor_path =  "../data/SimulationEnvData/leftImage/DSNL/bgrbaseColor_10.pfm";
-                image_ref_metallic_path=    "../data/SimulationEnvData/leftImage/DSNL/metallic_10.pfm";
+//                image_ref_baseColor_path =  "../data/SimulationEnvData/leftImage/DSNL/bgrbaseColor_10.pfm";
+                image_ref_baseColor_path =  "../data/SimulationEnvData/leftImage/DSNL/bgrbaseColor_10.png";
+                image_ref_metallic_path  =    "../data/SimulationEnvData/leftImage/DSNL/metallic_10.pfm";
                 image_ref_roughness_path =  "../data/SimulationEnvData/leftImage/DSNL/roughness_10.pfm";
-
-
-
-
-
-
-// 0.059711 0.244452 -0.252040 0.934427 -1.010461 0.110693 -1.495948
+                image_normal_GT_path =      "../data/SimulationEnvData/leftImage/DSNL/normals10.data"; //normals11  normals10 normals9  //data/SimulationEnvData/leftImage/DSNL/normal_10.data
 
 				Eigen::Matrix3d R1_w_l, R1_w_r;// left-handed and right-handed
 				Eigen::Vector3d t1_w_l;
-				R1_w_l << -0.970705, 0.029789, -0.238420,
-				        -0.240274, -0.120346, 0.963216,
-				        0.000000, 0.992285, 0.123978;
 
-                //t1_w_l << -0.75000, 3.030000, 0.390000;
-               //-1.144558 0.490336 0.628868
-                //t1_w_l << -1.144558, 0.490336, 0.628868 ;
+
                 t1_w_l << -1.010461, 0.110693, -1.495948;
-                R1_w_r = R1_w_l * S_x;
-//				Eigen::Quaternion<double> quaternionR1(R1_w_r);
-//                Eigen::Quaternion<double> quaternionR1(0.129972, 0.955255, -0.092275, 0.249158);
                 Eigen::Quaternion<double> quaternionR1(  0.059711, 0.244452 ,-0.252040 ,0.934427);
 				R1 = quaternionR1.toRotationMatrix();
 
-                string normal_GT_path = "../data/SimulationEnvData/leftImage/DSNL/normal_10.pfm";
+                // get extrinsic of camera 1
+                camPose1.setQuaternion(quaternionR1);
+                camPose1.translation()=t1_w_l;
+
+
                 Mat image_ref =imread(image_ref_path, IMREAD_ANYCOLOR | IMREAD_ANYDEPTH);
                 Mat depth_ref = imread(depth_ref_path, IMREAD_ANYCOLOR | IMREAD_ANYDEPTH);
                 Mat depth_reference(depth_ref.rows, depth_ref.cols, CV_64FC1);
                 for (int j = 0; j < depth_ref.rows; ++j) {
                     for (int i = 0; i < depth_ref.cols; ++i) {
-
                         depth_reference.at<double>(j,i)= 1.0/5000.0 * ((double ) depth_ref.at<unsigned short >(j,i));
-//                        cout << "\n show  depth_target: " << depth_reference.at<double>(j,i)<<endl;
+//                        cout << "\n show  depth_reference: " << depth_reference.at<double>(j,i)<<endl;
                     }
                 }
 
+//				image_ref_baseColor = loadPFM(image_ref_baseColor_path);
+                image_ref_baseColor =imread(image_ref_baseColor_path, IMREAD_ANYCOLOR | IMREAD_ANYDEPTH);
+                image_ref_baseColor.convertTo(image_ref_baseColor, CV_32FC3, 1.0/255.0);
 
-//                depth_ref= 1/5000.0*depth_ref;
-//                cout<<"correspondence: depth:"<< depth_ref.depth()<<endl;
-//                cout<<"correspondence: channels:"<< depth_ref.channels()<<endl;
-//                cout<<"!!!!!!show depth_ref channel:"<<depth_ref.channels()<<endl;
-
-				image_ref_baseColor = loadPFM(image_ref_baseColor_path);
                 Mat matallic_C1= loadPFM(image_ref_metallic_path);
-                //cout<<"matallic_ch3: channels:"<< matallic_ch3.channels()<<endl;
-
                 Mat roughness_C1= loadPFM(image_ref_roughness_path);
-				normal_map_GT = loadPFM(normal_GT_path);
+
 
 				int channelIdx = options_.channelIdx;
 				extractChannel(image_ref, grayImage_ref, channelIdx);
@@ -175,6 +157,13 @@ namespace DSONL {
                 image_ref_roughness= roughness_C1;
                 depth_map_ref = depth_reference.clone();
 
+                float normalArray[480][640][3]={0.0f};
+                ifstream readIn(image_normal_GT_path, ios::in | ios::binary);
+                readIn.read((char*) &normalArray, sizeof normalArray);
+                cv::Mat normal_A(480,640,CV_32FC3, &normalArray);
+                normal_map_GT = normal_A.clone();
+
+//                normal_map_GT = loadPFM(image_normal_GT_path);
 //                depth_map_ref.convertTo(depth_map_ref, CV_64FC1);
 				// -------------------------------------------Target image data loader-------------------------
 				string image_target_path;
@@ -189,33 +178,7 @@ namespace DSONL {
 					Eigen::Matrix3d R2_w_l, R1_w_r, R2_w_r;
 					Eigen::Vector3d t2_w_l;
 
-
-
-//                    Show GT rotation:
-//                    0.997975   0.016758 -0.0613651
-//                    -0.0157563   0.999735  0.0167717
-//                    0.0616299 -0.0157708   0.997974
-//                    Show GT translation:
-//                    -0.011791
-//                    0.0220861
-//                    -0.00961279
-
-
-
-// num16:  0.045509 0.247733 -0.224787 0.941291 -0.999663 0.136382 -1.479749
-//					R2_w_l << -0.916968, 0.045904, -0.396312,
-//					        -0.398961, -0.105505, 0.910878,
-//					        0.000000, 0.993359, 0.115058;
-//					t2_w_l << -1.24000, 2.850000, 0.360000;
-//                    t2_w_l << -1.137584, 0.493120, 0.628565;
-//                    t2_w_l << -1.126154, 0.499715 ,0.626336;
-
                     t2_w_l << -0.999663, 0.136382 ,-1.479749;
-
-//					R2_w_r = R2_w_l * S_x;
-//					Eigen::Quaterniond quaternionR2(R2_w_r);
-//                  Eigen::Quaterniond quaternionR2(0.134044, 0.950850, -0.096800, 0.261813);
-//                  Eigen::Quaterniond quaternionR2(0.126870, 0.947375 ,-0.096652, 0.277567);
 
                     Eigen::Quaterniond quaternionR2( 0.045509, 0.247733, -0.224787, 0.941291);
 					R2 = quaternionR2.toRotationMatrix();
@@ -297,6 +260,22 @@ namespace DSONL {
 }// namespace DSONL
 
 //---------------------------------------------------some notes----------------------------------------------
+
+
+//R1_w_r = R1_w_l * S_x;
+//R1_w_l << -0.970705, 0.029789, -0.238420,
+//-0.240274, -0.120346, 0.963216,
+//0.000000, 0.992285, 0.123978;
+
+
+
+
+
+
+
+
+
+
 
 
 //			double fov = 20;
