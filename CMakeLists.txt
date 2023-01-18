@@ -132,7 +132,7 @@ include_directories(${OPENGL_INCLUDE_DIRS} ${GLEW_INCLUDE_DIRS})
 
 
 # message(STATUS "show PCL-----${OPENGL_INCLUDE_DIRS}")
- message(STATUS "show PCL-----${GLEW_INCLUDE_DIRS}")
+# message(STATUS "show PCL-----${GLEW_INCLUDE_DIRS}")
 # message(STATUS "show PCL-----PCL_DEFINITIONS: ${PCL_DEFINITIONS}")
 # some output:
 message(STATUS "show IT: ${CMAKE_CURRENT_SOURCE_DIR}")

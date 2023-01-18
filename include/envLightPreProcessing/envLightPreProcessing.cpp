@@ -8,8 +8,6 @@
 #include <vector>
 #include <mutex>
 
-#include <cmath>
-
 using namespace std;
 
 
@@ -88,17 +86,7 @@ namespace DSONL {
         int seletcEnvMap2=200;
 
         for (size_t i=1;i<=fileNames.size();i++) {
-
-            // only use selected area
-
-            if (selectedIndex.count((int)i)==0){continue;}
-
-//            if ((int)i!=seletcEnvMap || (int)i!=seletcEnvMap2  ){
-//                continue;
-//            }
-
-            cout<<"\n =======================================show envMap index:"<< i<<endl;
-
+            if (selectedIndex.count(static_cast<int>(i))==0){continue;}
             stringstream ss;
             string img_idx_str;
             ss << i;
@@ -106,25 +94,39 @@ namespace DSONL {
             string name_prefix = "/envMap";
 
             string  envMap_parameter_path = envMap_Folder+ name_prefix+img_idx_str+ "/parameters.csv";
+
+//            string  envMapImg_parameter_path = envMap_Folder+ name_prefix+img_idx_str+ "/envMapImage.pfm";
+//           Mat showEnvMap= loadPFM(envMapImg_parameter_path);
+//           imshow("showEnvMap",showEnvMap);
+
             string  envMap_diffuse_parameter_path = envMap_Folder+ name_prefix+img_idx_str+ "/parameters_env_diffuse.csv";
+
+
 
             fstream parameters_file(envMap_diffuse_parameter_path);
             if (!parameters_file.is_open()){cout << "Error open shader_txt" << endl;}
 
-
             pointEnvlight pEnv;
+
+            pEnv.ctrlPointIdx= static_cast<int>(i);
+
+//            cout<<"\n =======================================show  pEnv.pEnv.ctrlPointIdx:"<<  pEnv.ctrlPointIdx<<endl;
 
             pEnv.envMapPose_world= controlPointPoses[i-1].cast<float>();
             pEnv.pointBase= Vec3f (  controlPointPoses[i-1].translation().x(), controlPointPoses[i-1].translation().y(),  controlPointPoses[i-1].translation().z());
 
-            cout<<"\n =======================================show  pEnv.pointBase:"<<   pEnv.pointBase<<endl;
-
+//            cout<<"\n =======================================show  pEnv.pointBase:"<<   pEnv.pointBase<<endl;
 //            {
 //                std::lock_guard<std::mutex>grd(mtx);
-
                 //              envMap_parameter_path = "include/EnvLight_Data/envMap01/parameters.csv";// !!!!!!!temp!!!!!!!!!!1
             EnvMapLookup *EnvMapLookup=new DSONL::EnvMapLookup(argc,argv, envMap_parameter_path);
             EnvMapLookup->makeMipMap( pEnv.EnvmapSampler); // index_0: prefiltered Env light
+
+//            gli::vec4 SampleSpecular = pEnv.EnvmapSampler[0].texture_lod(gli::fsampler2D::normalized_type(0.939755, 1.0-0.722123), 0.5 * 5.0);
+//            [0.151013, 0.074238, 0.0679612]
+//            std::cout << "\n============SampleSpecular val(BGRA):" << SampleSpecular.b << "," << SampleSpecular.g << "," << SampleSpecular.r << ","   << SampleSpecular.a << std:: endl;
+//            waitKey(0);
+//            cout << "\n============SampleSpecular val(RGBA):\n" << SampleSpecular.r << "," << SampleSpecular.g << "," << SampleSpecular.b << "," << SampleSpecular.a << endl;
             delete EnvMapLookup;
             //            envMap_diffuse_parameter_path = "include/EnvLight_Data/envMap01/parameters_env_diffuse.csv";// !!!!!!!temp!!!!!!!!!!1
 
@@ -137,7 +139,7 @@ namespace DSONL {
             envLightMap.insert(make_pair(pEnv.pointBase, pEnv));
             counter+=1;
             cout<<"\n show current envMap index: "<< i<<endl;
-            cout<<"show number of envMap added: "<< counter<<endl;
+            cout<<"\n show number of envMap added: "<< counter<<endl;
 
 //            }
 
@@ -171,6 +173,7 @@ namespace DSONL {
         pointBase= old.pointBase;
         EnvmapSampler.push_back(old.EnvmapSampler[0]);
         EnvmapSampler.push_back(old.EnvmapSampler[1]);
+        ctrlPointIdx= old.ctrlPointIdx ;
     }
 }
 

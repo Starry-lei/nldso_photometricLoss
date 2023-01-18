@@ -31,16 +31,23 @@ namespace DSONL {
     }
 
 
-    DSONL::ctrlPointSelector::ctrlPointSelector(Sophus::SE3d xi_GT, string controlPointPose_path, Mat Image,
+    DSONL::ctrlPointSelector::ctrlPointSelector(Sophus::SE3d Camera1_extrin, string controlPointPose_path, Mat Image,
                                                 Mat depthImage,
                                                 Eigen::Matrix<float, 3, 3> &K) {
 
         // constants
         kNearest = 3;
-        Sophus::SE3f Camera1_w2c = xi_GT.cast<float>();
+        Sophus::SE3f Camera1_w2c = Camera1_extrin.cast<float>();
         float fx = K(0, 0), cx = K(0, 2), fy = K(1, 1), cy = K(1, 2);
-        Vec2i boundingBoxUpperLeft(0, 0);
+
+
+        Vec2i boundingBoxUpperLeft( 83, 76);// 83, 76
         Vec2i boundingBoxBotRight(240, 320);
+
+
+
+
+
         pcl::PCDWriter writer;
 
         // check PointCloud
@@ -69,14 +76,28 @@ namespace DSONL {
         if (ControlpointCloud->empty()) { std::cerr << "\n Wrong Control-pointCloud!" << endl; }
         kdtree.setInputCloud(ControlpointCloud);
         imshow("slamImg", Image);
+
+        std::unordered_map<int, int> inliers_filter, inliers_filter_i;
+
+
+//        inliers_filter.emplace(108, 97 );//cabinet
+//        inliers_filter.emplace(125, 102);//table
+        // new test point in shadow:  108, 108
+        inliers_filter.emplace( 112, 130); // 112, 130
+
         Mat checkingArea(depthImage.rows, depthImage.cols, CV_64FC1, Scalar(0));
         for (int u = 0; u < depthImage.rows; u++)// colId, cols: 0 to 480
         {
             for (int v = 0; v < depthImage.cols; v++)// rowId,  rows: 0 to 640
             {
 
+//                if(inliers_filter.count(u)==0){continue;} // ~~~~~~~~~~~~~~Filter~~~~~~~~~~~~~~~~~~~~~~~
+//                if(inliers_filter[u]!=v ){continue;} // ~~~~~~~~~~~~~~Filter~~~~~~~~~~~~~~
+
+
+
                 //  use bounding box here
-//                if ( (v<boundingBoxUpperLeft.val[1] || v>boundingBoxBotRight.val[1]) || (u< boundingBoxUpperLeft.val[0] ||  u> boundingBoxBotRight.val[0])){ continue;}
+                if ( (v<boundingBoxUpperLeft.val[1] || v>boundingBoxBotRight.val[1]) || (u< boundingBoxUpperLeft.val[0] ||  u> boundingBoxBotRight.val[0])){ continue;}
 
 
                 // marks
@@ -91,25 +112,32 @@ namespace DSONL {
                 p_c1 = (float) iDepth * p_3d_no_d;
 
                 // convert it to world coordinate system
-                p_c1 = Camera1_w2c * p_c1;
-                pcl::PointXYZ searchPoint(p_c1.x(), p_c1.y(), p_c1.z());
+                Eigen::Vector3f p_w1 = Camera1_w2c * p_c1;
+                pcl::PointXYZ searchPoint(p_w1.x(), p_w1.y(), p_w1.z());
 
-                // add into point cloud
-                // scenePointCloud->push_back(searchPoint);
+                // add into point cloud (world coordinate)
+                 scenePointCloud->push_back(searchPoint);
 
+//                cv::Point3f key_shaderPoint(p_c1.x(), p_c1.y(), p_c1.z());
 
-                cv::Point3f key_shaderPoint(p_c1.x(), p_c1.y(), p_c1.z());
                 std::vector<int> pointIdxKNNSearch(kNearest);
                 std::vector<float> pointKNNSquaredDistance(kNearest);
 
-                vector<int> controlPointIndex[3];//  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! equal to kNearest(change together) !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//                vector<int> controlPointIndex[3];//  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! equal to kNearest(change together) !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
                 Vec3f key4Search;
                 if (kdtree.nearestKSearch(searchPoint, kNearest, pointIdxKNNSearch, pointKNNSquaredDistance) > 0) {
+
+
 //                std::cout << "\n---The Nearest point---"<<
-//                          (*(ControlpointCloud))[ pointIdxKNNSearch[0] ].x
+//                                    (*(ControlpointCloud))[ pointIdxKNNSearch[0]].x
 //                          << " " << (*(ControlpointCloud))[ pointIdxKNNSearch[0]].y
 //                          << " " << (*(ControlpointCloud))[ pointIdxKNNSearch[0]].z
 //                          << " (squared distance: " << pointKNNSquaredDistance[0] << ")" << std::endl;
+
+                    cout<<"\n Show current shader point:\n"<<p_w1<<"\n show nearst envMap point coordinate:\n"<< (*(ControlpointCloud))[ pointIdxKNNSearch[0]]<<endl;
+
+//                    cout<<"show pointIdxKNNSearch.size()"<<pointIdxKNNSearch.size()<<endl;
+
                     nearestPointCloud->push_back(pcl::PointXYZ((*(ControlpointCloud))[pointIdxKNNSearch[0]].x,
                                                                    (*(ControlpointCloud))[pointIdxKNNSearch[0]].y,
                                                                    (*(ControlpointCloud))[pointIdxKNNSearch[0]].z));
@@ -119,10 +147,13 @@ namespace DSONL {
                         key4Search_.val[0] = (*(ControlpointCloud))[pointIdxKNNSearch[idx]].x;
                         key4Search_.val[1] = (*(ControlpointCloud))[pointIdxKNNSearch[idx]].y;
                         key4Search_.val[2] = (*(ControlpointCloud))[pointIdxKNNSearch[idx]].z;
-                        controlPointIndex->push_back(pointCloud_UnorderedMap[key4Search_]);
+//                        cout<<"show key4Search_"<<key4Search_<<endl;
+//                        controlPointIndex->push_back(pointCloud_UnorderedMap[key4Search_]);
+
+//                        cout<<"show pointCloud_UnorderedMap[key4Search_]"<< pointCloud_UnorderedMap[key4Search_]<<endl;
                         selectedIndex_vec.push_back(pointCloud_UnorderedMap[key4Search_]);
                     }
-                    envLightMap.emplace(key_shaderPoint, *controlPointIndex);
+//                    envLightMap.emplace(key_shaderPoint, *controlPointIndex);
                 }
             }
         }
@@ -145,19 +176,21 @@ namespace DSONL {
         selectedIndex_vec.erase(unique(selectedIndex_vec.begin(), selectedIndex_vec.end()), selectedIndex_vec.end());
 
 
-//                for (int idx:selectedIndex_vec) {
-//                    selectedIndex.emplace(idx,1);
-//                    cout<<"show selected index:"<< idx<<endl;
-//                }
+        for (int idx:selectedIndex_vec) { selectedIndex.emplace(idx,1); cout<<"show selected index:"<< idx<<endl;}
+
+
+
+
         // Only one envMap here!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1
+//                selectedIndex.emplace(int(216),1);
+//                selectedIndex.emplace(int(36), 1);
+//                selectedIndex.emplace(int(200),1);
+//                selectedIndex.emplace(int(40),1);
+////                 selectedIndex.emplace(int(63),1);
+//
+//                selectedIndex.emplace(int(13),1);
 
-//        selectedIndex.emplace(int(216),1);
-        selectedIndex.emplace(int(36), 1);
-        selectedIndex.emplace(int(200),1);
-//        selectedIndex.emplace(int(171),1);
-//        selectedIndex.emplace(int(213),1);
-
-//        cout<<"show selectedIndex "<< selectedIndex_vec[0]<<endl;
+        //        cout<<"show selectedIndex "<< selectedIndex_vec[0]<<endl;
 
 
         cout << "\n show number of selected ctrlPoints size:" << selectedIndex_vec.size() << endl;

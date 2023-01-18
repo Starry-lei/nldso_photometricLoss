@@ -30,9 +30,14 @@ namespace DSONL{
 	extern  cv::Mat img_diffuseMap;
 	extern  cv::Mat img_diffuseMapMask;
 
-    extern const  gli::sampler2d<float>* prefilteredEnvmapSampler;
-    extern  const gli::sampler2d<float>* diffuseSampler;
-    extern  const gli::sampler2d<float>* brdfSampler_;
+    extern  const  gli::sampler2d<float>* prefilteredEnvmapSampler;
+    extern  const  gli::sampler2d<float>* diffuseSampler;
+    extern  const  gli::sampler2d<float>* brdfSampler_;
+
+    // extern Vec2i boundingBoxUpperLeft(83, 76);
+    // extern Vec2i boundingBoxBotRight(240, 320);
+
+
 
 
 

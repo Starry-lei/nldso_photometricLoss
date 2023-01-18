@@ -13,7 +13,13 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/core/mat.hpp>
 #include <opencv2/imgproc.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/opencv.hpp>
 
+#include <Eigen/Core>
+#include <Eigen/Dense>
+#include <vector>
+#include <string>
 
 #include "sophus/se3.hpp"
 
@@ -44,6 +50,7 @@ namespace DSONL{
             return res ;
         }
     };
+
 
 
 

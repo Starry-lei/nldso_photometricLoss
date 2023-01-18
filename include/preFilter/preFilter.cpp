@@ -163,7 +163,11 @@ namespace DSONL {
             env_map_preFilterMask.Init(argc, argv, parameter_path);
         }
 
-        image_pyramid_mask = img_pyramid_mask;
+        std::vector<cv::Mat> image_pyramid_mask_mid(img_pyramid_mask);
+        img_pyramid_mask.clear();
+        image_pyramid_mask = image_pyramid_mask_mid;
+
+
 
         roughness_i = 0.0;
         for (int i = 0; i < 6; ++i) {
@@ -171,7 +175,10 @@ namespace DSONL {
             preFilter env_mpa_preFilter(roughness_i);
             env_mpa_preFilter.Init(argc, argv, parameter_path);
         }
-        image_pyramid = img_pyramid;
+
+        std::vector<cv::Mat> image_pyramid_middle(img_pyramid);
+        img_pyramid.clear();
+        image_pyramid = image_pyramid_middle;
 
         mergeImagePyramid();
 
@@ -236,15 +243,22 @@ namespace DSONL {
         gli::sampler2d<float> Sampler(newTex, gli::WRAP_CLAMP_TO_EDGE, gli::FILTER_LINEAR, gli::FILTER_LINEAR, gli::vec4(1.0f, 0.5f, 0.0f, 1.0f));
 
 
+//        gli::vec4 SampleSpecular0 = Sampler.texture_lod(gli::fsampler2D::normalized_type(0.939755, 1.0-0.722123), 0.5* 5.0);
+
+//            [0.151013, 0.074238, 0.0679612]
+//        std::cout << "\n=====INSIDE start=======SampleSpecular val(BGRA):" << SampleSpecular0.b << "," << SampleSpecular0.g << "," << SampleSpecular0.r << ","   << SampleSpecular0.a << std:: endl;
+
+
         Sampler_vec.push_back(Sampler);
+
+//        gli::vec4 SampleSpecular = Sampler_vec[0].texture_lod(gli::fsampler2D::normalized_type(0.939755, 1.0-0.722123), 0.5 * 5.0);
+
+//            [0.151013, 0.074238, 0.0679612]
+//        std::cout << "\n=====INSIDE=======SampleSpecular val(BGRA):" << SampleSpecular.b << "," << SampleSpecular.g << "," << SampleSpecular.r << ","   << SampleSpecular.a << std:: endl;
+
 
 //                gli::vec4 SampleA = Sampler.texture_lod(gli::fsampler2D::normalized_type(0.5f,0.75f), 0.0f); // transform the texture coordinate
 //                cout << "\n============SampleA val------------------------(RGBA):\n" << SampleA.b << "," << SampleA.g << "," << SampleA.r << "," <<SampleA.a << endl;
-
-
-
-
-
         //                gli::vec4 SampleA = Sampler.texture_lod(gli::fsampler2D::normalized_type(0.5f,0.75f), 0.0f); // transform the texture coordinate
         //                cout << "\n============SampleA val------------------------(RGBA):\n" << SampleA.b << "," << SampleA.g << "," << SampleA.r << "," <<SampleA.a << endl;
         //                gli::vec4 SampleAAAAAA =prefilteredEnvmapSampler->texture_lod(gli::fsampler2D::normalized_type(0.5f,0.75f), 0.0f); // transform the texture coordinate
@@ -366,6 +380,7 @@ namespace DSONL {
         glutSetOption(GLUT_ACTION_ON_WINDOW_CLOSE, GLUT_ACTION_GLUTMAINLOOP_RETURNS);
         glutTimerFunc(unsigned(20), timer_diffuse, 0);
         glutMainLoop();
+
         diffuse_Map = img_diffuseMap;
         // get diffuse mask map
         diffuseMapMask *DiffuseMaskMap = new diffuseMapMask;

@@ -29,6 +29,7 @@ namespace DSONL{
         Sophus::SE3f envMapPose_world; //Sophus::SE3f* envMapPose_camera;
         cv::Point3f pointBase; // i.e. envMapPose_world.translation();
         std::vector<gli::sampler2d<float>> EnvmapSampler; // gli::sampler2d<float>* prefilteredEnvmapSampler; AND  gli::sampler2d<float>* diffuseSampler;
+        int ctrlPointIdx;
 
     };
 

@@ -4,22 +4,12 @@
 #pragma once
 
 
-#include <opencv2/core/mat.hpp>
-#include <opencv2/highgui/highgui.hpp>
-#include <opencv2/imgproc/imgproc.hpp>
-#include <opencv2/opencv.hpp>
-
-
-#include "sophus/se3.hpp"
-#include <Eigen/Core>
-#include <Eigen/Dense>
+#include "settings/common.h"
 #include <Eigen/Geometry>
 #include <Eigen/StdVector>
-
 #include <cmath>
-#include <iostream>
-#include <vector>
-#include <string>
+
+
 
 //#include <ceres/ceres.h>
 //#include <ceres/cubic_interpolation.h>
@@ -449,7 +439,7 @@ namespace DSONL {
 		Mat deltaMap_Color(deltaMap.rows, deltaMap.cols, CV_32FC3, Scalar(0, 0, 0));
 
 
-        Vec2i boundingBoxUpperLeft(0, 0);
+        Vec2i boundingBoxUpperLeft(83, 76);
         Vec2i boundingBoxBotRight(240, 320);
 
 
@@ -542,7 +532,7 @@ namespace DSONL {
 		Mat minus_adjust(depth_left.rows, depth_left.cols, CV_32FC1, Scalar(0));
 		Mat minus_mask(depth_left.rows, depth_left.cols, CV_8UC1, Scalar(0));
 
-        Vec2i boundingBoxUpperLeft(0, 0);
+        Vec2i boundingBoxUpperLeft(83, 76);
         Vec2i boundingBoxBotRight(240, 320);
 
 
@@ -627,8 +617,8 @@ namespace DSONL {
 
 		showMinus(minus_original, minus_adjust, minus_mask);
 
-//		 writer.write("PointCloud_Transformed16.pcd",*cloud, false);// do we need the sensor acquisition origin?
-//		 writer.write("PointCloud_right_HD16.pcd",*cloud_rig, false);// do we need the sensor acquisition origin?
+//		 writer.write("PointCloud_Transformed_10.pcd",*cloud, false);// do we need the sensor acquisition origin?
+//		 writer.write("PointCloud_right_HD_16.pcd",*cloud_rig, false);// do we need the sensor acquisition origin?
 
 		double max_n, min_n;
 		cv::minMaxLoc(deltaMapGT, &min_n, &max_n);

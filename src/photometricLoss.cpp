@@ -53,9 +53,9 @@ int main(int argc, char **argv) {
 	depth_target = dataLoader->depth_map_target;
 	image_ref_baseColor = dataLoader->image_ref_baseColor;
 
-
-    imshow("image_ref_baseColor",image_ref_baseColor);
-    waitKey(0);
+//
+//    imshow("image_ref_baseColor",image_ref_baseColor);
+//    waitKey(0);
 
 
 
@@ -91,7 +91,8 @@ int main(int argc, char **argv) {
     cout<<"\n The preComputation of EnvMap is ready!"<<endl;
 
 
-
+    imshow("temp", grayImage_target);
+    waitKey(0);
 	// show the depth image with noise
 	double min_depth_val, max_depth_val;
 	cv::minMaxLoc(depth_ref, &min_depth_val, &max_depth_val);
@@ -103,9 +104,9 @@ int main(int argc, char **argv) {
     cout << "\n show original grayImage_ref min, max:\n" << min_radiance_val << "," << max_radiance_val << endl;
 
 
-	imshow("grayImage_ref",grayImage_ref);
-	imshow("grayImage_target",grayImage_target);
-	waitKey(0);
+//	imshow("grayImage_ref",grayImage_ref);
+//	imshow("grayImage_target",grayImage_target);
+//	waitKey(0);
 
 
 
@@ -269,10 +270,10 @@ int main(int argc, char **argv) {
 
 			DSONL::updateDelta(dataLoader->camPose1, EnvLight,Rotation,Translation,Klvl,image_ref_baseColor,inv_depth_ref,image_ref_metallic ,image_ref_roughness,deltaMap,newNormalMap,up_new, butt_new);
 			Mat deltaMapGT_res= deltaMapGT(grayImage_ref,depth_ref,grayImage_target,depth_target,K.cast<double>(),distanceThres,xi_GT, upper, buttom, deltaMap);
-
-            Mat showGTdeltaMap=colorMap(deltaMapGT_res, upper, buttom);
-			Mat showESdeltaMap=colorMap(deltaMap, upper, buttom);
-
+//
+          Mat showGTdeltaMap=colorMap(deltaMapGT_res, upper, buttom);
+          Mat showESdeltaMap=colorMap(deltaMap, upper, buttom);
+//
 			imshow("show GT deltaMap", showGTdeltaMap);
 			imshow("show ES deltaMap", showESdeltaMap);
 

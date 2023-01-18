@@ -52,11 +52,16 @@ namespace DSONL
                 IBL_Radiance();
                 ~IBL_Radiance();
                 int mipCount=5;
-                Vec3f prefilteredColor(float u, float v, float level);
+                Vec3f prefilteredColor(float u, float v, float level,
+                                       pointEnvlight pointEnvlight_cur
+                                       );
                 Vec2f brdfIntegration(float NoV,float roughness );
                 Vec2f directionToSphericalEnvmap(Vec3f dir);
                 Vec3f specularIBL(Vec3f F0, float roughness, Vec3f N, Vec3f V, const Eigen::Matrix3d Camera1_c2w,
-                                  Sophus::SO3f enterEnv_Rotation);
+                                  Sophus::SO3f enterEnv_Rotation,
+
+                                  pointEnvlight pointEnvlight_cur
+                                  );
                 Vec3f specularIBLCheck(Vec3f F0, float roughness, Vec3f N, Vec3f V, const Eigen::Matrix3d Camera1_c2w);
 
 		        Vec3f RRTAndODTFit( Vec3f v);
@@ -74,9 +79,13 @@ namespace DSONL
                                        const float &reflectance,
                                        const Vec3f& baseColorValue,
                                        const Eigen::Matrix3d Transformation_wc,
-                                       Sophus::SO3f enterEnv_Rotation
-
+                                       Sophus::SO3f enterEnv_Rotation,
+                                       pointEnvlight pointEnvlight_cur
                                        );
+
+                //EnvLight->envLightMap[key4Search].EnvmapSampler[0]
+
+
 
 
 
@@ -99,6 +108,15 @@ namespace DSONL
             float& upper_b,
             float& lower_b
         );
+
+
+//        void colorCtrlPoint( Mat& inputImg, Mat& outputImg ){
+//
+//
+//
+//
+//
+//        }
 
 
 
