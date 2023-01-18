@@ -1,0 +1,8 @@
+envMapImage,Image
+NodeClassName,Text,ImageShaderPluginNode
+NodeName,Text,DiffuseImportanceSampling
+width,Integer,256
+height,Integer,128
+samples,Integer,512
+envMapLevel,Float,6
+
