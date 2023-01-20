@@ -134,7 +134,7 @@ namespace DSONL {
 //                          << " " << (*(ControlpointCloud))[ pointIdxKNNSearch[0]].z
 //                          << " (squared distance: " << pointKNNSquaredDistance[0] << ")" << std::endl;
 
-                    cout<<"\n Show current shader point:\n"<<p_w1<<"\n show nearst envMap point coordinate:\n"<< (*(ControlpointCloud))[ pointIdxKNNSearch[0]]<<endl;
+//                    cout<<"\n Show current shader point:\n"<<p_w1<<"\n show nearst envMap point coordinate:\n"<< (*(ControlpointCloud))[ pointIdxKNNSearch[0]]<<endl;
 
 //                    cout<<"show pointIdxKNNSearch.size()"<<pointIdxKNNSearch.size()<<endl;
 
@@ -159,12 +159,11 @@ namespace DSONL {
         }
 
 
-//        for (auto pair: envLightMap) {
-//            cout << "\n show correspondence between shader point and its ctrlPointIndex:" << endl;
-//            for (int i = 0; i < pair.second.size(); ++i) {
-//                cout << pair.second[i] << ",";
-//            }
-//        }
+
+
+
+
+
 //        writer.write("ControlpointCloud.pcd", *ControlpointCloud, false);// do we need the sensor acquisition origin?
 //        writer.write("nearestPointCloud.pcd", *nearestPointCloud, false);// do we need the sensor acquisition origin?
 //        writer.write("scenePointCloud.pcd", *scenePointCloud, false);// do we need the sensor acquisition origin?
@@ -186,7 +185,7 @@ namespace DSONL {
 //                selectedIndex.emplace(int(36), 1);
 //                selectedIndex.emplace(int(200),1);
 //                selectedIndex.emplace(int(40),1);
-////                 selectedIndex.emplace(int(63),1);
+//                 selectedIndex.emplace(int(63),1);
 //
 //                selectedIndex.emplace(int(13),1);
 
@@ -194,7 +193,6 @@ namespace DSONL {
 
 
         cout << "\n show number of selected ctrlPoints size:" << selectedIndex_vec.size() << endl;
-
         imshow("checkingArea", checkingArea);
         waitKey(0);
 

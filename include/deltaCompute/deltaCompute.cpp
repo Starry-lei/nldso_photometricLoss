@@ -456,7 +456,7 @@ namespace DSONL {
                     key4Search.val[1] = (*(EnvLight->ControlpointCloud))[pointIdxKNNSearch[0]].y;
                     key4Search.val[2] = (*(EnvLight->ControlpointCloud))[pointIdxKNNSearch[0]].z;
 				}
-                cout<<"\n Show current shader point:\n"<<p_c1_w<<"\n show nearst envMap point coordinate:\n"<<key4Search<<endl;
+//                cout<<"\n Show current shader point:\n"<<p_c1_w<<"\n show nearst envMap point coordinate:\n"<<key4Search<<endl;
 //                cout<<"\n show count of envLightMap"<<  EnvLight->envLightMap.count(key4Search)<<endl;
 //                cout<<"show EnvLight size:"<< EnvLight->envLightMap.size()<<endl;
 //
