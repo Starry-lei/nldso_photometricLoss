@@ -456,7 +456,7 @@ namespace DSONL {
                     key4Search.val[1] = (*(EnvLight->ControlpointCloud))[pointIdxKNNSearch[0]].y;
                     key4Search.val[2] = (*(EnvLight->ControlpointCloud))[pointIdxKNNSearch[0]].z;
 				}
-                cout<<"\n Show current shader point:\n"<<p_c1_w<<"\n show nearst envMap point coordinate:\n"<<key4Search<<endl;
+//                cout<<"\n Show current shader point:\n"<<p_c1_w<<"\n show nearst envMap point coordinate:\n"<<key4Search<<endl;
 //                cout<<"\n show count of envLightMap"<<  EnvLight->envLightMap.count(key4Search)<<endl;
 //                cout<<"show EnvLight size:"<< EnvLight->envLightMap.size()<<endl;
 //
@@ -466,13 +466,6 @@ namespace DSONL {
                 if ( EnvLight->envLightMap.size()==0){std::cerr<<"Error in EnvLight->envLightMap! "<<endl;}
 
 				brdfSampler_ = & (EnvLight->brdfSampler[0]);
-
-//				prefilteredEnvmapSampler= & (EnvLight->envLightMap[key4Search].EnvmapSampler[0]);
-//              gli::vec4 SampleSpecular =prefilteredEnvmapSampler->texture_lod(gli::fsampler2D::normalized_type(0.5, 1-0.75), 0.0f);
-//              cout << "\n============SampleSpecular val(RGBA):\n" << SampleSpecular.r << "," << SampleSpecular.g << "," << SampleSpecular.b << "," << SampleSpecular.a << endl;
-//
-
-
 				diffuseSampler = & (EnvLight->envLightMap[key4Search].EnvmapSampler[1]);
 
 
@@ -529,9 +522,6 @@ namespace DSONL {
                     ctrlPointMask.at<Vec3b>(u,v)[2]= 125;
                 }
 
-                //  cout<<"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!show key4Search_Val:"<< key4Search<<endl;
-                //  cout<<"!!!!!!!!!!!!!!!!!!!!!!!!!!!ctrlIndex!!!!!!!!!!show key4Search_Val:"<< ctrlIndex<<endl;
-                // ctrlIndex
 
 				// ===================================RADIANCE-COMPUTATION====================================
 				IBL_Radiance *ibl_Radiance = new IBL_Radiance;

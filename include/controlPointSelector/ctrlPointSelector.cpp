@@ -134,7 +134,7 @@ namespace DSONL {
 //                          << " " << (*(ControlpointCloud))[ pointIdxKNNSearch[0]].z
 //                          << " (squared distance: " << pointKNNSquaredDistance[0] << ")" << std::endl;
 
-                    cout<<"\n Show current shader point:\n"<<p_w1<<"\n show nearst envMap point coordinate:\n"<< (*(ControlpointCloud))[ pointIdxKNNSearch[0]]<<endl;
+//                    cout<<"\n Show current shader point:\n"<<p_w1<<"\n show nearst envMap point coordinate:\n"<< (*(ControlpointCloud))[ pointIdxKNNSearch[0]]<<endl;
 
 //                    cout<<"show pointIdxKNNSearch.size()"<<pointIdxKNNSearch.size()<<endl;
 

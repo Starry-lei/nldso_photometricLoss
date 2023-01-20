@@ -39,8 +39,12 @@ int main(int argc, char **argv) {
 
     // load env light maps
 //    std::string envMap_Folder="../data/SimulationEnvData/envMap_10To16";
-    std::string envMap_Folder="/home/lei/Documents/Research/envMapData/envMap_10To16";
-    string controlPointPose_path= "../data/SimulationEnvData/scene0704_01_control_cam_pose.txt";
+//    std::string envMap_Folder="/home/lei/Documents/Research/envMapData/envMap_10To16";
+
+    std::string envMap_Folder="/home/lei/Documents/Research/envMapData/envMapData_Dense01";
+    string controlPointPose_path= "/home/lei/Documents/Research/envMapData/envMapData_Dense0704_01_control_cam_pose3k.txt";
+
+
 
     Mat grayImage_target, grayImage_ref, depth_ref, depth_target, image_ref_baseColor, image_target_baseColor;
     Mat image_ref_metallic = dataLoader->image_ref_metallic;

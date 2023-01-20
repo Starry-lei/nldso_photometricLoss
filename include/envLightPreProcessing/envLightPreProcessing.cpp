@@ -72,10 +72,10 @@ namespace DSONL {
         string brdfIntegrationMap_path = "../include/brdfIntegrationMap/brdfIntegrationMap.pfm";
         brdfIntegrationMap *brdfIntegrationMap= new DSONL::brdfIntegrationMap(brdfIntegrationMap_path);
         brdfIntegrationMap->makebrdfIntegrationMap(brdfSampler);
-
         delete brdfIntegrationMap;
-        ControlpointCloud.reset(new pcl::PointCloud<pcl::PointXYZ>());
 
+
+        ControlpointCloud.reset(new pcl::PointCloud<pcl::PointXYZ>());
 
 
         std::mutex mtx;
@@ -85,81 +85,65 @@ namespace DSONL {
         int seletcEnvMap=36;
         int seletcEnvMap2=200;
 
-        for (size_t i=1;i<=fileNames.size();i++) {
-
-            if (selectedIndex.count(static_cast<int>(i))==0){continue;}
-
-
-            stringstream ss;
-            string img_idx_str;
-            ss << i;
-            ss >> img_idx_str;
-            string name_prefix = "/envMap";
-
-//            string  envMap_parameter_path = envMap_Folder+ name_prefix+img_idx_str+ "/parameters.csv";
-
-            string renderedEnvLight_path="/home/lei/Documents/Research/envMapData/renderedEnvMap";
-            string renderedEnvLightfolder= renderedEnvLight_path+ "/envMap"+img_idx_str+"/renderedEnvLight";
-            string renderedEnvLightDiffuse= renderedEnvLight_path+ "/envMap"+img_idx_str+"/renderedEnvLightDiffuse";
-            string envMapDiffuse= renderedEnvLightDiffuse+"/envMapDiffuse_"+img_idx_str +".pfm";
+//        string renderedEnvLight_path="/home/lei/Documents/Research/envMapData/renderedEnvMap";
+        string renderedEnvLight_path= envMap_Folder;
 
 
+//        for (size_t i=1;i<=fileNames.size();i++) {
+
+        tbb::parallel_for(
+                (size_t)1, (size_t)(fileNames.size()+1), [&] (size_t i) {
+
+                    if (selectedIndex.count(static_cast<int>(i)) == 0) { return ; }
 
 
+                    stringstream ss;
+                    string img_idx_str;
+                    ss << i;
+                    ss >> img_idx_str;
+                    string name_prefix = "/envMap";
 
 
-//            string  envMapImg_parameter_path = envMap_Folder+ name_prefix+img_idx_str+ "/envMapImage.pfm";
-//           Mat showEnvMap= loadPFM(envMapImg_parameter_path);
-//           imshow("showEnvMap",showEnvMap);
-
-//            string  envMap_diffuse_parameter_path = envMap_Folder+ name_prefix+img_idx_str+ "/parameters_env_diffuse.csv";
-
-
-
-//            fstream parameters_file(envMap_diffuse_parameter_path);
-//            if (!parameters_file.is_open()){cout << "Error open shader_txt" << endl;}
-
-            pointEnvlight pEnv;
-
-            pEnv.ctrlPointIdx= static_cast<int>(i);
-
-//            cout<<"\n =======================================show  pEnv.pEnv.ctrlPointIdx:"<<  pEnv.ctrlPointIdx<<endl;
-
-            pEnv.envMapPose_world= controlPointPoses[i-1].cast<float>();
-            pEnv.pointBase= Vec3f (  controlPointPoses[i-1].translation().x(), controlPointPoses[i-1].translation().y(),  controlPointPoses[i-1].translation().z());
-
-//            cout<<"\n =======================================show  pEnv.pointBase:"<<   pEnv.pointBase<<endl;
-//            {
-//                std::lock_guard<std::mutex>grd(mtx);
-                // envMap_parameter_path = "include/EnvLight_Data/envMap01/parameters.csv";// !!!!!!!temp!!!!!!!!!!1
-            EnvMapLookup *EnvMapLookup=new DSONL::EnvMapLookup();
-
-            EnvMapLookup->makeMipMap( pEnv.EnvmapSampler,  renderedEnvLightfolder); // index_0: prefiltered Env light
-
-//            gli::vec4 SampleSpecular = pEnv.EnvmapSampler[0].texture_lod(gli::fsampler2D::normalized_type(0.939755, 1.0-0.722123), 0.5 * 5.0);
-//            [0.151013, 0.074238, 0.0679612]
-//            std::cout << "\n============SampleSpecular val(BGRA):" << SampleSpecular.b << "," << SampleSpecular.g << "," << SampleSpecular.r << ","   << SampleSpecular.a << std:: endl;
-//            waitKey(0);
-//            cout << "\n============SampleSpecular val(RGBA):\n" << SampleSpecular.r << "," << SampleSpecular.g << "," << SampleSpecular.b << "," << SampleSpecular.a << endl;
-            delete EnvMapLookup;
-            //            envMap_diffuse_parameter_path = "include/EnvLight_Data/envMap01/parameters_env_diffuse.csv";// !!!!!!!temp!!!!!!!!!!1
-
-            diffuseMap *diffuseMap = new DSONL::diffuseMap;
-//            diffuseMap->Init(argc,argv, envMap_diffuse_parameter_path);
-
-            diffuseMap->makeDiffuseMap(pEnv.EnvmapSampler, envMapDiffuse); // index_1: diffuse
-            delete diffuseMap;
-
-            ControlpointCloud->push_back(pcl::PointXYZ(pEnv.pointBase.x, pEnv.pointBase.y, pEnv.pointBase.z));
-            envLightMap.insert(make_pair(pEnv.pointBase, pEnv));
-            counter+=1;
-            cout<<"\n show current envMap index: "<< i<<endl;
-            cout<<"\n show number of envMap added: "<< counter<<endl;
-
-//            }
+                    string renderedEnvLightfolder =
+                            renderedEnvLight_path + "/envMap" + img_idx_str + "/renderedEnvLight";
+                    string renderedEnvLightDiffuse =
+                            renderedEnvLight_path + "/envMap" + img_idx_str + "/renderedEnvLightDiffuse";
+                    string envMapDiffuse = renderedEnvLightDiffuse + "/envMapDiffuse_" + img_idx_str + ".pfm";
 
 
-    }
+                    pointEnvlight pEnv;
+                    pEnv.ctrlPointIdx = static_cast<int>(i);
+
+                    pEnv.envMapPose_world = controlPointPoses[i - 1].cast<float>();
+                    pEnv.pointBase = Vec3f(controlPointPoses[i - 1].translation().x(),
+                                           controlPointPoses[i - 1].translation().y(),
+                                           controlPointPoses[i - 1].translation().z());
+
+
+                    EnvMapLookup *EnvMapLookup = new DSONL::EnvMapLookup();
+                    EnvMapLookup->makeMipMap(pEnv.EnvmapSampler,
+                                             renderedEnvLightfolder); // index_0: prefiltered Env light
+                    delete EnvMapLookup;
+
+                    diffuseMap *diffuseMap = new DSONL::diffuseMap;
+                    diffuseMap->makeDiffuseMap(pEnv.EnvmapSampler, envMapDiffuse); // index_1: diffuse
+                    delete diffuseMap;
+//                    cout << "\n processing: " << i << endl;
+//                    fflush(stdout);
+
+                    {
+                        std::lock_guard<std::mutex>grd(mtx);
+                        ControlpointCloud->push_back(pcl::PointXYZ(pEnv.pointBase.x, pEnv.pointBase.y, pEnv.pointBase.z));
+                        envLightMap.insert(make_pair(pEnv.pointBase, pEnv));
+                        counter += 1;
+                        cout << "\n show current envMap index: " << i << endl;
+                        cout << "\n show number of envMap added: " << counter << endl;
+                    }
+
+
+//    }
+
+                });
 
 
 
