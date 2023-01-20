@@ -3,7 +3,7 @@
 //
 
 #include "preFilter.h"
-
+#include <boost/filesystem.hpp>
 namespace DSONL {
 
 
@@ -183,7 +183,7 @@ namespace DSONL {
         img_pyramid.clear();
         image_pyramid = image_pyramid_middle;
 
-        mergeImagePyramid();
+        mergeImagePyramid( );
 
         //                double min_depth_val, max_depth_val;
         //                cv::minMaxLoc(image_pyramid[0], &min_depth_val,&max_depth_val);
@@ -205,7 +205,20 @@ namespace DSONL {
     }
 
 
-    void EnvMapLookup::mergeImagePyramid() {
+    void EnvMapLookup::mergeImagePyramid( ) {
+
+//        string renderedEnvLight_path="/home/lei/Documents/Research/envMapData/renderedEnvMap";
+//
+//        string renderedEnvLightfolder= renderedEnvLight_path+ "/envMap"+lightIdx+"/renderedEnvLight";  //+"/renderedEnvLight";
+//
+//
+//        if (boost::filesystem::create_directories(renderedEnvLightfolder)){
+//            cout << "Directory:"+ renderedEnvLightfolder +" created"<<endl;
+//        }
+
+
+
+
         for (int i = 0; i < 6; ++i) {
             Mat map_channel[3], mask_channel[3];
             split(image_pyramid[i], map_channel);
@@ -215,19 +228,56 @@ namespace DSONL {
             final_channels.push_back(applyMask(map_channel[1], mask_channel[1]));
             final_channels.push_back(applyMask(map_channel[2], mask_channel[2]));
             cv::merge(final_channels, image_pyramid[i]);
+
+            // save image_pyramid
+//            stringstream ss;
+//            string img_idx_str;
+//            ss << i;
+//            ss >> img_idx_str;
+//            string name_prefix = "/envMapLvl_";
+//            string image_pyramid_lvl= renderedEnvLightfolder+name_prefix+img_idx_str +".pfm";
+//            savePFM(image_pyramid[i], image_pyramid_lvl);
+
         }
-
-        // save the merged image_pyramid
-
 
 
 
     }
 
-    void EnvMapLookup::makeMipMap(std::vector<gli::sampler2d<float>>& Sampler_vec) {
+    void EnvMapLookup::makeMipMap(std::vector<gli::sampler2d<float>>& Sampler_vec, string env_path) {
 
         //===============================mind  opencv BGR order=================================
         // define and allocate space for Mipmap using GLM library
+
+
+
+        // read envMap data
+        //            string name_prefix = "/envMapLvl_";
+//            string image_pyramid_lvl= renderedEnvLightfolder+name_prefix+img_idx_str +".pfm";
+//            savePFM(image_pyramid[i], image_pyramid_lvl);
+
+        image_pyramid.clear();
+        for (int i = 0; i < 6; ++i) {
+            // read image_pyramid
+            stringstream ss;
+            string img_idx_str;
+            ss << i;
+            ss >> img_idx_str;
+            string name_prefix = "/envMapLvl_";
+            string image_pyramid_lvl= env_path+name_prefix+img_idx_str +".pfm";
+            Mat lvl_i= loadPFM(image_pyramid_lvl);
+
+//            imshow("lvl_i", lvl_i);
+//            waitKey(0);
+
+
+            image_pyramid.push_back(lvl_i);
+
+        }
+
+
+
+
 
         std::size_t numMipmaps = 6;
         gli::texture2d orig_tex(gli::FORMAT_RGB32_SFLOAT_PACK32, gli::texture2d::extent_type(1024, 512), 1);
@@ -274,6 +324,7 @@ namespace DSONL {
         //                cout << "\n============SampleAAAAAA val(RGBA):\n"<< SampleAAAAAA.b << "," << SampleAAAAAA.g << "," <<SampleAAAAAA.r << "," << SampleAAAAAA.a << endl;
     }
 
+         EnvMapLookup::EnvMapLookup() {}
 
 
     brdfIntegrationMap::brdfIntegrationMap(string map_path) {
@@ -423,19 +474,41 @@ namespace DSONL {
         return SampleDiffuse;
     }
 
-    void diffuseMap::mergeDiffuse_Map() {
+    void diffuseMap::mergeDiffuse_Map( ) {
+
+
+
+//        string renderedEnvLight_path="/home/lei/Documents/Research/envMapData/renderedEnvMap";
+//        string renderedEnvLightDiffuse= renderedEnvLight_path+ "/envMap"+lightIdx+"/renderedEnvLightDiffuse"; //+"/renderedEnvLight";
+//        if (boost::filesystem::create_directories(renderedEnvLightDiffuse)){
+//            cout << "Directory:"+ renderedEnvLightDiffuse +" created"<<endl;
+//        }
+
+
 
         Mat map_channel[3], mask_channel[3];
-
         split(diffuse_Map, map_channel);
         split(diffuse_MaskMap, mask_channel);
         std::vector<Mat> final_channels;
-
         final_channels.push_back(applyMask(map_channel[0], mask_channel[0]));
         final_channels.push_back(applyMask(map_channel[1], mask_channel[1]));
         final_channels.push_back(applyMask(map_channel[2], mask_channel[2]));
-
         cv::merge(final_channels, diffuse_Final_Map);
+
+
+        // save merged Diffuse envMap
+
+//        stringstream ss;
+//        string img_idx_str;
+//        ss << lightIdx;
+//        ss >> img_idx_str;
+//        string name_prefix = "/envMapDiffuse_";
+//        string envMapDiffuse= renderedEnvLightDiffuse+name_prefix+img_idx_str +".pfm";
+//        savePFM(diffuse_Final_Map, envMapDiffuse);
+
+
+
+
 
         //	double min_depth_val, max_depth_val;
         //	cv::minMaxLoc(diffuse_Final_Map, &min_depth_val, &max_depth_val);
@@ -459,8 +532,11 @@ namespace DSONL {
         return input;
     }
 
-    void diffuseMap::makeDiffuseMap( std::vector<gli::sampler2d<float>>& Sampler_diffuse_vec) {
-        mergeDiffuse_Map();
+    void diffuseMap::makeDiffuseMap( std::vector<gli::sampler2d<float>>& Sampler_diffuse_vec, string  envMapDiffuse) {
+
+        diffuse_Final_Map= loadPFM(envMapDiffuse);
+
+//        mergeDiffuse_Map( img_idx_str );
         gli::texture2d diffuse_tex(gli::FORMAT_RGB32_SFLOAT_PACK32, gli::texture2d::extent_type(256, 128), 1);
         cv::Mat flat_diffuse = diffuse_Final_Map.reshape(1, diffuse_Final_Map.total() * diffuse_Final_Map.channels());
         std::vector<float> img_array_diffuse = diffuse_Final_Map.isContinuous() ? flat_diffuse : flat_diffuse.clone();
@@ -472,10 +548,6 @@ namespace DSONL {
 
 
         gli::sampler2d<float> Sampler_diffuse(diffuse_tex, gli::WRAP_CLAMP_TO_EDGE, gli::FILTER_LINEAR, gli::FILTER_LINEAR, gli::vec4(1.0f, 0.5f, 0.0f, 1.0f));// TODO: check 1.0, 0.5 meaning
-
-
-
-
 
         Sampler_diffuse_vec.push_back(Sampler_diffuse);
 

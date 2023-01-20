@@ -86,25 +86,38 @@ namespace DSONL {
         int seletcEnvMap2=200;
 
         for (size_t i=1;i<=fileNames.size();i++) {
+
             if (selectedIndex.count(static_cast<int>(i))==0){continue;}
+
+
             stringstream ss;
             string img_idx_str;
             ss << i;
             ss >> img_idx_str;
             string name_prefix = "/envMap";
 
-            string  envMap_parameter_path = envMap_Folder+ name_prefix+img_idx_str+ "/parameters.csv";
+//            string  envMap_parameter_path = envMap_Folder+ name_prefix+img_idx_str+ "/parameters.csv";
+
+            string renderedEnvLight_path="/home/lei/Documents/Research/envMapData/renderedEnvMap";
+            string renderedEnvLightfolder= renderedEnvLight_path+ "/envMap"+img_idx_str+"/renderedEnvLight";
+            string renderedEnvLightDiffuse= renderedEnvLight_path+ "/envMap"+img_idx_str+"/renderedEnvLightDiffuse";
+            string envMapDiffuse= renderedEnvLightDiffuse+"/envMapDiffuse_"+img_idx_str +".pfm";
+
+
+
+
+
 
 //            string  envMapImg_parameter_path = envMap_Folder+ name_prefix+img_idx_str+ "/envMapImage.pfm";
 //           Mat showEnvMap= loadPFM(envMapImg_parameter_path);
 //           imshow("showEnvMap",showEnvMap);
 
-            string  envMap_diffuse_parameter_path = envMap_Folder+ name_prefix+img_idx_str+ "/parameters_env_diffuse.csv";
+//            string  envMap_diffuse_parameter_path = envMap_Folder+ name_prefix+img_idx_str+ "/parameters_env_diffuse.csv";
 
 
 
-            fstream parameters_file(envMap_diffuse_parameter_path);
-            if (!parameters_file.is_open()){cout << "Error open shader_txt" << endl;}
+//            fstream parameters_file(envMap_diffuse_parameter_path);
+//            if (!parameters_file.is_open()){cout << "Error open shader_txt" << endl;}
 
             pointEnvlight pEnv;
 
@@ -119,9 +132,9 @@ namespace DSONL {
 //            {
 //                std::lock_guard<std::mutex>grd(mtx);
                 // envMap_parameter_path = "include/EnvLight_Data/envMap01/parameters.csv";// !!!!!!!temp!!!!!!!!!!1
-            EnvMapLookup *EnvMapLookup=new DSONL::EnvMapLookup(argc,argv, envMap_parameter_path);
+            EnvMapLookup *EnvMapLookup=new DSONL::EnvMapLookup();
 
-            EnvMapLookup->makeMipMap( pEnv.EnvmapSampler); // index_0: prefiltered Env light
+            EnvMapLookup->makeMipMap( pEnv.EnvmapSampler,  renderedEnvLightfolder); // index_0: prefiltered Env light
 
 //            gli::vec4 SampleSpecular = pEnv.EnvmapSampler[0].texture_lod(gli::fsampler2D::normalized_type(0.939755, 1.0-0.722123), 0.5 * 5.0);
 //            [0.151013, 0.074238, 0.0679612]
@@ -132,8 +145,9 @@ namespace DSONL {
             //            envMap_diffuse_parameter_path = "include/EnvLight_Data/envMap01/parameters_env_diffuse.csv";// !!!!!!!temp!!!!!!!!!!1
 
             diffuseMap *diffuseMap = new DSONL::diffuseMap;
-            diffuseMap->Init(argc,argv, envMap_diffuse_parameter_path);
-            diffuseMap->makeDiffuseMap(pEnv.EnvmapSampler); // index_1: diffuse
+//            diffuseMap->Init(argc,argv, envMap_diffuse_parameter_path);
+
+            diffuseMap->makeDiffuseMap(pEnv.EnvmapSampler, envMapDiffuse); // index_1: diffuse
             delete diffuseMap;
 
             ControlpointCloud->push_back(pcl::PointXYZ(pEnv.pointBase.x, pEnv.pointBase.y, pEnv.pointBase.z));
