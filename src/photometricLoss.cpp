@@ -38,7 +38,9 @@ int main(int argc, char **argv) {
     // ===========================Environment Light preprocessing module===========================================
 
     // load env light maps
-    std::string envMap_Folder="../data/SimulationEnvData/envMap_10To16";
+//    std::string envMap_Folder="../data/SimulationEnvData/envMap_10To16";
+    std::string envMap_Folder="/home/lei/Documents/Research/envMapData/envMap_10To16";
+
     string controlPointPose_path= "../data/SimulationEnvData/scene0704_01_control_cam_pose.txt";
 
     Mat grayImage_target, grayImage_ref, depth_ref, depth_target, image_ref_baseColor, image_target_baseColor;
@@ -84,6 +86,7 @@ int main(int argc, char **argv) {
     ctrlPointSelector  * ctrlPoint_Selector= new ctrlPointSelector(dataLoader->camPose1, controlPointPose_path,grayImage_ref, depth_ref_GT,K);
     // TODO(parallelization)
     std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
+
     envLight  *EnvLight= new envLight(ctrlPoint_Selector->selectedIndex, argc, argv, envMap_Folder,controlPointPose_path);
     std::chrono::steady_clock::time_point t2 = std::chrono::steady_clock::now();
     std::chrono::duration<double> time_used =std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1);

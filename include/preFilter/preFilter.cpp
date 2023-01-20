@@ -164,6 +164,9 @@ namespace DSONL {
         }
 
         std::vector<cv::Mat> image_pyramid_mask_mid(img_pyramid_mask);
+
+
+
         img_pyramid_mask.clear();
         image_pyramid_mask = image_pyramid_mask_mid;
 
@@ -213,6 +216,12 @@ namespace DSONL {
             final_channels.push_back(applyMask(map_channel[2], mask_channel[2]));
             cv::merge(final_channels, image_pyramid[i]);
         }
+
+        // save the merged image_pyramid
+
+
+
+
     }
 
     void EnvMapLookup::makeMipMap(std::vector<gli::sampler2d<float>>& Sampler_vec) {

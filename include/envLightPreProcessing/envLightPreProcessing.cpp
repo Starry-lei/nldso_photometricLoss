@@ -118,8 +118,9 @@ namespace DSONL {
 //            cout<<"\n =======================================show  pEnv.pointBase:"<<   pEnv.pointBase<<endl;
 //            {
 //                std::lock_guard<std::mutex>grd(mtx);
-                //              envMap_parameter_path = "include/EnvLight_Data/envMap01/parameters.csv";// !!!!!!!temp!!!!!!!!!!1
+                // envMap_parameter_path = "include/EnvLight_Data/envMap01/parameters.csv";// !!!!!!!temp!!!!!!!!!!1
             EnvMapLookup *EnvMapLookup=new DSONL::EnvMapLookup(argc,argv, envMap_parameter_path);
+
             EnvMapLookup->makeMipMap( pEnv.EnvmapSampler); // index_0: prefiltered Env light
 
 //            gli::vec4 SampleSpecular = pEnv.EnvmapSampler[0].texture_lod(gli::fsampler2D::normalized_type(0.939755, 1.0-0.722123), 0.5 * 5.0);
