@@ -270,14 +270,18 @@ int main(int argc, char **argv) {
 //			// deltaMap=deltaMapGT_res.clone();// !!!!!!!!!!!!!!!!!!!!!!!!!!!!test!!!!!!!!!!!!!!!!!!!!!!!!!!!11
 //            /// TEMP TEST END
 
-
+            imshow("show grayImage_ref", grayImage_ref);
+            imshow("show grayImage_target", grayImage_target);
 
 
 			imshow("show GT deltaMap", showGTdeltaMap);
 			imshow("show ES deltaMap", showESdeltaMap);
 
-//			imwrite("GT_deltaMap.exr", showGTdeltaMap);
-//			imwrite("ES_deltaMap.exr", showESdeltaMap);
+			imwrite("GT_deltaMap.exr", showGTdeltaMap);
+			imwrite("ES_deltaMap.exr", showESdeltaMap);
+//            imwrite("grayImage_ref.exr", grayImage_ref);
+//            imwrite("grayImage_target.exr", grayImage_target);
+
 
 ////
 			cout << "\n show depth_ref min, max:\n" << min_gt_special << "," << max_gt_special << endl;
