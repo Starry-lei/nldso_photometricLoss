@@ -96,12 +96,12 @@ namespace DSONL {
 
 	class EnvMapLookup {
 	public:
-		EnvMapLookup(int argc, char **argv, string parameter_path);
+		EnvMapLookup(int argc, char **argv, string parameter_path, string lightIdx);
 		~EnvMapLookup();
 		std::vector<cv::Mat> image_pyramid_mask;
 		std::vector<cv::Mat> image_pyramid;
 		cv::Mat applyMask(cv::Mat &input, cv::Mat &mask);
-		void mergeImagePyramid();
+		void mergeImagePyramid( string lightIdx);
 		void makeMipMap(std::vector<gli::sampler2d<float>>& Sampler_vec);
 
 	private:
@@ -139,12 +139,12 @@ namespace DSONL {
 		diffuseMap();
 		~diffuseMap();
 
-		void Init(int argc, char **argv, string parameters_path);
+		void Init(int argc, char **argv, string parameters_path, string img_idx_str);
 		cv::Mat diffuse_Map;
 		cv::Mat diffuse_MaskMap;
 		cv::Mat diffuse_Final_Map;
-		void mergeDiffuse_Map();
-		void makeDiffuseMap(std::vector<gli::sampler2d<float>>& Sampler_diffuse_vec);
+		void mergeDiffuse_Map(string  img_idx_str);
+		void makeDiffuseMap(std::vector<gli::sampler2d<float>>& Sampler_diffuse_vec,string  img_idx_str);
 
 		cv::Mat applyMask(Mat &input, Mat &mask);
 		gli::vec4 getDiffuse(float u, float v);
