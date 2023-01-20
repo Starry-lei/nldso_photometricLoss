@@ -40,7 +40,6 @@ int main(int argc, char **argv) {
     // load env light maps
 //    std::string envMap_Folder="../data/SimulationEnvData/envMap_10To16";
     std::string envMap_Folder="/home/lei/Documents/Research/envMapData/envMap_10To16";
-
     string controlPointPose_path= "../data/SimulationEnvData/scene0704_01_control_cam_pose.txt";
 
     Mat grayImage_target, grayImage_ref, depth_ref, depth_target, image_ref_baseColor, image_target_baseColor;
@@ -74,13 +73,6 @@ int main(int argc, char **argv) {
     R = dataLoader->q_12.normalized().toRotationMatrix();
     xi_GT.setRotationMatrix(R);
     xi_GT.translation() = dataLoader->t12;
-
-
-
-//    imshow("baseColor", image_ref_baseColor);
-//    waitKey(0);
-
-
 
 // ===========================ctrlPoint Selector==========================================
     ctrlPointSelector  * ctrlPoint_Selector= new ctrlPointSelector(dataLoader->camPose1, controlPointPose_path,grayImage_ref, depth_ref_GT,K);

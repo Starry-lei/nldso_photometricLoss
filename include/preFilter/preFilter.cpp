@@ -249,13 +249,6 @@ namespace DSONL {
         //===============================mind  opencv BGR order=================================
         // define and allocate space for Mipmap using GLM library
 
-
-
-        // read envMap data
-        //            string name_prefix = "/envMapLvl_";
-//            string image_pyramid_lvl= renderedEnvLightfolder+name_prefix+img_idx_str +".pfm";
-//            savePFM(image_pyramid[i], image_pyramid_lvl);
-
         image_pyramid.clear();
         for (int i = 0; i < 6; ++i) {
             // read image_pyramid
@@ -266,13 +259,7 @@ namespace DSONL {
             string name_prefix = "/envMapLvl_";
             string image_pyramid_lvl= env_path+name_prefix+img_idx_str +".pfm";
             Mat lvl_i= loadPFM(image_pyramid_lvl);
-
-//            imshow("lvl_i", lvl_i);
-//            waitKey(0);
-
-
             image_pyramid.push_back(lvl_i);
-
         }
 
 
