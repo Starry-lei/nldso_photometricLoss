@@ -164,9 +164,9 @@ namespace DSONL {
 
 
 
-//        writer.write("ControlpointCloud.pcd", *ControlpointCloud, false);// do we need the sensor acquisition origin?
-//        writer.write("nearestPointCloud.pcd", *nearestPointCloud, false);// do we need the sensor acquisition origin?
-//        writer.write("scenePointCloud.pcd", *scenePointCloud, false);// do we need the sensor acquisition origin?
+        writer.write("ControlpointCloud_Dense.pcd", *ControlpointCloud, false);// do we need the sensor acquisition origin?
+        writer.write("nearestPointCloud_Dense.pcd", *nearestPointCloud, false);// do we need the sensor acquisition origin?
+        writer.write("scenePointCloud_Dense.pcd", *scenePointCloud, false);// do we need the sensor acquisition origin?
 
 
 
