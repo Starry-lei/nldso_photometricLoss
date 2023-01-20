@@ -146,7 +146,6 @@ namespace DSONL {
 
             diffuseMap *diffuseMap = new DSONL::diffuseMap;
 //            diffuseMap->Init(argc,argv, envMap_diffuse_parameter_path);
-
             diffuseMap->makeDiffuseMap(pEnv.EnvmapSampler, envMapDiffuse); // index_1: diffuse
             delete diffuseMap;
 
