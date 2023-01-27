@@ -57,6 +57,7 @@ namespace DSONL {
         Mat image_ref_metallic;
         Mat image_ref_roughness;
 		Mat grayImage_ref;
+        Mat grayImage_ref_CV8UC1;
         Mat grayImage_selector_ref;
 
 
@@ -78,6 +79,9 @@ namespace DSONL {
         Sophus::SE3d camPose1;
 		int rows;
 		int cols;
+
+        double mean_val;
+        double std_dev;
 
 
 		void Init() {
@@ -159,6 +163,14 @@ namespace DSONL {
 
 				int channelIdx = options_.channelIdx;
 				extractChannel(image_ref, grayImage_ref, channelIdx);
+                Mat grayImg, mat_mean, mat_stddev;
+                meanStdDev(grayImage_ref, mat_mean, mat_stddev);
+                mean_val= mat_mean.at<double>(0,0);
+                std_dev = mat_stddev.at<double>(0,0);
+                grayImage_ref_CV8UC1= grayImage_ref.clone();
+
+
+
                 extractChannel(image_ref_seletor, grayImage_selector_ref, channelIdx);
 
                 grayImage_ref.convertTo(grayImage_ref, CV_64FC1, 1/255.0);

@@ -41,8 +41,12 @@ int main(int argc, char **argv) {
 //    std::string envMap_Folder="../data/SimulationEnvData/envMap_10To16";
 //    std::string envMap_Folder="/home/lei/Documents/Research/envMapData/envMap_10To16";
 
-    std::string envMap_Folder="/home/lei/Documents/Research/envMapData/envMapData_Dense01";
-    string controlPointPose_path= "/home/lei/Documents/Research/envMapData/envMapData_Dense0704_01_control_cam_pose3k.txt";
+//    std::string envMap_Folder="/home/lei/Documents/Research/envMapData/envMapData_Dense01";
+//    string controlPointPose_path= "/home/lei/Documents/Research/envMapData/envMapData_Dense0704_01_control_cam_pose3k.txt";
+
+    std::string envMap_Folder="/home/lei/Documents/Research/envMapData/maskedSelector";
+    string controlPointPose_path= "/home/lei/Documents/Research/envMapData/scene0704_01_control_cam_pose.txt";
+
 
 
 
@@ -134,7 +138,7 @@ int main(int argc, char **argv) {
         for(int i=0; i>=0; i--) {
 
             cout << "\n pyrLevelsUsed:" << i << endl;
-//			plotImPyr(newFrame_ref, i, "newFrame_ref");
+			plotImPyr(newFrame_ref, i, "newFrame_ref");
 //			plotImPyr(newFrame_tar, i, "newFrame_tar");
 //			plotImPyr(depthMap_ref, i, "depthMap_ref");
             npts[i] = pixelSelector->makeMaps(newFrame_ref, statusMap, densities[1] * wG[0] * hG[0], 1, true, 2);
@@ -159,17 +163,45 @@ int main(int argc, char **argv) {
                 }
             }
         }
+        // refine the point selector
+
+
+        Mat sPointMask(selectedPointMask1.rows,  selectedPointMask1.cols, CV_8UC1, Scalar(0));
+        float metallic_threshold = 0.8;
+        float roughness_threshold = 0.15;
+        float scale_std= 0.6;
+
+        int point_counter=0;
+        int dso_point_counter=0;
+        for (int j = 0; j < grayImage_ref.rows; ++j) {
+            for (int i = 0; i < grayImage_ref.cols; ++i) {
+
+                if (int (selectedPointMask1.at<uchar>(j,i))==255){
+                    dso_point_counter+=1;
+
+                    if ( (image_ref_roughness.at<float>(j,i) < roughness_threshold || image_ref_metallic.at<float>(j,i)>metallic_threshold) && (dataLoader->grayImage_ref_CV8UC1.at<uchar>(j,i)>(dataLoader->mean_val+scale_std*dataLoader->std_dev) )){
+
+//                        cout << "\n 1 show  metallic:" << image_ref_metallic.at<float>(j,i);
+//                        cout << "\n 3 show  roughtness: " << image_ref_roughness.at<float>(j,i);
+                        sPointMask.at<uchar>(j,i)= 255;
+                        point_counter+=1;
+                    }
+                }
+            }
+        }
+
 
         imshow("selectedPointMask1",selectedPointMask1);
-        imwrite("selectedPointMask1.png",selectedPointMask1);
+        imshow("sPointMask", sPointMask);
+
+        std::cerr<<"\n show point_counter:"<<point_counter<<endl;
+        std::cerr<<"\n show dso_point_counter:"<<dso_point_counter<<endl;
+        cout<<"\n Image averge:"<< dataLoader->mean_val<<endl;
+        cout<<" Image std:"<<dataLoader->std_dev<<endl;
+//        imwrite("pointMask.png", sPointMask);
+//        imwrite("selectedPointMask1.png",selectedPointMask1);
         std::cerr<<"Show counter for confirmation:"<<counter<<endl;
         waitKey(0);
-
-
-
-
-
-
 
         }
 
@@ -194,7 +226,7 @@ int main(int argc, char **argv) {
     cout<<"\n The preComputation of EnvMap is ready!"<<endl;
 
 
-    imshow("temp", grayImage_target);
+    imshow("grayImage_target", grayImage_target);
     waitKey(0);
 	// show the depth image with noise
 	double min_depth_val, max_depth_val;
@@ -292,16 +324,6 @@ int main(int argc, char **argv) {
 	Eigen::Matrix<double, 3, 1> Translation(xi.translation());
 
 
-//	PixelSelector* pixelSelector=NULL;
-//	FrameHessian* newFrame_ref=NULL;
-//	FrameHessian* newFrame_tar=NULL;
-//	FrameHessian* depthMap_ref=NULL;
-
-//	float *color_ref = NULL;
-//	float *color_tar = NULL;
-//	float *depthMapArray_ref = NULL;
-//	float *statusMap = NULL;
-//	bool *statusMapB = NULL;
 
 	AddGaussianNoise_Opencv(depth_ref, depth_ref_NS, Mean, StdDev, statusMap);
 	divide(Scalar(1), depth_ref, depth_ref_gt);
@@ -364,21 +386,28 @@ int main(int argc, char **argv) {
 				//				//				showScaledImage(depth_ref_gt, inv_depth_ref);
 				//				//				waitKey(0);
 			} else {
-//				PhotometricBA(IRef, I, options, Klvl, Rotation, Translation, inv_depth_ref, deltaMap, depth_upper_bound,depth_lower_bound, statusMap, statusMapB);
+				PhotometricBA(IRef, I, options, Klvl, Rotation, Translation, inv_depth_ref, deltaMap, depth_upper_bound,depth_lower_bound, statusMap, statusMapB);
 			}
 
 
-            // show baseColor
 
 
-			DSONL::updateDelta(dataLoader->camPose1, EnvLight,Rotation,Translation,Klvl,image_ref_baseColor,inv_depth_ref,image_ref_metallic ,image_ref_roughness,deltaMap,newNormalMap,up_new, butt_new);
-			Mat deltaMapGT_res= deltaMapGT(grayImage_ref,depth_ref,grayImage_target,depth_target,K.cast<double>(),distanceThres,xi_GT, upper, buttom, deltaMap);
+
+//			DSONL::updateDelta(dataLoader->camPose1, EnvLight,Rotation,Translation,Klvl,image_ref_baseColor,inv_depth_ref,image_ref_metallic ,image_ref_roughness,deltaMap,newNormalMap,up_new, butt_new);
+//			Mat deltaMapGT_res= deltaMapGT(grayImage_ref,depth_ref,grayImage_target,depth_target,K.cast<double>(),distanceThres,xi_GT, upper, buttom, deltaMap);
 //
-          Mat showGTdeltaMap=colorMap(deltaMapGT_res, upper, buttom);
-          Mat showESdeltaMap=colorMap(deltaMap, upper, buttom);
+//          Mat showGTdeltaMap=colorMap(deltaMapGT_res, upper, buttom);
+//          Mat showESdeltaMap=colorMap(deltaMap, upper, buttom);
 //
-			imshow("show GT deltaMap", showGTdeltaMap);
-			imshow("show ES deltaMap", showESdeltaMap);
+//			imshow("show GT deltaMap", showGTdeltaMap);
+//			imshow("show ES deltaMap", showESdeltaMap);
+
+
+
+
+
+
+
 
 
 //			/// TEMP TEST BEGIN

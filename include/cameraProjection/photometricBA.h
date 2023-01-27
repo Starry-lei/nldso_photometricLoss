@@ -104,7 +104,7 @@ namespace DSONL {
 
 
 				// use DSO pixel selector
-				// if (statusMap!=NULL && statusMap[u*image.cols+v]==0 ){ continue;}
+				 if (statusMap!=NULL && statusMap[u*image.cols+v]==0 ){ continue;}
 
 				// use the inlier filter
 //				if (inliers_filter.count(u) == 0) { continue; }// ~~~~~~~~~~~~~~Filter~~~~~~~~~~~~~~~~~~~~~~~
