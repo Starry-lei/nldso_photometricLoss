@@ -40,8 +40,12 @@ int main(int argc, char **argv) {
 //    std::string envMap_Folder="/home/lei/Documents/Research/envMapData/envMap_10To16";
 //    string controlPointPose_path= "../data/SimulationEnvData/scene0704_01_control_cam_pose.txt";
 
-    std::string envMap_Folder="/media/lei/Data/datasetProcessing/ToolBox/data/formattedEnvMap_denser";
-    string controlPointPose_path= "/media/lei/Data/Kitchen_scene/Frame10to16_denser/scene0704_01_control_cam_pose3k.txt";
+//    std::string envMap_Folder="/media/lei/Data/datasetProcessing/ToolBox/data/formattedEnvMap_denser";
+//    string controlPointPose_path= "/media/lei/Data/Kitchen_scene/Frame10to16_denser/scene0704_01_control_cam_pose3k.txt";
+
+    std::string envMap_Folder="/media/lei/Data/Kitchen_scene/MaskedPoint_EnvMap/formattedEnvMap";
+    string controlPointPose_path= "/home/lei/Documents/Research/envMapData/scene0704_01_control_cam_pose.txt";
+
 
 
 
@@ -87,6 +91,10 @@ int main(int argc, char **argv) {
 // ===========================ctrlPoint Selector==========================================
     ctrlPointSelector  * ctrlPoint_Selector= new ctrlPointSelector(dataLoader->camPose1, controlPointPose_path,grayImage_ref, depth_ref_GT,K);
     // TODO(parallelization)
+
+    imshow("grayImage_ref", grayImage_ref);
+    waitKey(0);
+
     std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
 
     envLight  *EnvLight= new envLight(ctrlPoint_Selector->selectedIndex, argc, argv, envMap_Folder,controlPointPose_path);

@@ -64,7 +64,7 @@ namespace DSONL {
         std::unordered_map<cv::Point3f, int, hash3d<cv::Point3f>, equalTo<cv::Point3f>> pointCloud_UnorderedMap;
 
 
-        for (size_t i = 1; i <= controlPointPoses.size(); i++) {
+        for (size_t i = 1; i <= controlPointPoses.size(); i++) { //  4601,  4721
             Sophus::SE3f envMapPose_world = controlPointPoses[i - 1].cast<float>();
             cv::Point3f pointBase = Vec3f(controlPointPoses[i - 1].translation().x(),
                                           controlPointPoses[i - 1].translation().y(),
@@ -164,9 +164,9 @@ namespace DSONL {
 
 
 
-        writer.write("ControlpointCloud_Dense.pcd", *ControlpointCloud, false);// do we need the sensor acquisition origin?
-        writer.write("nearestPointCloud_Dense.pcd", *nearestPointCloud, false);// do we need the sensor acquisition origin?
-        writer.write("scenePointCloud_Dense.pcd", *scenePointCloud, false);// do we need the sensor acquisition origin?
+        writer.write("ControlpointCloud_Masked.pcd", *ControlpointCloud, false);// do we need the sensor acquisition origin?
+        writer.write("nearestPointCloud_Masked.pcd", *nearestPointCloud, false);// do we need the sensor acquisition origin?
+        writer.write("scenePointCloud_Masked.pcd", *scenePointCloud, false);// do we need the sensor acquisition origin?
 
 
 
