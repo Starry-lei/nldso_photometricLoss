@@ -1,6 +1,7 @@
 //
 // Created by cheng on 30.10.22.
 //
+#pragma once
 
 #include "minimalImage.h"
 #include "numType.h"
@@ -9,7 +10,7 @@
 #include <opencv2/core/mat.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <unordered_set>
-#pragma once
+
 namespace DSONL
 {
 

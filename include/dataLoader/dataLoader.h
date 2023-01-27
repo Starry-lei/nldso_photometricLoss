@@ -57,7 +57,10 @@ namespace DSONL {
         Mat image_ref_metallic;
         Mat image_ref_roughness;
 		Mat grayImage_ref;
-		Mat grayImage_target;
+        Mat grayImage_selector_ref;
+
+
+        Mat grayImage_target;
 		Mat depth_map_ref;
 		Mat depth_map_target;
 		Mat outlier_mask_big_baseline;
@@ -89,6 +92,8 @@ namespace DSONL {
 			Eigen::Matrix3d S_x;
 			S_x << 1.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, -1.0;
 
+
+
 			if (options_.isTextured) {
 
 				string image_ref_path;
@@ -97,6 +102,7 @@ namespace DSONL {
                 string image_ref_metallic_path;
                 string image_ref_roughness_path;
                 string image_normal_GT_path;
+                string image_ref_seletor_path;
 
 //                image_ref_path =            "../data/SimulationEnvData/leftImage/origfov_10.pfm";
 //                image_ref_baseColor_path =  "../data/SimulationEnvData/leftImage/bgrbaseColor_10.pfm";
@@ -105,6 +111,8 @@ namespace DSONL {
 //                image_ref_roughness_path =  "../data/SimulationEnvData/leftImage/bgrroughness_10.pfm";
 
                 image_ref_path =            "../data/SimulationEnvData/leftImage/bgr_10.png";
+                image_ref_seletor_path =    "../data/SimulationEnvData/leftImage/bgr_10_goalFrame.pfm";
+
                 depth_ref_path =            "../data/SimulationEnvData/leftImage/origfovdepth_10.png";
 
 //                image_ref_baseColor_path =  "../data/SimulationEnvData/leftImage/DSNL/bgrbaseColor_10.pfm";
@@ -129,6 +137,9 @@ namespace DSONL {
 
 
                 Mat image_ref =imread(image_ref_path, IMREAD_ANYCOLOR | IMREAD_ANYDEPTH);
+
+                Mat image_ref_seletor= loadPFM(image_ref_seletor_path);
+
                 Mat depth_ref = imread(depth_ref_path, IMREAD_ANYCOLOR | IMREAD_ANYDEPTH);
                 Mat depth_reference(depth_ref.rows, depth_ref.cols, CV_64FC1);
                 for (int j = 0; j < depth_ref.rows; ++j) {
@@ -148,11 +159,13 @@ namespace DSONL {
 
 				int channelIdx = options_.channelIdx;
 				extractChannel(image_ref, grayImage_ref, channelIdx);
+                extractChannel(image_ref_seletor, grayImage_selector_ref, channelIdx);
+
                 grayImage_ref.convertTo(grayImage_ref, CV_64FC1, 1/255.0);
 
 				rows = image_ref.rows;
 				cols = image_ref.cols;
-				//setGlobalCalib(cols,rows,camera_intrinsics);
+				setGlobalCalib(cols,rows,camera_intrinsics);
 				// ref image depth
 				Mat channel[3], metallic_ref_render, channel_rough[3], _tar_render;
                 image_ref_metallic=matallic_C1;

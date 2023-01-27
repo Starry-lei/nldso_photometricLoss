@@ -185,6 +185,9 @@ set(dsonl_SOURCE_FILES
         include/controlPointSelector/ctrlPointSelector.cpp
         include/controlPointSelector/ctrlPointSelector.h
 
+        include/pixelSelector.h
+        include/pixelSelector.cpp
+
 #        include/settings/common.h
 
         )

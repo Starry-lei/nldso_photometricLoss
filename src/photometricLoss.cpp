@@ -16,7 +16,7 @@
 
 #include "deltaCompute/deltaCompute.h"
 
-
+#include "pixelSelector.h"
 
 using namespace cv;
 using namespace std;
@@ -58,12 +58,6 @@ int main(int argc, char **argv) {
 	depth_target = dataLoader->depth_map_target;
 	image_ref_baseColor = dataLoader->image_ref_baseColor;
 
-//
-//    imshow("image_ref_baseColor",image_ref_baseColor);
-//    waitKey(0);
-
-
-
 	image_target_baseColor = dataLoader->image_target_baseColor;
     Mat normal_map_GT;
     normal_map_GT = dataLoader->normal_map_GT;
@@ -77,6 +71,116 @@ int main(int argc, char **argv) {
     R = dataLoader->q_12.normalized().toRotationMatrix();
     xi_GT.setRotationMatrix(R);
     xi_GT.translation() = dataLoader->t12;
+
+
+    // ====================================== pointSelector========================================
+    bool usePixelSelector= true;
+    float densities[] = {0.03,0.003, 0.05,0.15,0.5,1}; /// number of optimized depths,  current index is 1
+    PixelSelector* pixelSelector=NULL;
+    FrameHessian* newFrame_ref=NULL;
+    FrameHessian* newFrame_tar=NULL;
+    FrameHessian* depthMap_ref=NULL;
+    float* color_ref=NULL;
+    float* color_tar=NULL;
+    float* depthMapArray_ref=NULL;
+    float* statusMap=NULL;
+    bool*  statusMapB=NULL;
+
+    if (usePixelSelector){
+        double min_gray,max_gray;
+        Mat grayImage_ref_CV8U;
+        Mat grayImage_tar_CV8U;
+        imshow("grayImage_selector_ref",dataLoader->grayImage_selector_ref);
+        dataLoader->grayImage_selector_ref.convertTo(grayImage_ref_CV8U,CV_8UC1, 255.0);
+//        grayImage_target.convertTo(grayImage_tar_CV8U,CV_8UC1, 255.0);
+
+        imshow("grayImage_ref_CV8U",grayImage_ref_CV8U);
+        waitKey(0);
+        newFrame_ref= new FrameHessian();
+        newFrame_tar= new FrameHessian();
+
+
+        pixelSelector= new PixelSelector(wG[0],hG[0]);
+        color_ref= new float[wG[0]*hG[0]];
+        color_tar= new float[wG[0]*hG[0]];
+
+
+        for (int row = 0; row < hG[0]; ++row) {
+
+            uchar *pixel_ref=grayImage_ref_CV8U.ptr<uchar>(row);
+            uchar *pixel_tar=grayImage_ref_CV8U.ptr<uchar>(row);
+//            float * pixel_depth_ref= inv_depth_ref.ptr<float>(row);
+
+            for (int col = 0; col < wG[0]; ++col) {
+                color_ref[row*wG[0]+col]= (float) pixel_ref[col];
+                color_tar[row*wG[0]+col]= (float)pixel_tar[col];
+//              depthMapArray_ref[row*wG[0]+col]=pixel_depth_ref[col];
+
+            }
+        }
+        newFrame_ref->makeImages(color_ref); // make image_ref pyramid
+        newFrame_tar->makeImages(color_tar); // make image_tar pyramid
+        statusMap= new float[wG[0]*hG[0]];
+        statusMapB = new bool[wG[0]*hG[0]];
+        int setting_desiredImmatureDensity=1500;
+        float densities[] = {1,0.5,0.15,0.05,0.03}; // 不同层取得点密度
+
+        int  npts[pyrLevelsUsed];
+        Mat selectedPointMask1(grayImage_ref.rows,  grayImage_ref.cols, CV_8UC1, Scalar(0));
+
+
+        // MinimalImageB3 imgShow[pyrLevelsUsed];
+        pixelSelector->currentPotential= 3;
+        for(int i=0; i>=0; i--) {
+
+            cout << "\n pyrLevelsUsed:" << i << endl;
+//			plotImPyr(newFrame_ref, i, "newFrame_ref");
+//			plotImPyr(newFrame_tar, i, "newFrame_tar");
+//			plotImPyr(depthMap_ref, i, "depthMap_ref");
+            npts[i] = pixelSelector->makeMaps(newFrame_ref, statusMap, densities[1] * wG[0] * hG[0], 1, true, 2);
+            cout << "\n npts[i]: " << npts[i] << "\n densities[i]*wG[0]*hG[0]:" << densities[i] * wG[0] * hG[0] << endl;
+            waitKey(0);
+
+//            cv::Mat image_ref(hG[i], wG[i], CV_32FC1);
+//            memcpy(image_ref.data, newFrame_ref->img_pyr[i], wG[i] * hG[i] * sizeof(float));
+//            cv::Mat image_tar(hG[i], wG[i], CV_32FC1);
+//            memcpy(image_tar.data, newFrame_tar->img_pyr[i], wG[i] * hG[i] * sizeof(float));
+        }
+
+        int counter=0;
+        for (int u = 0; u< grayImage_ref.rows; u++) // colId, cols: 0 to 480
+        {
+            for (int v = 0; v < grayImage_ref.cols; v++) // rowId,  rows: 0 to 640
+            {
+                if (statusMap!=NULL && statusMap[u*grayImage_ref.cols+v]!=0 ){
+                    // ================================save the selectedPoint mask here=======================
+                    selectedPointMask1.at<uchar>(u,v)= 255;
+                    counter++;
+                }
+            }
+        }
+
+        imshow("selectedPointMask1",selectedPointMask1);
+        imwrite("selectedPointMask1.png",selectedPointMask1);
+        std::cerr<<"Show counter for confirmation:"<<counter<<endl;
+        waitKey(0);
+
+
+
+
+
+
+
+        }
+
+
+
+
+
+
+
+
+
 
 // ===========================ctrlPoint Selector==========================================
     ctrlPointSelector  * ctrlPoint_Selector= new ctrlPointSelector(dataLoader->camPose1, controlPointPose_path,grayImage_ref, depth_ref_GT,K);
@@ -193,11 +297,11 @@ int main(int argc, char **argv) {
 //	FrameHessian* newFrame_tar=NULL;
 //	FrameHessian* depthMap_ref=NULL;
 
-	float *color_ref = NULL;
-	float *color_tar = NULL;
-	float *depthMapArray_ref = NULL;
-	float *statusMap = NULL;
-	bool *statusMapB = NULL;
+//	float *color_ref = NULL;
+//	float *color_tar = NULL;
+//	float *depthMapArray_ref = NULL;
+//	float *statusMap = NULL;
+//	bool *statusMapB = NULL;
 
 	AddGaussianNoise_Opencv(depth_ref, depth_ref_NS, Mean, StdDev, statusMap);
 	divide(Scalar(1), depth_ref, depth_ref_gt);
