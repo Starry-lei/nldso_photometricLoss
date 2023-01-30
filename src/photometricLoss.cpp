@@ -55,8 +55,7 @@ int main(int argc, char **argv) {
     Mat image_ref_roughness = dataLoader->image_ref_roughness;
 	grayImage_ref = dataLoader->grayImage_ref;
 	grayImage_target = dataLoader->grayImage_target;
-	grayImage_ref.convertTo(grayImage_ref, CV_64FC1);
-	grayImage_target.convertTo(grayImage_target, CV_64FC1);
+
 	depth_ref = dataLoader->depth_map_ref;
 	Mat depth_ref_GT = dataLoader->depth_map_ref;
 	depth_target = dataLoader->depth_map_target;
@@ -76,7 +75,8 @@ int main(int argc, char **argv) {
     xi_GT.setRotationMatrix(R);
     xi_GT.translation() = dataLoader->t12;
 
-
+//    imshow("image_ref_baseColor",image_ref_baseColor);
+//    waitKey(0);
     // ====================================== pointSelector========================================
     bool usePixelSelector= true;
     float densities[] = {0.03,0.003, 0.05,0.15,0.5,1}; /// number of optimized depths,  current index is 1
@@ -89,6 +89,7 @@ int main(int argc, char **argv) {
     float* depthMapArray_ref=NULL;
     float* statusMap=NULL;
     bool*  statusMapB=NULL;
+    Mat statusMap_NonLambCand(grayImage_ref.rows,  grayImage_ref.cols, CV_8UC1, Scalar(0));
 
     if (usePixelSelector){
         double min_gray,max_gray;
@@ -151,48 +152,47 @@ int main(int argc, char **argv) {
 //            memcpy(image_tar.data, newFrame_tar->img_pyr[i], wG[i] * hG[i] * sizeof(float));
         }
 
-        int counter=0;
+
+        float metallic_threshold = 0.8;
+        float roughness_threshold = 0.15;
+//        float scale_std= 0.6; // LDR
+        float scale_std= 0.11; // HDR maybe wrong
+//        float scale_std= 0.8; // HDR only for test
+
+
+        int point_counter=0;
+        int dso_point_counter=0;
+
         for (int u = 0; u< grayImage_ref.rows; u++) // colId, cols: 0 to 480
         {
             for (int v = 0; v < grayImage_ref.cols; v++) // rowId,  rows: 0 to 640
             {
                 if (statusMap!=NULL && statusMap[u*grayImage_ref.cols+v]!=0 ){
+                    dso_point_counter+=1;
+
                     // ================================save the selectedPoint mask here=======================
-                    selectedPointMask1.at<uchar>(u,v)= 255;
-                    counter++;
+
+                    if ( (image_ref_roughness.at<float>(u,v) < roughness_threshold || image_ref_metallic.at<float>(u,v)>metallic_threshold) && (grayImage_ref.at<double>(u,v)>(dataLoader->mean_val+scale_std*dataLoader->std_dev) )){
+                        statusMap_NonLambCand.at<uchar>(u,v)= 255;
+                        statusMap[u*grayImage_ref.cols+v]=255;
+                        point_counter+=1;
+                    }
+
+
+//                    if ( (image_ref_roughness.at<float>(u,v) < roughness_threshold || image_ref_metallic.at<float>(u,v)>metallic_threshold) && (dataLoader->grayImage_ref_CV8UC1.at<uchar>(u,v)>(dataLoader->mean_val+scale_std*dataLoader->std_dev) )){
+//                        statusMap_NonLambCand.at<uchar>(u,v)= 255;
+//                        statusMap[u*grayImage_ref.cols+v]=255;
+//                        point_counter+=1;
+//                    }
+
                 }
             }
         }
         // refine the point selector
 
 
-        Mat sPointMask(selectedPointMask1.rows,  selectedPointMask1.cols, CV_8UC1, Scalar(0));
-        float metallic_threshold = 0.8;
-        float roughness_threshold = 0.15;
-        float scale_std= 0.6;
-
-        int point_counter=0;
-        int dso_point_counter=0;
-        for (int j = 0; j < grayImage_ref.rows; ++j) {
-            for (int i = 0; i < grayImage_ref.cols; ++i) {
-
-                if (int (selectedPointMask1.at<uchar>(j,i))==255){
-                    dso_point_counter+=1;
-
-                    if ( (image_ref_roughness.at<float>(j,i) < roughness_threshold || image_ref_metallic.at<float>(j,i)>metallic_threshold) && (dataLoader->grayImage_ref_CV8UC1.at<uchar>(j,i)>(dataLoader->mean_val+scale_std*dataLoader->std_dev) )){
-
-//                        cout << "\n 1 show  metallic:" << image_ref_metallic.at<float>(j,i);
-//                        cout << "\n 3 show  roughtness: " << image_ref_roughness.at<float>(j,i);
-                        sPointMask.at<uchar>(j,i)= 255;
-                        point_counter+=1;
-                    }
-                }
-            }
-        }
-
-
-        imshow("selectedPointMask1",selectedPointMask1);
-        imshow("sPointMask", sPointMask);
+//        imshow("selectedPointMask1",selectedPointMask1);
+        imshow("statusMap_NonLambCand", statusMap_NonLambCand);
 
         std::cerr<<"\n show point_counter:"<<point_counter<<endl;
         std::cerr<<"\n show dso_point_counter:"<<dso_point_counter<<endl;
@@ -200,7 +200,6 @@ int main(int argc, char **argv) {
         cout<<" Image std:"<<dataLoader->std_dev<<endl;
 //        imwrite("pointMask.png", sPointMask);
 //        imwrite("selectedPointMask1.png",selectedPointMask1);
-        std::cerr<<"Show counter for confirmation:"<<counter<<endl;
         waitKey(0);
 
         }
@@ -216,13 +215,11 @@ int main(int argc, char **argv) {
 
 // ===========================ctrlPoint Selector==========================================
     ctrlPointSelector  * ctrlPoint_Selector= new ctrlPointSelector(dataLoader->camPose1, controlPointPose_path,grayImage_ref, depth_ref_GT,K);
-    // TODO(parallelization)
-    std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
+//     TODO(parallelization)
 
-    envLight  *EnvLight= new envLight(ctrlPoint_Selector->selectedIndex, argc, argv, envMap_Folder,controlPointPose_path);
-    std::chrono::steady_clock::time_point t2 = std::chrono::steady_clock::now();
-    std::chrono::duration<double> time_used =std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1);
-    cout << "construct the envMap: " << time_used.count() << " seconds." << endl;
+    envLightLookup  *EnvLightLookup= new envLightLookup(ctrlPoint_Selector->selectedIndex, argc, argv, envMap_Folder,controlPointPose_path);
+
+
     cout<<"\n The preComputation of EnvMap is ready!"<<endl;
 
 
@@ -242,10 +239,6 @@ int main(int argc, char **argv) {
 //	imshow("grayImage_ref",grayImage_ref);
 //	imshow("grayImage_target",grayImage_target);
 //	waitKey(0);
-
-
-
-
 
 	// ----------------------------------------optimization variable: depth --------------------------------------
 	cout << "\n Show GT rotation:\n" << xi_GT.rotationMatrix() << "\n Show GT translation:\n" << xi_GT.translation()
@@ -291,7 +284,10 @@ int main(int argc, char **argv) {
 	PhotometricBAOptions options;
     Mat newNormalMap = normal_map;
 //    Mat newNormalMap = normal_map_GT;
-	double distanceThres = 0.007;
+//	double distanceThres = 0.007;
+//    double distanceThres = 0.0035;
+    double distanceThres = 0.002;
+
 	float upper = 2.0;
 	float buttom = 0.5;
 	float up_new = upper;
@@ -322,6 +318,9 @@ int main(int argc, char **argv) {
 
 	Sophus::SO3d Rotation(xi.rotationMatrix());
 	Eigen::Matrix<double, 3, 1> Translation(xi.translation());
+
+    Sophus::SO3d Rotation_GT(xi_GT.rotationMatrix());
+    Eigen::Matrix<double, 3, 1> Translation_GT(xi_GT.translation());
 
 
 
@@ -362,7 +361,7 @@ int main(int argc, char **argv) {
 		double min_gt_special, max_gt_special;
 
 		int i = 0;
-		while (i < 1) {
+		while (i < 2) {
 			double max_n_, min_n_;
 			cv::minMaxLoc(deltaMap, &min_n_, &max_n_);
 			cout << "->>>>>>>>>>>>>>>>>show max and min of estimated deltaMap:" << max_n_ << "," << min_n_ << endl;
@@ -386,14 +385,46 @@ int main(int argc, char **argv) {
 				//				//				showScaledImage(depth_ref_gt, inv_depth_ref);
 				//				//				waitKey(0);
 			} else {
-				PhotometricBA(IRef, I, options, Klvl, Rotation, Translation, inv_depth_ref, deltaMap, depth_upper_bound,depth_lower_bound, statusMap, statusMapB);
+				PhotometricBA(IRef, I, options, Klvl, Rotation, Translation, inv_depth_ref, deltaMap, depth_upper_bound,depth_lower_bound, statusMap, statusMapB,statusMap_NonLambCand);
 			}
 
-
-
-
-
 //			DSONL::updateDelta(dataLoader->camPose1, EnvLight,Rotation,Translation,Klvl,image_ref_baseColor,inv_depth_ref,image_ref_metallic ,image_ref_roughness,deltaMap,newNormalMap,up_new, butt_new);
+
+
+
+
+            // Result analysis
+            cout << "\n show depth_ref min, max:\n" << min_gt_special << "," << max_gt_special << endl;
+            cout << "\n Show optimized rotation:\n" << Rotation.matrix() << "\n Show optimized translation:\n"<< Translation << endl;
+            cout << "\n Show Rotational error :" << rotationErr(xi_GT.rotationMatrix(), Rotation.matrix())
+                 << "(degree)." << "\n Show translational error :"
+                 << 100 * translationErr(xi_GT.translation(), Translation) << "(%) "
+                 << "\n Show depth error :" << depthErr(depth_ref_gt, inv_depth_ref).val[0]
+                 << endl;
+
+
+
+
+
+            std::cout << "\n Start calculating delta map ... " << endl;
+            std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
+
+
+
+
+            Mat deltaMapGT_res= deltaMapGT(grayImage_ref,depth_ref,grayImage_target,depth_target,K.cast<double>(),distanceThres,xi_GT, upper, buttom, deltaMap, statusMap);
+
+
+//            DSONL::updateDelta(dataLoader->camPose1,EnvLightLookup, statusMap,Rotation,Translation,Klvl,image_ref_baseColor,inv_depth_ref,image_ref_metallic ,image_ref_roughness,deltaMap,newNormalMap,up_new, butt_new);
+            DSONL::updateDelta(dataLoader->camPose1,EnvLightLookup, statusMap,Rotation_GT,Translation_GT,Klvl,image_ref_baseColor,inv_depth_ref,image_ref_metallic ,image_ref_roughness,deltaMap,newNormalMap,up_new, butt_new);
+
+
+
+
+            std::chrono::steady_clock::time_point t2 = std::chrono::steady_clock::now();
+            std::chrono::duration<double> time_used =std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1);
+            std::cout << "\n Delta map is done ... "<< " and costs time:" << time_used.count() << " seconds." << endl;
+
 //			Mat deltaMapGT_res= deltaMapGT(grayImage_ref,depth_ref,grayImage_target,depth_target,K.cast<double>(),distanceThres,xi_GT, upper, buttom, deltaMap);
 //
 //          Mat showGTdeltaMap=colorMap(deltaMapGT_res, upper, buttom);
@@ -426,13 +457,7 @@ int main(int argc, char **argv) {
 //			imwrite("GT_deltaMap.exr", showGTdeltaMap);
 //			imwrite("ES_deltaMap.exr", showESdeltaMap);
 
-			cout << "\n show depth_ref min, max:\n" << min_gt_special << "," << max_gt_special << endl;
-			cout << "\n Show optimized rotation:\n" << Rotation.matrix() << "\n Show optimized translation:\n"<< Translation << endl;
-			cout << "\n Show Rotational error :" << rotationErr(xi_GT.rotationMatrix(), Rotation.matrix())
-			     << "(degree)." << "\n Show translational error :"
-			     << 100 * translationErr(xi_GT.translation(), Translation) << "(%) "
-			     << "\n Show depth error :" << depthErr(depth_ref_gt, inv_depth_ref).val[0]
-			     << endl;// !!!!!!!!!!!!!!!!!!!!!!!!
+
 			i += 1;
 
 		}
@@ -463,7 +488,13 @@ int main(int argc, char **argv) {
 
 
 
+// notes:
 
+//
+//std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
+//std::chrono::steady_clock::time_point t2 = std::chrono::steady_clock::now();
+//std::chrono::duration<double> time_used =std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1);
+//cout << "construct the envMap: " << time_used.count() << " seconds." << endl;
 
 
 // case 1

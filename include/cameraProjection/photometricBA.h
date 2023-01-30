@@ -25,7 +25,7 @@ namespace DSONL {
 	using namespace std;
 
 	void PhotometricBA(Mat &image, Mat &image_right, const PhotometricBAOptions &options, const Eigen::Matrix3f &K, Sophus::SO3d &Rotation, Eigen::Vector3d &Translation, Mat &depth_ref, Mat deltaMap,
-	                   const double &depth_upper_bound, const double &depth_lower_bound, float *statusMap, bool *statusMapB
+	                   const double &depth_upper_bound, const double &depth_lower_bound, float *statusMap, bool *statusMapB, Mat statusMap_NonLambCand
 
 	) {
 		ceres::Problem problem;
@@ -45,39 +45,83 @@ namespace DSONL {
 
 		std::unordered_map<int, int> inliers_filter;
 
-		//		at (240, 189)  B value is: 36  G value is: 25  R value is: 22
-		//		at (233, 146)  B value is: 35  G value is: 27  R value is: 23
 
-//        at (339, 266)  B value is: 0.225064  G value is: 0.237635  R value is: 0.180505
-//        at (343, 247)  B value is: 0.247288  G value is: 0.253032  R value is: 0.196374
-
-//        at (243, 518)  B value is: 0.0998543  G value is: 0.17071  R value is: 0.330281
-//        at (245, 496)  B value is: 0.0882254  G value is: 0.151583  R value is: 0.278097
-
-// 10 to 14
-
-//        at (339, 266)  B value is: 0.225064  G value is: 0.237635  R value is: 0.180505
-//        at (355, 229)  B value is: 0.178958  G value is: 0.182782  R value is: 0.134759
+//		inliers_filter.emplace(339, 266);///(355, 229)
 
 
-//        at (232, 122)  B value is: 0.101819  G value is: 0.0435376  R value is: 0.0233006
-//        at (251, 80)  B value is: 0.0512972  G value is: 0.0257137  R value is: 0.0161647
+        Vec2i boundingBoxUpperLeft( 145,180);
+        Vec2i boundingBoxBotRight(173,242);
 
-		inliers_filter.emplace(339, 266);///(355, 229)
 
-		int counter = 0;
+        Vec2i boundingBoxUpperLeft_AOI2( 246,14);
+        Vec2i boundingBoxBotRight_AOI2(460,163);
+
+        Vec2i boundingBoxUpperLeft_AOI3( 217,378);
+        Vec2i boundingBoxBotRight_AOI3(282,444);
+
+        int counter = 0;
+
+        Mat AOI( image.rows, image.cols, CV_8UC1, Scalar(0));
+
 		for (int u = 0; u < image.rows; u++)// colId, cols: 0 to 480
 		{
 			for (int v = 0; v < image.cols; v++)// rowId,  rows: 0 to 640
 			{
-				if (statusMap != NULL && statusMap[u * image.cols + v] != 0) {
-					inliers_filter.emplace(u, v);
-					counter++;
-				}
+
+                if ( (v<boundingBoxUpperLeft.val[1] || v>boundingBoxBotRight.val[1]) || (u< boundingBoxUpperLeft.val[0] ||  u> boundingBoxBotRight.val[0])){ continue;}
+                if (statusMap!=NULL && statusMap[u*image.cols+v]==0 ){ continue;}
+                inliers_filter.emplace(u, v);
+                counter++;
+                AOI.at<uchar>(u,v)=255;
+
+//                if (statusMap != NULL && statusMap[u * image.cols + v] != 0) {
+//					inliers_filter.emplace(u, v);
+//					counter++;
+//				}
 			}
 		}
 
-		//  cerr << "show counter for confirmation:" << counter << endl;
+//        for (int u = 0; u < image.rows; u++)// colId, cols: 0 to 480
+//        {
+//            for (int v = 0; v < image.cols; v++)// rowId,  rows: 0 to 640
+//            {
+//
+//                if ( (v<boundingBoxUpperLeft_AOI2.val[1] || v>boundingBoxBotRight_AOI2.val[1]) || (u< boundingBoxUpperLeft_AOI2.val[0] ||  u> boundingBoxBotRight_AOI2.val[0])){ continue;}
+//                if (statusMap!=NULL && statusMap[u*image.cols+v]==0 ){ continue;}
+//                inliers_filter.emplace(u, v);
+//                counter++;
+//                AOI.at<uchar>(u,v)=255;
+////                if (statusMap != NULL && statusMap[u * image.cols + v] != 0) {
+////					inliers_filter.emplace(u, v);
+////					counter++;
+////				}
+//            }
+//        }
+//
+//        for (int u = 0; u < image.rows; u++)// colId, cols: 0 to 480
+//        {
+//            for (int v = 0; v < image.cols; v++)// rowId,  rows: 0 to 640
+//            {
+//
+//                if ( (v<boundingBoxUpperLeft_AOI3.val[1] || v>boundingBoxBotRight_AOI3.val[1]) || (u< boundingBoxUpperLeft_AOI3.val[0] ||  u> boundingBoxBotRight_AOI3.val[0])){ continue;}
+//                if (statusMap!=NULL && statusMap[u*image.cols+v]==0 ){ continue;}
+//                inliers_filter.emplace(u, v);
+//                counter++;
+//                AOI.at<uchar>(u,v)=255;
+//
+////                if (statusMap != NULL && statusMap[u * image.cols + v] != 0) {
+////					inliers_filter.emplace(u, v);
+////					counter++;
+////				}
+//            }
+//        }
+
+
+//
+		  cerr << "show counter for used points in BA:" << counter << endl;
+
+        imshow("AOI", AOI);
+        waitKey(0);
 		//		double intensity_ref;
 		//		double deltaMap_val;
 		double *Rotation_ = Rotation.data();
@@ -86,29 +130,37 @@ namespace DSONL {
 		Eigen::Matrix<float, 3, 3> KRKi = K * Rotation.matrix().cast<float>() * K.inverse();
 		Eigen::Matrix<float, 3, 1> Kt = K * Translation.cast<float>();
 
-		//		int step = 50;
-		//		int pixelSkip = 0;
 
 		// use pixels,depth and delta to optimize pose and depth itself
         int counter_outlier= 0;
+        int num_points_used= 0;
+
 
 		for (int u = 0; u < image.rows; u++)// colId, cols: 0 to 480
 		{
 			for (int v = 0; v < image.cols; v++)// rowId,  rows: 0 to 640
 			{
 
+                //  use interest of area bounding box here
+//                 if ( (v<boundingBoxUpperLeft.val[1] || v>boundingBoxBotRight.val[1]) || (u< boundingBoxUpperLeft.val[0] ||  u> boundingBoxBotRight.val[0])){ continue;}
+
+                // use DSO pixel selector
+//                 if (statusMap!=NULL && statusMap[u*image.cols+v]==0 ){ continue;}
+
+                // use non lambertian point selector
+//                if (statusMap!=NULL && static_cast<int>(statusMap[u * image.cols + v])!= 255){ continue;}
 
 
-
-
-
-
-				// use DSO pixel selector
-				 if (statusMap!=NULL && statusMap[u*image.cols+v]==0 ){ continue;}
 
 				// use the inlier filter
-//				if (inliers_filter.count(u) == 0) { continue; }// ~~~~~~~~~~~~~~Filter~~~~~~~~~~~~~~~~~~~~~~~
-//				if (inliers_filter[u] != v) { continue; }      // ~~~~~~~~~~~~~~Filter~~~~~~~~~~~~~~~~~~~~~~~
+//                 if (inliers_filter.count(u) == 0) { continue; }// ~~~~~~~~~~~~~~Filter~~~~~~~~~~~~~~~~~~~~~~~
+//                 if (inliers_filter[u] != v) { continue; }      // ~~~~~~~~~~~~~~Filter~~~~~~~~~~~~~~~~~~~~~~~
+
+                if (AOI.at<uchar>(u,v)!=255){ continue;}
+
+
+                num_points_used+=1;
+
 
 				// if(pixelSkip%step!=0){ pixelSkip++;continue;}
 				//----------------------current PhotoBA---------------------------
@@ -158,9 +210,9 @@ namespace DSONL {
 
 
 				if (!project((float) v, (float) u, (float) depth_ref.at<double>(u, v), (int) cols_, (int) rows_, KRKi, Kt, pt2d)) {  counter_outlier+=1;
-//                    cout<<"show counter_outlier:"<< counter_outlier<<endl;
 
                     continue; }
+//                cout<<"show counter_outlier:"<< counter_outlier<<endl;
 
 				if (options.use_huber) {
 					problem.AddResidualBlock(new ceres::AutoDiffCostFunction<PhotometricCostFunctor, 9, Sophus::SO3d::num_parameters, 3, 1>(
@@ -195,6 +247,10 @@ namespace DSONL {
 			}
 		}
 		// Solve
+
+
+
+        std::cout << "\n Showing number of point used in directBA: " <<num_points_used<< endl;
 		std::cout << "\n Solving ceres directBA ... " << endl;
 		ceres::Solver::Options ceres_options;
 		ceres_options.max_num_iterations = 300;
@@ -214,6 +270,11 @@ namespace DSONL {
 				std::cout << summary.FullReport() << std::endl;
 				break;
 		}
+
+
+
+
+
 	}
 
 }// namespace DSONL

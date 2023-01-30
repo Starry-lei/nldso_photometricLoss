@@ -95,8 +95,9 @@ namespace DSONL {
 	}
 
 	Vec3f IBL_Radiance::specularIBL(Vec3f F0, float roughness, Vec3f N, Vec3f V, const Eigen::Matrix3d Camera1_c2w,
-                                    Sophus::SO3f enterEnv_Rotatio_inv,
-                                    pointEnvlight pointEnvlight_cur
+                                    Sophus::SO3f enterEnv_Rotatio_inv
+//                                    ,
+//                                    pointEnvlight pointEnvlight_cur
                                     ) {
 
 		float NoV = clamp(_dot(N, V), 0.0, 1.0);
@@ -119,8 +120,8 @@ namespace DSONL {
 
 
 		//      std::cout<<"uv:"<<uv<<"show roughness*float(mipCount)"<<roughness*float(mipCount)<<std::endl;
-		Vec3f prefiltered_Color = prefilteredColor(uv.val[0], uv.val[1], roughness * float(mipCount),
-                                                   pointEnvlight_cur
+		Vec3f prefiltered_Color = prefilteredColor(uv.val[0], uv.val[1], roughness * float(mipCount)
+//                                                   ,pointEnvlight_cur
         );
 
 		//    uv:[0.179422, 0.400616]show roughness*float(mipCount)1.5
@@ -191,13 +192,10 @@ namespace DSONL {
 		return (F0 + (Vec3f(1.0f, 1.0f, 1.0f) - F0) * std::pow(1.0f - cosTheta, 5.0f));
 	}
 
-	Vec3f IBL_Radiance::prefilteredColor(float u, float v, float level,
-                                         pointEnvlight pointEnvlight_cur
+	Vec3f IBL_Radiance::prefilteredColor(float u, float v, float level
+//                                         ,pointEnvlight pointEnvlight_cur
                                          ) {
-
-
-
-		gli::vec4 Sample_val =  pointEnvlight_cur.EnvmapSampler[0].texture_lod(gli::fsampler2D::normalized_type(u, 1 - v), level);// transform the texture coordinate
+		gli::vec4 Sample_val =  prefilteredEnvmapSampler->texture_lod(gli::fsampler2D::normalized_type(u, 1 - v), level);// transform the texture coordinate
 		//      std::cout << "\n============Sample_val val(BGRA):\n" << Sample_val.b << "," << Sample_val.g << "," << Sample_val.r << ","   << Sample_val.a << std:: endl;
 		return cv::Vec3f((float) Sample_val.b, (float) Sample_val.g, (float) Sample_val.r);
 	}
@@ -214,8 +212,9 @@ namespace DSONL {
 	                                     const float &reflectance,
 	                                     const Vec3f &baseColorValue,
 	                                     const Eigen::Matrix3d Camera1_c2w,
-                                         Sophus::SO3f enterEnv_Rotation_inv,
-                                         pointEnvlight pointEnvlight_cur
+                                         Sophus::SO3f enterEnv_Rotation_inv
+//                                         ,
+//                                         pointEnvlight pointEnvlight_cur
                                          ) {
 
 		// !!!!!!!!  vec3 baseCol = pow(texture(baseColorTexture, texScale*tc).rgb, vec3(2.2)); // this is gamma correction!
@@ -228,8 +227,9 @@ namespace DSONL {
 		Vec3f kD = One - kS;
 		kD = kD.mul(One - metallicValue * One);
 		Vec3f specular = specularIBL(f0, roughnessValue, normal, viewDir,
-                                     Camera1_c2w,enterEnv_Rotation_inv,
-                                     pointEnvlight_cur
+                                     Camera1_c2w,enterEnv_Rotation_inv
+//                                     ,
+//                                     pointEnvlight_cur
                                      );
 
         Specularity =specular;
@@ -318,7 +318,8 @@ namespace DSONL {
 
 	void updateDelta(
             Sophus::SE3d& Camera1_c2w,
-			envLight* EnvLight,
+            envLightLookup* EnvLightLookup,
+            float *statusMap,
 	        Sophus::SO3d& Rotation,
 	        Eigen::Matrix<double, 3, 1>& Translation,
 	        const Eigen::Matrix3f &K,
@@ -371,19 +372,35 @@ namespace DSONL {
         Vec2i boundingBoxUpperLeft(83, 76);
         Vec2i boundingBoxBotRight(240, 320);
 
+
+        Vec2i boundingBoxUpperLeft_AoI( 145,180);
+        Vec2i boundingBoxBotRight_AoI(173,242);
+
 		for (int u = 0; u < depth_map.rows; u++)// colId, cols: 0 to 480
 		{
 
             for (int v = 0; v < depth_map.cols; v++)// rowId,  rows: 0 to 640
 			{
 
-//				 if(inliers_filter.count(u)==0){continue;} // ~~~~~~~~~~~~~~Filter~~~~~~~~~~~~~~~~~~~~~~~
-//				 if(inliers_filter[u]!=v ){continue;} // ~~~~~~~~~~~~~~Filter~~~~~~~~~~~~~~
+                //=====================================Inliers Filter=====================================
+                //				 if(inliers_filter.count(u)==0){continue;}
+                //				 if(inliers_filter[u]!=v ){continue;}
 
-//                if ( (v<boundingBoxUpperLeft.val[1] || v>boundingBoxBotRight.val[1]) || (u< boundingBoxUpperLeft.val[0] ||  u> boundingBoxBotRight.val[0])){ continue;}
+
+                //=====================================Area of interest Filter=====================================
+                                if ( (v<boundingBoxUpperLeft_AoI.val[1] || v>boundingBoxBotRight_AoI.val[1]) || (u< boundingBoxUpperLeft_AoI.val[0] ||  u> boundingBoxBotRight_AoI.val[0])){ continue;}
 
 
-//                cout<<"show current index:"<< u<<","<<v<<endl;
+                // ====================================use DSO pixel selector================================================
+                //                if (statusMap!=NULL && statusMap[u*depth_map.cols+v]==0 ){ continue;}
+
+                // =====================================use non lambertian point selector================================
+                                if (statusMap!=NULL && static_cast<int>(statusMap[u * depth_map.cols + v])!= 255){ continue;}
+
+
+
+
+                // cout<<"show current index:"<< u<<","<<v<<endl;
                 // get image_roughnes!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1
                 float image_roughnes= image_roughnes_.at<float>(u,v);
                 float image_metallic= image_metallic_.at<float>(u,v);
@@ -418,13 +435,18 @@ namespace DSONL {
 
                 // envMapPose_world
 				// ===================================BASE-COLOR=============================================
-                // Vec3f baseColor(image_baseColor.at<Vec3f>(u, v)[2], image_baseColor.at<Vec3f>(u, v)[1], image_baseColor.at<Vec3f>(u, v)[0]);
+//                 Vec3f baseColor(image_baseColor.at<Vec3f>(u, v)[2], image_baseColor.at<Vec3f>(u, v)[1], image_baseColor.at<Vec3f>(u, v)[0]);
                 Vec3f baseColor(std::pow(image_baseColor.at<Vec3f>(u, v)[2], 2.2), std::pow(image_baseColor.at<Vec3f>(u, v)[1], 2.2), std::pow(image_baseColor.at<Vec3f>(u, v)[0], 2.2));
 
                 // vec3 baseCol = pow(texture(baseColorTexture, texScale*tc).rgb, vec3(2.2)); //~~~
                 //                pow(image_baseColor.at<Vec3f>(u, v)[2], 2.2);
                 //                pow(image_baseColor.at<Vec3f>(u, v)[1], 2.2);
                 //                pow(image_baseColor.at<Vec3f>(u, v)[0], 2.2);
+
+// GT  Checking radiance vals:left Coord: u:172, v:207left_intensity:0.905309  and right_intensity at pixel_x:211, pixel_y:222is:        0.766174  show GT delta: 0.846311
+// ES  Checking radiance vals:left Coord: u:172, v:207left_radiance:1.00905    and right_intensity at pixel_x:pixel_x, pixel_y:pixel_yis:1.00017   show delta_g: 0.991198
+
+
 
 
                 Vec3f N_(normal(0), normal(1), normal(2));
@@ -440,87 +462,115 @@ namespace DSONL {
                 std::vector<int> pointIdxKNNSearch(num_K);
                 std::vector<float> pointKNNSquaredDistance(num_K);
 				Vec3f key4Search;
-				if ( EnvLight->kdtree.nearestKSearch(searchPoint, num_K, pointIdxKNNSearch, pointKNNSquaredDistance) > 0) {
+				if ( EnvLightLookup->kdtree.nearestKSearch(searchPoint, num_K, pointIdxKNNSearch, pointKNNSquaredDistance) > 0) {
 
 
 //					for (std::size_t i = 0; i < pointIdxKNNSearch.size (); ++i)
 //                    {
 //                        std::cout << "\n------"<<
-//                                           (*(EnvLight->ControlpointCloud))[ pointIdxKNNSearch[0] ].x
-//                                  << " " << (*(EnvLight->ControlpointCloud))[ pointIdxKNNSearch[0]].y
-//                                  << " " << (*(EnvLight->ControlpointCloud))[ pointIdxKNNSearch[0]].z
+//                                           (*(EnvLightLookup->ControlpointCloud))[ pointIdxKNNSearch[0] ].x
+//                                  << " " << (*(EnvLightLookup->ControlpointCloud))[ pointIdxKNNSearch[0]].y
+//                                  << " " << (*(EnvLightLookup->ControlpointCloud))[ pointIdxKNNSearch[0]].z
 //                                  << " (squared distance: " << pointKNNSquaredDistance[0] << ")" << std::endl;
 //                    }
 
-                    key4Search.val[0] = (*(EnvLight->ControlpointCloud))[pointIdxKNNSearch[0]].x;
-                    key4Search.val[1] = (*(EnvLight->ControlpointCloud))[pointIdxKNNSearch[0]].y;
-                    key4Search.val[2] = (*(EnvLight->ControlpointCloud))[pointIdxKNNSearch[0]].z;
+                    key4Search.val[0] = (*(EnvLightLookup->ControlpointCloud))[pointIdxKNNSearch[0]].x;
+                    key4Search.val[1] = (*(EnvLightLookup->ControlpointCloud))[pointIdxKNNSearch[0]].y;
+                    key4Search.val[2] = (*(EnvLightLookup->ControlpointCloud))[pointIdxKNNSearch[0]].z;
 				}
 //                cout<<"\n Show current shader point:\n"<<p_c1_w<<"\n show nearst envMap point coordinate:\n"<<key4Search<<endl;
-//                cout<<"\n show count of envLightMap"<<  EnvLight->envLightMap.count(key4Search)<<endl;
-//                cout<<"show EnvLight size:"<< EnvLight->envLightMap.size()<<endl;
+//                cout<<"\n show count of envLightMap"<<  EnvLightLookup->envLightIdxMap.count(key4Search)<<endl;
+//                cout<<"show EnvLight size:"<< EnvLightLookup->envLightIdxMap.size()<<endl;
 //
-                int ctrlIndex= EnvLight->envLightMap[key4Search].ctrlPointIdx;
+                int ctrlIndex= EnvLightLookup->envLightIdxMap[key4Search];
+//                cout<<"\n show ctrlIndex :"<< ctrlIndex<<endl;
+
+                if ( EnvLightLookup->envLightIdxMap.size()==0){std::cerr<<"Error in EnvLight->envLightIdxMap! "<<endl;}
 
 
-                if ( EnvLight->envLightMap.size()==0){std::cerr<<"Error in EnvLight->envLightMap! "<<endl;}
+                // Get pyramid
+                std::string renderedEnvLight_path="/home/lei/Documents/Research/envMapData/maskedSelector";
+                stringstream ss;
+                string img_idx_str;
+                ss << ctrlIndex;
+                ss >> img_idx_str;
+                string name_prefix = "/envMap";
 
-				brdfSampler_ = & (EnvLight->brdfSampler[0]);
-				diffuseSampler = & (EnvLight->envLightMap[key4Search].EnvmapSampler[1]);
+
+                string renderedEnvLightfolder =renderedEnvLight_path + "/envMap" + img_idx_str + "/renderedEnvLight";
+                string renderedEnvLightDiffuse =renderedEnvLight_path + "/envMap" + img_idx_str + "/renderedEnvLightDiffuse";
+                string envMapDiffuse = renderedEnvLightDiffuse + "/envMapDiffuse_" + img_idx_str + ".pfm";
+
+                pointEnvlight pEnv;
+
+                EnvMapLookup *EnvMapLookup = new DSONL::EnvMapLookup();
+                EnvMapLookup->makeMipMap(pEnv.EnvmapSampler,renderedEnvLightfolder); // index_0: prefiltered Env light
+                delete EnvMapLookup;
+
+                diffuseMap *diffuseMap = new DSONL::diffuseMap;
+                diffuseMap->makeDiffuseMap(pEnv.EnvmapSampler, envMapDiffuse); // index_1: diffuse
+                delete diffuseMap;
 
 
-                    int numberColor= 12;
 
-                if (ctrlIndex%numberColor==0){
-                    ctrlPointMask.at<Vec3b>(u,v)[0]= 255;
-                    ctrlPointMask.at<Vec3b>(u,v)[1]= 0;
-                    ctrlPointMask.at<Vec3b>(u,v)[2]= 0;
-                } else if(ctrlIndex%numberColor==1){
-                    ctrlPointMask.at<Vec3b>(u,v)[0]= 0;
-                    ctrlPointMask.at<Vec3b>(u,v)[1]= 255;
-                    ctrlPointMask.at<Vec3b>(u,v)[2]= 0;
-                } else if(ctrlIndex%numberColor==2){
-                    ctrlPointMask.at<Vec3b>(u,v)[0]= 0;
-                    ctrlPointMask.at<Vec3b>(u,v)[1]= 0;
-                    ctrlPointMask.at<Vec3b>(u,v)[2]= 255;
-                } else if(ctrlIndex%numberColor==3){
-                    ctrlPointMask.at<Vec3b>(u,v)[0]= 255;
-                    ctrlPointMask.at<Vec3b>(u,v)[1]= 255;
-                    ctrlPointMask.at<Vec3b>(u,v)[2]= 0;
-                } else if(ctrlIndex%numberColor==4){
-                    ctrlPointMask.at<Vec3b>(u,v)[0]= 0;
-                    ctrlPointMask.at<Vec3b>(u,v)[1]= 255;
-                    ctrlPointMask.at<Vec3b>(u,v)[2]= 255;
-                }else if (ctrlIndex%numberColor==5){
-                    ctrlPointMask.at<Vec3b>(u,v)[0]= 255;
-                    ctrlPointMask.at<Vec3b>(u,v)[1]= 0;
-                    ctrlPointMask.at<Vec3b>(u,v)[2]= 255;
-                }
-                else if (ctrlIndex%numberColor==6){
-                    ctrlPointMask.at<Vec3b>(u,v)[0]= 125;
-                    ctrlPointMask.at<Vec3b>(u,v)[1]= 0;
-                    ctrlPointMask.at<Vec3b>(u,v)[2]= 0;
-                } else if(ctrlIndex%numberColor==7){
-                    ctrlPointMask.at<Vec3b>(u,v)[0]= 0;
-                    ctrlPointMask.at<Vec3b>(u,v)[1]= 125;
-                    ctrlPointMask.at<Vec3b>(u,v)[2]= 0;
-                } else if(ctrlIndex%numberColor==8){
-                    ctrlPointMask.at<Vec3b>(u,v)[0]= 0;
-                    ctrlPointMask.at<Vec3b>(u,v)[1]= 0;
-                    ctrlPointMask.at<Vec3b>(u,v)[2]= 125;
-                } else if(ctrlIndex%numberColor==9){
-                    ctrlPointMask.at<Vec3b>(u,v)[0]= 125;
-                    ctrlPointMask.at<Vec3b>(u,v)[1]= 125;
-                    ctrlPointMask.at<Vec3b>(u,v)[2]= 0;
-                } else if(ctrlIndex%numberColor==10){
-                    ctrlPointMask.at<Vec3b>(u,v)[0]= 0;
-                    ctrlPointMask.at<Vec3b>(u,v)[1]= 125;
-                    ctrlPointMask.at<Vec3b>(u,v)[2]= 125;
-                }else {
-                    ctrlPointMask.at<Vec3b>(u,v)[0]= 125;
-                    ctrlPointMask.at<Vec3b>(u,v)[1]= 0;
-                    ctrlPointMask.at<Vec3b>(u,v)[2]= 125;
-                }
+
+
+                prefilteredEnvmapSampler= & (pEnv.EnvmapSampler[0]);
+                brdfSampler_ = & (EnvLightLookup->brdfSampler[0]);
+				diffuseSampler = & (pEnv.EnvmapSampler[1]);
+
+
+//                int numberColor= 12;
+//                if (ctrlIndex%numberColor==0){
+//                    ctrlPointMask.at<Vec3b>(u,v)[0]= 255;
+//                    ctrlPointMask.at<Vec3b>(u,v)[1]= 0;
+//                    ctrlPointMask.at<Vec3b>(u,v)[2]= 0;
+//                } else if(ctrlIndex%numberColor==1){
+//                    ctrlPointMask.at<Vec3b>(u,v)[0]= 0;
+//                    ctrlPointMask.at<Vec3b>(u,v)[1]= 255;
+//                    ctrlPointMask.at<Vec3b>(u,v)[2]= 0;
+//                } else if(ctrlIndex%numberColor==2){
+//                    ctrlPointMask.at<Vec3b>(u,v)[0]= 0;
+//                    ctrlPointMask.at<Vec3b>(u,v)[1]= 0;
+//                    ctrlPointMask.at<Vec3b>(u,v)[2]= 255;
+//                } else if(ctrlIndex%numberColor==3){
+//                    ctrlPointMask.at<Vec3b>(u,v)[0]= 255;
+//                    ctrlPointMask.at<Vec3b>(u,v)[1]= 255;
+//                    ctrlPointMask.at<Vec3b>(u,v)[2]= 0;
+//                } else if(ctrlIndex%numberColor==4){
+//                    ctrlPointMask.at<Vec3b>(u,v)[0]= 0;
+//                    ctrlPointMask.at<Vec3b>(u,v)[1]= 255;
+//                    ctrlPointMask.at<Vec3b>(u,v)[2]= 255;
+//                }else if (ctrlIndex%numberColor==5){
+//                    ctrlPointMask.at<Vec3b>(u,v)[0]= 255;
+//                    ctrlPointMask.at<Vec3b>(u,v)[1]= 0;
+//                    ctrlPointMask.at<Vec3b>(u,v)[2]= 255;
+//                }
+//                else if (ctrlIndex%numberColor==6){
+//                    ctrlPointMask.at<Vec3b>(u,v)[0]= 125;
+//                    ctrlPointMask.at<Vec3b>(u,v)[1]= 0;
+//                    ctrlPointMask.at<Vec3b>(u,v)[2]= 0;
+//                } else if(ctrlIndex%numberColor==7){
+//                    ctrlPointMask.at<Vec3b>(u,v)[0]= 0;
+//                    ctrlPointMask.at<Vec3b>(u,v)[1]= 125;
+//                    ctrlPointMask.at<Vec3b>(u,v)[2]= 0;
+//                } else if(ctrlIndex%numberColor==8){
+//                    ctrlPointMask.at<Vec3b>(u,v)[0]= 0;
+//                    ctrlPointMask.at<Vec3b>(u,v)[1]= 0;
+//                    ctrlPointMask.at<Vec3b>(u,v)[2]= 125;
+//                } else if(ctrlIndex%numberColor==9){
+//                    ctrlPointMask.at<Vec3b>(u,v)[0]= 125;
+//                    ctrlPointMask.at<Vec3b>(u,v)[1]= 125;
+//                    ctrlPointMask.at<Vec3b>(u,v)[2]= 0;
+//                } else if(ctrlIndex%numberColor==10){
+//                    ctrlPointMask.at<Vec3b>(u,v)[0]= 0;
+//                    ctrlPointMask.at<Vec3b>(u,v)[1]= 125;
+//                    ctrlPointMask.at<Vec3b>(u,v)[2]= 125;
+//                }else {
+//                    ctrlPointMask.at<Vec3b>(u,v)[0]= 125;
+//                    ctrlPointMask.at<Vec3b>(u,v)[1]= 0;
+//                    ctrlPointMask.at<Vec3b>(u,v)[2]= 125;
+//                }
 
 
 				// ===================================RADIANCE-COMPUTATION====================================
@@ -534,14 +584,13 @@ namespace DSONL {
 
                 Vec3f radiance_beta = ibl_Radiance->solveForRadiance(View_beta, N_, image_roughnes, image_metallic,
                                                                      reflectance, baseColor, Camera1_c2w.rotationMatrix(),
-                                                                     enterPanoroma.inverse(),
-                                                                     EnvLight->envLightMap[key4Search]
+                                                                     enterPanoroma.inverse()
+//                                                                     ,EnvLight->envLightMap[key4Search]
                                                                      );
                 Vec3f radiance_beta_prime = ibl_Radiance->solveForRadiance(View_beta_prime, N_, image_roughnes, image_metallic,
                                                                            reflectance, baseColor, Camera1_c2w.rotationMatrix(),
-                                                                           enterPanoroma.inverse(),
-                                                                           EnvLight->envLightMap[key4Search]
-
+                                                                           enterPanoroma.inverse()
+//                                                                           ,EnvLight->envLightMap[key4Search]
                                                                            );
 
 				// ===================================SAVE-RADIANCE===========================================
@@ -567,7 +616,14 @@ namespace DSONL {
 				float delta_g = radiance_beta_prime.val[1] / radiance_beta.val[1];
 				float delta_b = radiance_beta_prime.val[2] / radiance_beta.val[2];
 				deltaMap.at<float>(u, v) = delta_g;
-				//deltaMap.at<float>(u, v) = delta_b;
+
+//                cout<<"\n Checking radiance vals:"<< "left Coord: u:"<<u<<", v:"<<v<<"left_radiance:"<< radiance_beta.val[1]
+//                    << "and right_intensity at pixel_x:"<<"pixel_x"<<", pixel_y:"<< "pixel_y"<< "is:"<<  radiance_beta_prime.val[1]
+//                    <<"  show delta_g: "<<delta_g <<endl;
+
+
+
+                //deltaMap.at<float>(u, v) = delta_b;
 			}
 		}
 
@@ -582,11 +638,11 @@ namespace DSONL {
         cvtColor(radianceMap_leftSave, radianceMap_leftSave, COLOR_BGR2RGB);
 
 
-        imwrite("radianceMap_left.png", radianceMap_left*255.0);
-        imwrite("radianceMap_leftSave.png", radianceMap_leftSave*255.0);
-        imwrite("radianceMap_right.png", radianceMap_right*255.0);
-        imwrite("radianceMap_rightSave.png", radianceMap_rightSave*255.0);
-        imwrite("ctrlPointMask.png",ctrlPointMask);
+//        imwrite("radianceMap_left.png", radianceMap_left*255.0);
+//        imwrite("radianceMap_leftSave.png", radianceMap_leftSave*255.0);
+//        imwrite("radianceMap_right.png", radianceMap_right*255.0);
+//        imwrite("radianceMap_rightSave.png", radianceMap_rightSave*255.0);
+//        imwrite("ctrlPointMask.png",ctrlPointMask);
 
 
 
@@ -601,14 +657,14 @@ namespace DSONL {
         imshow("ctrlPointMask",ctrlPointMask);
 
 //
-        for (int u = 0; u < depth_map.rows; u++)// colId, cols: 0 to 480
-        {
-            for (int v = 0; v < depth_map.cols; v++)// rowId,  rows: 0 to 640
-            {
-                if ( (v<boundingBoxUpperLeft.val[1] || v>boundingBoxBotRight.val[1]) || (u< boundingBoxUpperLeft.val[0] ||  u> boundingBoxBotRight.val[0])){ continue;}
-//                cout<<"show =====================ctrlPointMask point value :"<< ctrlPointMask.at<Vec3f>(u, v);
-
-            }}
+//        for (int u = 0; u < depth_map.rows; u++)// colId, cols: 0 to 480
+//        {
+//            for (int v = 0; v < depth_map.cols; v++)// rowId,  rows: 0 to 640
+//            {
+//                if ( (v<boundingBoxUpperLeft.val[1] || v>boundingBoxBotRight.val[1]) || (u< boundingBoxUpperLeft.val[0] ||  u> boundingBoxBotRight.val[0])){ continue;}
+////                cout<<"show =====================ctrlPointMask point value :"<< ctrlPointMask.at<Vec3f>(u, v);
+//
+//            }}
 
 
 

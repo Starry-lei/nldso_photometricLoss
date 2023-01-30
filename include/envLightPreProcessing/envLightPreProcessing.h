@@ -56,6 +56,26 @@ namespace DSONL{
 
 
 
+    class envLightLookup{
+
+    public:
+
+        envLightLookup(std::unordered_map<int, int> selectedIndex, int argc, char **argv, string envMap_Folder, string controlPointPose_path);
+        ~envLightLookup();
+
+        pcl::PointCloud<pcl::PointXYZ>::Ptr ControlpointCloud;
+
+        pcl::KdTreeFLANN<pcl::PointXYZ> kdtree;
+
+        std::unordered_map<cv::Point3f, int, hash3d<cv::Point3f>, equalTo<cv::Point3f>> envLightIdxMap;
+
+        std::vector<gli::sampler2d<float>> brdfSampler;
+
+    };
+
+
+
+
 
 
 

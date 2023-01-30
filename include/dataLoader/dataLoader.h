@@ -114,13 +114,15 @@ namespace DSONL {
 //                image_ref_metallic_path=    "../data/SimulationEnvData/leftImage/bgrmetallic_10.pfm";
 //                image_ref_roughness_path =  "../data/SimulationEnvData/leftImage/bgrroughness_10.pfm";
 
-                image_ref_path =            "../data/SimulationEnvData/leftImage/bgr_10.png";
+//                image_ref_path =            "../data/SimulationEnvData/leftImage/bgr_10.png"; // LDR
+                image_ref_path =            "../data/SimulationEnvData/leftImage/bgr_10.pfm"; // HDR
+
                 image_ref_seletor_path =    "../data/SimulationEnvData/leftImage/bgr_10_goalFrame.pfm";
 
                 depth_ref_path =            "../data/SimulationEnvData/leftImage/origfovdepth_10.png";
 
 //                image_ref_baseColor_path =  "../data/SimulationEnvData/leftImage/DSNL/bgrbaseColor_10.pfm";
-                image_ref_baseColor_path =  "../data/SimulationEnvData/leftImage/DSNL/bgrbaseColor_10.png";
+                image_ref_baseColor_path =  "../data/SimulationEnvData/leftImage/DSNL/bgrbaseColor_10.pfm";
                 image_ref_metallic_path  =    "../data/SimulationEnvData/leftImage/DSNL/metallic_10.pfm";
                 image_ref_roughness_path =  "../data/SimulationEnvData/leftImage/DSNL/roughness_10.pfm";
                 image_normal_GT_path =      "../data/SimulationEnvData/leftImage/DSNL/normals10.data"; //normals11  normals10 normals9  //data/SimulationEnvData/leftImage/DSNL/normal_10.data
@@ -140,7 +142,9 @@ namespace DSONL {
 //                cout<<"show camPose1:"<<camPose1.matrix()<<endl;
 
 
-                Mat image_ref =imread(image_ref_path, IMREAD_ANYCOLOR | IMREAD_ANYDEPTH);
+//                Mat image_ref =imread(image_ref_path, IMREAD_ANYCOLOR | IMREAD_ANYDEPTH);// LDR
+
+                Mat image_ref = loadPFM(image_ref_path);
 
                 Mat image_ref_seletor= loadPFM(image_ref_seletor_path);
 
@@ -153,9 +157,10 @@ namespace DSONL {
                     }
                 }
 
-//				image_ref_baseColor = loadPFM(image_ref_baseColor_path);
-                image_ref_baseColor =imread(image_ref_baseColor_path, IMREAD_ANYCOLOR | IMREAD_ANYDEPTH);
-                image_ref_baseColor.convertTo(image_ref_baseColor, CV_32FC3, 1.0/255.0);
+				image_ref_baseColor = loadPFM(image_ref_baseColor_path);
+//                image_ref_baseColor =imread(image_ref_baseColor_path, IMREAD_ANYCOLOR | IMREAD_ANYDEPTH);
+//                image_ref_baseColor.convertTo(image_ref_baseColor, CV_32FC3, 1.0/255.0);
+
 
                 Mat matallic_C1= loadPFM(image_ref_metallic_path);
                 Mat roughness_C1= loadPFM(image_ref_roughness_path);
@@ -173,8 +178,8 @@ namespace DSONL {
 
                 extractChannel(image_ref_seletor, grayImage_selector_ref, channelIdx);
 
-                grayImage_ref.convertTo(grayImage_ref, CV_64FC1, 1/255.0);
-
+//                grayImage_ref.convertTo(grayImage_ref, CV_64FC1, 1/255.0);
+                grayImage_ref.convertTo(grayImage_ref, CV_64FC1);
 				rows = image_ref.rows;
 				cols = image_ref.cols;
 				setGlobalCalib(cols,rows,camera_intrinsics);
@@ -199,7 +204,10 @@ namespace DSONL {
 
 				if (options_.baseline == 0) {
 
-					image_target_path = "../data/SimulationEnvData/rightImage/bgr_16.png";
+//					image_target_path = "../data/SimulationEnvData/rightImage/bgr_16.png";
+                    image_target_path = "../data/SimulationEnvData/rightImage/bgr_16.pfm";
+
+                    ///
 					depth_target_path = "../data/SimulationEnvData/rightImage/origfovdepth_16.png";
 
 					Eigen::Matrix3d R2_w_l, R1_w_r, R2_w_r;
@@ -238,8 +246,10 @@ namespace DSONL {
 
 
 
-                Mat image_target= imread(image_target_path, IMREAD_ANYCOLOR | IMREAD_ANYDEPTH);
+//                Mat image_target= imread(image_target_path, IMREAD_ANYCOLOR | IMREAD_ANYDEPTH);
                         //loadPFM(image_target_path);
+
+                Mat image_target= loadPFM(image_target_path);
 
 
                 Mat depth_target = imread(depth_target_path, IMREAD_ANYCOLOR | IMREAD_ANYDEPTH);
@@ -259,7 +269,8 @@ namespace DSONL {
 				extractChannel(image_target, grayImage_target, channelIdx);
 //              cout<<"show grayImage_target depth()"<<grayImage_target.depth()<<endl;
 
-                grayImage_target.convertTo(grayImage_target, CV_64FC1, 1/255.0);
+//              grayImage_target.convertTo(grayImage_target, CV_64FC1, 1/255.0);
+                grayImage_target.convertTo(grayImage_target, CV_64FC1);
 
                 depth_map_target = depth_tar.clone();
 //				depth_map_target.convertTo(depth_map_target, CV_64FC1);

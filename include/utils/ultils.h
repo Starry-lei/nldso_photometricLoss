@@ -485,7 +485,7 @@ namespace DSONL {
 
 
 	Mat deltaMapGT(Mat &Img_left, Mat &depth_left, Mat &Img_right, Mat &depth_right, const Eigen::Matrix<double, 3, 3> &K_, double &thres,
-	               const Sophus::SE3d &ExtrinsicPose, float &upper, float &buttom, Mat &pred_deltaMap) {
+	               const Sophus::SE3d &ExtrinsicPose, float &upper, float &buttom, Mat &pred_deltaMap, float *statusMap ) {
 
 		//		Mat normalMap_left=getNormals(K_,depth_left);
 		//		Mat normalMap_right=getNormals(K_,depth_right);
@@ -532,10 +532,11 @@ namespace DSONL {
 		Mat minus_adjust(depth_left.rows, depth_left.cols, CV_32FC1, Scalar(0));
 		Mat minus_mask(depth_left.rows, depth_left.cols, CV_8UC1, Scalar(0));
 
-        Vec2i boundingBoxUpperLeft(83, 76);
-        Vec2i boundingBoxBotRight(240, 320);
+//        Vec2i boundingBoxUpperLeft(83, 76);
+//        Vec2i boundingBoxBotRight(240, 320);
 
-
+        Vec2i boundingBoxUpperLeft_AoI( 145,180);
+        Vec2i boundingBoxBotRight_AoI(173,242);
 
         for (int x = 0; x < depth_left.rows; ++x) {
 			for (int y = 0; y < depth_left.cols; ++y) {
@@ -543,7 +544,8 @@ namespace DSONL {
 				//				if(inliers_filter.count(x)==0){continue;}// ~~~~~~~~~~~~~~Filter~~~~~~~~~~~~~~~~~~~~~~~
 				//				if(inliers_filter[x]!=y ){continue;}// ~~~~~~~~~~~~~~Filter~~~~~~~~~~~~~~
 
-                if ( (y<boundingBoxUpperLeft.val[1] || y>boundingBoxBotRight.val[1]) || (x< boundingBoxUpperLeft.val[0] ||  x> boundingBoxBotRight.val[0])){ continue;}
+                    if ( (y<boundingBoxUpperLeft_AoI.val[1] || y>boundingBoxBotRight_AoI.val[1]) || (x< boundingBoxUpperLeft_AoI.val[0] ||  x> boundingBoxBotRight_AoI.val[0])){ continue;}
+                    if (statusMap!=NULL && static_cast<int>(statusMap[x * depth_left.cols + y])!= 255){ continue;}
 
 
 
@@ -578,7 +580,12 @@ namespace DSONL {
 					float delta = right_intensity / left_intensity;
 					//float delta= abs(left_intensity-right_intensity);
 
-					float diff_orig = std::abs(left_intensity - right_intensity);
+                    cout<<"\n Checking radiance vals:"<< "left Coord: u:"<<x<<", v:"<<y<<"left_intensity:"<< left_intensity
+                    << "and right_intensity at pixel_x:"<<pixel_x<<", pixel_y:"<< pixel_y<< "is:"<<  right_intensity
+                            <<"show GT delta: "<<delta <<endl;
+
+
+                    float diff_orig = std::abs(left_intensity - right_intensity);
 					minus_original.at<float>(x, y) = diff_orig;
 					float delta_pred = pred_deltaMap.at<float>(x, y);
 					float diff_adj = std::abs(right_intensity - delta_pred * left_intensity);

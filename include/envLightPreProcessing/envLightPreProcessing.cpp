@@ -145,16 +145,107 @@ namespace DSONL {
 
                 });
 
-
-
         if (ControlpointCloud->empty()){std::cerr<<"\n Wrong Control-pointCloud!"<< endl;}
         kdtree.setInputCloud(ControlpointCloud);
 
         // ======================serialization============================
 
+    }
+
+    envLightLookup::envLightLookup(std::unordered_map<int, int> selectedIndex, int argc, char **argv,
+                                   string envMap_Folder, string controlPointPose_path) {
 
 
+        std::vector<string> fileNames;
+        GetFileNames(envMap_Folder,fileNames);
+        std::cout<<" \n Show fileNames.size():"<<fileNames.size()<< std::endl;
 
+        std::vector<Sophus::SE3f, Eigen::aligned_allocator<Sophus::SE3f>> controlPointPoses;
+        readCtrlPointPoseData(controlPointPose_path,controlPointPoses);
+        std::cout<<" \n Show controlPointPoses.size():"<<controlPointPoses.size()<< std::endl;
+
+
+        //brdf(Red&Green Table)
+        string brdfIntegrationMap_path = "../include/brdfIntegrationMap/brdfIntegrationMap.pfm";
+        brdfIntegrationMap *brdfIntegrationMap= new DSONL::brdfIntegrationMap(brdfIntegrationMap_path);
+        brdfIntegrationMap->makebrdfIntegrationMap(brdfSampler);
+        delete brdfIntegrationMap;
+
+
+        ControlpointCloud.reset(new pcl::PointCloud<pcl::PointXYZ>());
+
+
+        std::mutex mtx;
+
+        int counter=0;
+
+        int seletcEnvMap=36;
+        int seletcEnvMap2=200;
+
+//        string renderedEnvLight_path="/home/lei/Documents/Research/envMapData/renderedEnvMap";
+        string renderedEnvLight_path= envMap_Folder;
+
+
+//        for (size_t i=1;i<=fileNames.size();i++) {
+
+        tbb::parallel_for(
+                (size_t)1, (size_t)(fileNames.size()+1), [&] (size_t i) {
+
+                    if (selectedIndex.count(static_cast<int>(i)) == 0) { return ; }
+
+
+//                    stringstream ss;
+//                    string img_idx_str;
+//                    ss << i;
+//                    ss >> img_idx_str;
+//                    string name_prefix = "/envMap";
+//
+//
+//                    string renderedEnvLightfolder =
+//                            renderedEnvLight_path + "/envMap" + img_idx_str + "/renderedEnvLight";
+//                    string renderedEnvLightDiffuse =
+//                            renderedEnvLight_path + "/envMap" + img_idx_str + "/renderedEnvLightDiffuse";
+//                    string envMapDiffuse = renderedEnvLightDiffuse + "/envMapDiffuse_" + img_idx_str + ".pfm";
+
+
+                    pointEnvlight pEnv;
+                    pEnv.ctrlPointIdx = static_cast<int>(i);
+
+                    pEnv.envMapPose_world = controlPointPoses[i - 1].cast<float>();
+                    pEnv.pointBase = Vec3f(controlPointPoses[i - 1].translation().x(),
+                                           controlPointPoses[i - 1].translation().y(),
+                                           controlPointPoses[i - 1].translation().z());
+
+
+//                    EnvMapLookup *EnvMapLookup = new DSONL::EnvMapLookup();
+//                    EnvMapLookup->makeMipMap(pEnv.EnvmapSampler,
+//                                             renderedEnvLightfolder); // index_0: prefiltered Env light
+//                    delete EnvMapLookup;
+//
+//                    diffuseMap *diffuseMap = new DSONL::diffuseMap;
+//                    diffuseMap->makeDiffuseMap(pEnv.EnvmapSampler, envMapDiffuse); // index_1: diffuse
+//                    delete diffuseMap;
+//                    cout << "\n processing: " << i << endl;
+//                    fflush(stdout);
+
+                    {
+                        std::lock_guard<std::mutex>grd(mtx);
+                        ControlpointCloud->push_back(pcl::PointXYZ(pEnv.pointBase.x, pEnv.pointBase.y, pEnv.pointBase.z));
+                        envLightIdxMap.insert(make_pair(pEnv.pointBase, static_cast<int>(i)));
+                        counter += 1;
+                        cout << "\n show current envMap index: " << i << endl;
+                        cout << "\n show number of envMap added: " << counter << endl;
+                    }
+
+
+//    }
+
+                });
+
+        if (ControlpointCloud->empty()){std::cerr<<"\n Wrong Control-pointCloud!"<< endl;}
+        kdtree.setInputCloud(ControlpointCloud);
+
+        // ======================serialization============================
 
 
     }
@@ -174,6 +265,8 @@ namespace DSONL {
         EnvmapSampler.push_back(old.EnvmapSampler[1]);
         ctrlPointIdx= old.ctrlPointIdx ;
     }
+
+
 }
 
 //  =================================== code notes=============================================
