@@ -208,7 +208,9 @@ namespace DSONL {
     void EnvMapLookup::mergeImagePyramid( string lightIdx) {
 
 //        string renderedEnvLight_path="/home/lei/Documents/Research/envMapData/envMapData_Dense01";
-        string renderedEnvLight_path="/home/lei/Documents/Research/envMapData/maskedSelector";
+//        string renderedEnvLight_path="/home/lei/Documents/Research/envMapData/maskedSelector";
+        string renderedEnvLight_path="/home/lei/Documents/Research/envMapData/ThirtyPointsEnvMap";
+
 
         string renderedEnvLightfolder= renderedEnvLight_path+ "/envMap"+lightIdx+"/renderedEnvLight";  //+"/renderedEnvLight";
 
@@ -449,7 +451,8 @@ namespace DSONL {
 
 
 //        string renderedEnvLight_path="/home/lei/Documents/Research/envMapData/envMapData_Dense01";
-        string renderedEnvLight_path="/home/lei/Documents/Research/envMapData/maskedSelector";
+//        string renderedEnvLight_path="/home/lei/Documents/Research/envMapData/maskedSelector";
+        string renderedEnvLight_path="/home/lei/Documents/Research/envMapData/ThirtyPointsEnvMap";
 
         string renderedEnvLightDiffuse= renderedEnvLight_path+ "/envMap"+lightIdx+"/renderedEnvLightDiffuse"; //+"/renderedEnvLight";
         if (boost::filesystem::create_directories(renderedEnvLightDiffuse)){

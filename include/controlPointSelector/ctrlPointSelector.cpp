@@ -36,7 +36,7 @@ namespace DSONL {
                                                 Eigen::Matrix<float, 3, 3> &K) {
 
         // constants
-        kNearest = 3;
+        kNearest = 1;
         Sophus::SE3f Camera1_w2c = Camera1_extrin.cast<float>();
         float fx = K(0, 0), cx = K(0, 2), fy = K(1, 1), cy = K(1, 2);
 
