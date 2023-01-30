@@ -33,7 +33,8 @@ namespace DSONL {
 
     DSONL::ctrlPointSelector::ctrlPointSelector(Sophus::SE3d Camera1_extrin, string controlPointPose_path, Mat Image,
                                                 Mat depthImage,
-                                                Eigen::Matrix<float, 3, 3> &K) {
+                                                Eigen::Matrix<float, 3, 3> &K,
+    , Mat pointOfInterest) {
 
         // constants
         kNearest = 1;
@@ -99,6 +100,7 @@ namespace DSONL {
                 //  use bounding box here
 //                if ( (v<boundingBoxUpperLeft.val[1] || v>boundingBoxBotRight.val[1]) || (u< boundingBoxUpperLeft.val[0] ||  u> boundingBoxBotRight.val[0])){ continue;}
 
+                if (pointOfInterest.at<uchar>(u,v)!=255){ continue;}
 
                 // marks
                 checkingArea.at<double>(u, v)= Image.at<double>(u, v);
@@ -128,11 +130,11 @@ namespace DSONL {
                 if (kdtree.nearestKSearch(searchPoint, kNearest, pointIdxKNNSearch, pointKNNSquaredDistance) > 0) {
 
 
-//                std::cout << "\n---The Nearest point---"<<
-//                                    (*(ControlpointCloud))[ pointIdxKNNSearch[0]].x
-//                          << " " << (*(ControlpointCloud))[ pointIdxKNNSearch[0]].y
-//                          << " " << (*(ControlpointCloud))[ pointIdxKNNSearch[0]].z
-//                          << " (squared distance: " << pointKNNSquaredDistance[0] << ")" << std::endl;
+                std::cout << "\n---The Nearest point---"<<
+                                    (*(ControlpointCloud))[ pointIdxKNNSearch[0]].x
+                          << " " << (*(ControlpointCloud))[ pointIdxKNNSearch[0]].y
+                          << " " << (*(ControlpointCloud))[ pointIdxKNNSearch[0]].z
+                          << " (squared distance: " << pointKNNSquaredDistance[0] << ")" << std::endl;
 
 //                    cout<<"\n Show current shader point:\n"<<p_w1<<"\n show nearst envMap point coordinate:\n"<< (*(ControlpointCloud))[ pointIdxKNNSearch[0]]<<endl;
 

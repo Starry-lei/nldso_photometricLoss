@@ -50,6 +50,7 @@ int main(int argc, char **argv) {
 
 
 
+
     Mat grayImage_target, grayImage_ref, depth_ref, depth_target, image_ref_baseColor, image_target_baseColor;
     Mat image_ref_metallic = dataLoader->image_ref_metallic;
     Mat image_ref_roughness = dataLoader->image_ref_roughness;
@@ -66,6 +67,14 @@ int main(int argc, char **argv) {
     normal_map_GT = dataLoader->normal_map_GT;
     Eigen::Matrix3f K;
     K = dataLoader->camera_intrinsics;
+
+    Mat pointOfInterestArea(grayImage_ref.rows, grayImage_ref.cols, CV_8UC1, Scalar(0) );
+    string pointOfInterest= "../data/Exp_specular_floor/point_of_Interest.txt";
+    readUV(pointOfInterest, pointOfInterestArea);
+    imshow("pointOfInterestArea",pointOfInterestArea);
+    waitKey(0);
+
+
 
     // ----------------------------------------optimization variable: R, t--------------------------------------
     Sophus::SE3d xi, xi_GT;
@@ -209,19 +218,14 @@ int main(int argc, char **argv) {
 
 
 
-
-
-
-
 // ===========================ctrlPoint Selector==========================================
-    ctrlPointSelector  * ctrlPoint_Selector= new ctrlPointSelector(dataLoader->camPose1, controlPointPose_path,grayImage_ref, depth_ref_GT,K);
+    ctrlPointSelector  * ctrlPoint_Selector= new ctrlPointSelector(dataLoader->camPose1, controlPointPose_path,grayImage_ref, depth_ref_GT,K, pointOfInterestArea);
 //     TODO(parallelization)
 
     envLightLookup  *EnvLightLookup= new envLightLookup(ctrlPoint_Selector->selectedIndex, argc, argv, envMap_Folder,controlPointPose_path);
 
 
     cout<<"\n The preComputation of EnvMap is ready!"<<endl;
-
 
     imshow("grayImage_target", grayImage_target);
     waitKey(0);
@@ -281,12 +285,15 @@ int main(int argc, char **argv) {
 	//	float densities[] = {0.03, 0.003, 0.05, 0.15, 0.5, 1}; /// number of optimized depths,  current index is 1
 
 
+    imshow("normal_map",normal_map);
+    waitKey(0);
+
 	PhotometricBAOptions options;
     Mat newNormalMap = normal_map;
 //    Mat newNormalMap = normal_map_GT;
-//	double distanceThres = 0.007;
+	double distanceThres = 0.007;
 //    double distanceThres = 0.0035;
-    double distanceThres = 0.002;
+//    double distanceThres = 0.002;
 
 	float upper = 2.0;
 	float buttom = 0.5;
@@ -385,6 +392,8 @@ int main(int argc, char **argv) {
 				//				//				showScaledImage(depth_ref_gt, inv_depth_ref);
 				//				//				waitKey(0);
 			} else {
+
+                statusMap_NonLambCand= pointOfInterestArea.clone();
 				PhotometricBA(IRef, I, options, Klvl, Rotation, Translation, inv_depth_ref, deltaMap, depth_upper_bound,depth_lower_bound, statusMap, statusMapB,statusMap_NonLambCand);
 			}
 
@@ -412,11 +421,11 @@ int main(int argc, char **argv) {
 
 
 
-            Mat deltaMapGT_res= deltaMapGT(grayImage_ref,depth_ref,grayImage_target,depth_target,K.cast<double>(),distanceThres,xi_GT, upper, buttom, deltaMap, statusMap);
+            Mat deltaMapGT_res= deltaMapGT(grayImage_ref,depth_ref,grayImage_target,depth_target,K.cast<double>(),distanceThres,xi_GT, upper, buttom, deltaMap, statusMap, pointOfInterestArea);
 
 
 //            DSONL::updateDelta(dataLoader->camPose1,EnvLightLookup, statusMap,Rotation,Translation,Klvl,image_ref_baseColor,inv_depth_ref,image_ref_metallic ,image_ref_roughness,deltaMap,newNormalMap,up_new, butt_new);
-            DSONL::updateDelta(dataLoader->camPose1,EnvLightLookup, statusMap,Rotation_GT,Translation_GT,Klvl,image_ref_baseColor,inv_depth_ref,image_ref_metallic ,image_ref_roughness,deltaMap,newNormalMap,up_new, butt_new);
+            DSONL::updateDelta(dataLoader->camPose1,EnvLightLookup, statusMap,Rotation_GT,Translation_GT,Klvl,image_ref_baseColor,inv_depth_ref,image_ref_metallic ,image_ref_roughness,deltaMap,newNormalMap,up_new, butt_new, pointOfInterestArea);
 
 
 

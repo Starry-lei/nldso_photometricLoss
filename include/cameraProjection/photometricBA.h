@@ -120,8 +120,7 @@ namespace DSONL {
 //
 		  cerr << "show counter for used points in BA:" << counter << endl;
 
-        imshow("AOI", AOI);
-        waitKey(0);
+
 		//		double intensity_ref;
 		//		double deltaMap_val;
 		double *Rotation_ = Rotation.data();
@@ -136,6 +135,9 @@ namespace DSONL {
         int num_points_used= 0;
 
 
+        AOI= statusMap_NonLambCand.clone();
+        imshow("AOI", AOI);
+        waitKey(0);
 		for (int u = 0; u < image.rows; u++)// colId, cols: 0 to 480
 		{
 			for (int v = 0; v < image.cols; v++)// rowId,  rows: 0 to 640

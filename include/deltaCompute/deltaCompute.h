@@ -104,6 +104,7 @@ namespace DSONL
             Mat& newNormalMap,
             float& upper_b,
             float& lower_b
+            , Mat pointOfInterest
         );
 
 

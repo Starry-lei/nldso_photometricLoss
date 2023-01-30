@@ -330,7 +330,9 @@ namespace DSONL {
 	        Mat &deltaMap,
 	        Mat &newNormalMap,
 	        float &upper_b,
-	        float &lower_b) {
+	        float &lower_b
+            , Mat pointOfInterest
+            ) {
 
 		// ===================================RENDERING PARAMETERS:====================================
 		float fx = K(0, 0), cx = K(0, 2), fy = K(1, 1), cy = K(1, 2);
@@ -388,15 +390,16 @@ namespace DSONL {
 
 
                 //=====================================Area of interest Filter=====================================
-                                if ( (v<boundingBoxUpperLeft_AoI.val[1] || v>boundingBoxBotRight_AoI.val[1]) || (u< boundingBoxUpperLeft_AoI.val[0] ||  u> boundingBoxBotRight_AoI.val[0])){ continue;}
+//                                if ( (v<boundingBoxUpperLeft_AoI.val[1] || v>boundingBoxBotRight_AoI.val[1]) || (u< boundingBoxUpperLeft_AoI.val[0] ||  u> boundingBoxBotRight_AoI.val[0])){ continue;}
 
 
                 // ====================================use DSO pixel selector================================================
                 //                if (statusMap!=NULL && statusMap[u*depth_map.cols+v]==0 ){ continue;}
 
                 // =====================================use non lambertian point selector================================
-                                if (statusMap!=NULL && static_cast<int>(statusMap[u * depth_map.cols + v])!= 255){ continue;}
+//                                if (statusMap!=NULL && static_cast<int>(statusMap[u * depth_map.cols + v])!= 255){ continue;}
 
+                if (pointOfInterest.at<uchar>(u,v)!=255){ continue;}
 
 
 

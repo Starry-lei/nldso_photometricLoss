@@ -40,6 +40,29 @@ namespace DSONL {
 	using namespace std;
 	const double DEG_TO_ARC = 0.0174532925199433;
 
+    void readUV(string blhTxtName, Mat& coordMask )
+    {
+        ifstream infile(blhTxtName);
+        if (!infile)
+        {
+            cout << "error!" << endl;
+            return;
+        }
+//        double x, y, z;
+//        while (infile>>x>>y>>z)
+//        {
+//            cout << x << " " << y << " " << z << endl;
+//        }
+//        infile.close();
+        int u, v;
+        while (infile>>u>>v)
+        {
+            coordMask.at<uchar>(u,v)=255;
+//            cout <<"check vals of coord:"<< u<< "," << v << endl;
+        }
+        infile.close();
+
+    }
 
 	bool AddGaussianNoise_Opencv(const Mat mSrc, Mat &mDst, double Mean = 0.0, double StdDev = 10.0) {
 		if (mSrc.empty()) {
@@ -485,7 +508,7 @@ namespace DSONL {
 
 
 	Mat deltaMapGT(Mat &Img_left, Mat &depth_left, Mat &Img_right, Mat &depth_right, const Eigen::Matrix<double, 3, 3> &K_, double &thres,
-	               const Sophus::SE3d &ExtrinsicPose, float &upper, float &buttom, Mat &pred_deltaMap, float *statusMap ) {
+	               const Sophus::SE3d &ExtrinsicPose, float &upper, float &buttom, Mat &pred_deltaMap, float *statusMap, Mat pointOfInterest ) {
 
 		//		Mat normalMap_left=getNormals(K_,depth_left);
 		//		Mat normalMap_right=getNormals(K_,depth_right);
@@ -544,10 +567,10 @@ namespace DSONL {
 				//				if(inliers_filter.count(x)==0){continue;}// ~~~~~~~~~~~~~~Filter~~~~~~~~~~~~~~~~~~~~~~~
 				//				if(inliers_filter[x]!=y ){continue;}// ~~~~~~~~~~~~~~Filter~~~~~~~~~~~~~~
 
-                    if ( (y<boundingBoxUpperLeft_AoI.val[1] || y>boundingBoxBotRight_AoI.val[1]) || (x< boundingBoxUpperLeft_AoI.val[0] ||  x> boundingBoxBotRight_AoI.val[0])){ continue;}
-                    if (statusMap!=NULL && static_cast<int>(statusMap[x * depth_left.cols + y])!= 255){ continue;}
+//                    if ( (y<boundingBoxUpperLeft_AoI.val[1] || y>boundingBoxBotRight_AoI.val[1]) || (x< boundingBoxUpperLeft_AoI.val[0] ||  x> boundingBoxBotRight_AoI.val[0])){ continue;}
+//                    if (statusMap!=NULL && static_cast<int>(statusMap[x * depth_left.cols + y])!= 255){ continue;}
 
-
+                if (pointOfInterest.at<uchar>(x,y)!=255){ continue;}
 
 
                 // calculate 3D point of left camera
@@ -580,9 +603,9 @@ namespace DSONL {
 					float delta = right_intensity / left_intensity;
 					//float delta= abs(left_intensity-right_intensity);
 
-                    cout<<"\n Checking radiance vals:"<< "left Coord: u:"<<x<<", v:"<<y<<"left_intensity:"<< left_intensity
-                    << "and right_intensity at pixel_x:"<<pixel_x<<", pixel_y:"<< pixel_y<< "is:"<<  right_intensity
-                            <<"show GT delta: "<<delta <<endl;
+//                    cout<<"\n Checking radiance vals:"<< "left Coord: u:"<<x<<", v:"<<y<<"left_intensity:"<< left_intensity
+//                    << "and right_intensity at pixel_x:"<<pixel_x<<", pixel_y:"<< pixel_y<< "is:"<<  right_intensity
+//                            <<"show GT delta: "<<delta <<endl;
 
 
                     float diff_orig = std::abs(left_intensity - right_intensity);
@@ -624,8 +647,8 @@ namespace DSONL {
 
 		showMinus(minus_original, minus_adjust, minus_mask);
 
-//		 writer.write("PointCloud_Transformed_10.pcd",*cloud, false);// do we need the sensor acquisition origin?
-//		 writer.write("PointCloud_right_HD_16.pcd",*cloud_rig, false);// do we need the sensor acquisition origin?
+//		 writer.write("PointCloud_Transformed_02.pcd",*cloud, false);// do we need the sensor acquisition origin?
+//		 writer.write("PointCloud_right_HD_02.pcd",*cloud_rig, false);// do we need the sensor acquisition origin?
 
 		double max_n, min_n;
 		cv::minMaxLoc(deltaMapGT, &min_n, &max_n);

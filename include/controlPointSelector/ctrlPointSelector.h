@@ -24,7 +24,9 @@ namespace DSONL{
     class ctrlPointSelector {
 
     public:
-        ctrlPointSelector(Sophus::SE3d Camera1_extrin,string controlPointPose_path, Mat Image, Mat depthImage, Eigen::Matrix<float,3,3>& K);
+        ctrlPointSelector(Sophus::SE3d Camera1_extrin,string controlPointPose_path, Mat Image, Mat depthImage, Eigen::Matrix<float,3,3>& K
+        , Mat pointOfInterest
+        );
         ~ctrlPointSelector();
         int kNearest;
         vector<int> selectedIndex_vec;

@@ -115,24 +115,25 @@ namespace DSONL {
 //                image_ref_roughness_path =  "../data/SimulationEnvData/leftImage/bgrroughness_10.pfm";
 
 //                image_ref_path =            "../data/SimulationEnvData/leftImage/bgr_10.png"; // LDR
-                image_ref_path =            "../data/SimulationEnvData/leftImage/bgr_10.pfm"; // HDR
+                image_ref_path =            "../data/Exp_specular_floor/leftImage/orig_2.pfm"; // HDR
 
-                image_ref_seletor_path =    "../data/SimulationEnvData/leftImage/bgr_10_goalFrame.pfm";
+                image_ref_seletor_path =    "../data/Exp_specular_floor/leftImage/orig_2.pfm";
 
-                depth_ref_path =            "../data/SimulationEnvData/leftImage/origfovdepth_10.png";
+                depth_ref_path =            "../data/Exp_specular_floor/leftImage/origdepth_2.png";
 
 //                image_ref_baseColor_path =  "../data/SimulationEnvData/leftImage/DSNL/bgrbaseColor_10.pfm";
-                image_ref_baseColor_path =  "../data/SimulationEnvData/leftImage/DSNL/bgrbaseColor_10.pfm";
-                image_ref_metallic_path  =    "../data/SimulationEnvData/leftImage/DSNL/metallic_10.pfm";
-                image_ref_roughness_path =  "../data/SimulationEnvData/leftImage/DSNL/roughness_10.pfm";
-                image_normal_GT_path =      "../data/SimulationEnvData/leftImage/DSNL/normals10.data"; //normals11  normals10 normals9  //data/SimulationEnvData/leftImage/DSNL/normal_10.data
+                image_ref_baseColor_path =  "../data/Exp_specular_floor/leftImage/non_lambertian/origbaseColor_2.pfm";
+                image_ref_metallic_path  =    "../data/Exp_specular_floor/leftImage/non_lambertian/origmetallic_2.pfm";
+                image_ref_roughness_path =  "../data/Exp_specular_floor/leftImage/non_lambertian/origroughness_2.pfm";
+
+                image_normal_GT_path =      "../data/Exp_specular_floor/leftImage/non_lambertian/orignormal_2.dat"; //normals11  normals10 normals9  //data/SimulationEnvData/leftImage/DSNL/normal_10.data
 
 				Eigen::Matrix3d R1_w_l, R1_w_r;// left-handed and right-handed
 				Eigen::Vector3d t1_w_l;
 
 
-                t1_w_l << -1.010461, 0.110693, -1.495948;
-                Eigen::Quaternion<double> quaternionR1(  0.059711, 0.244452 ,-0.252040 ,0.934427);
+                t1_w_l << -2.228000000000000203e+00, 2.909999999999999809e-01, 4.580000000000000182e-01;
+                Eigen::Quaternion<double> quaternionR1(  2.915518455604547698e-01, 8.724267396286820020e-01 ,-1.240161990092776972e-01 ,3.721412201227538019e-01);
 				R1 = quaternionR1.toRotationMatrix();
 
                 // get extrinsic of camera 1
@@ -168,6 +169,20 @@ namespace DSONL {
 
 				int channelIdx = options_.channelIdx;
 				extractChannel(image_ref, grayImage_ref, channelIdx);
+                extractChannel(matallic_C1, matallic_C1, channelIdx);
+                extractChannel(roughness_C1, roughness_C1, channelIdx);
+
+//                imshow("matallic_C1",matallic_C1);
+//                cout<<"show channel of matallic_C1 "<< matallic_C1.channels()<< endl;
+//
+//                imshow("roughness_C1",matallic_C1);
+//                cout<<"show channel of roughness_C1 "<< roughness_C1.channels()<< endl;
+//
+//                waitKey(0);
+
+
+
+
                 Mat grayImg, mat_mean, mat_stddev;
                 meanStdDev(grayImage_ref, mat_mean, mat_stddev);
                 mean_val= mat_mean.at<double>(0,0);
@@ -205,17 +220,16 @@ namespace DSONL {
 				if (options_.baseline == 0) {
 
 //					image_target_path = "../data/SimulationEnvData/rightImage/bgr_16.png";
-                    image_target_path = "../data/SimulationEnvData/rightImage/bgr_16.pfm";
+                    image_target_path = "../data/Exp_specular_floor/rightImage/orig_6.pfm";
 
-                    ///
-					depth_target_path = "../data/SimulationEnvData/rightImage/origfovdepth_16.png";
+					depth_target_path = "../data/Exp_specular_floor/rightImage/origdepth_6.png";
 
 					Eigen::Matrix3d R2_w_l, R1_w_r, R2_w_r;
 					Eigen::Vector3d t2_w_l;
 
-                    t2_w_l << -0.999663, 0.136382 ,-1.479749;
+                    t2_w_l << -1.828000000000000069e+00, 2.909999999999999809e-01, 4.580000000000000182e-01;
 
-                    Eigen::Quaterniond quaternionR2( 0.045509, 0.247733, -0.224787, 0.941291);
+                    Eigen::Quaterniond quaternionR2( 3.607157085028365184e-01, 8.906232514292543589e-01, -1.940714441068365215e-01, 1.975112053407775681e-01);
 					R2 = quaternionR2.toRotationMatrix();
 					R12 = R2.transpose() * R1;
 					t12 = R2.transpose() * (t1_w_l - t2_w_l);
