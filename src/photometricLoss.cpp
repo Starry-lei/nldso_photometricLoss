@@ -44,8 +44,8 @@ int main(int argc, char **argv) {
 //    std::string envMap_Folder="/home/lei/Documents/Research/envMapData/envMapData_Dense01";
 //    string controlPointPose_path= "/home/lei/Documents/Research/envMapData/envMapData_Dense0704_01_control_cam_pose3k.txt";
 
-    std::string envMap_Folder="/home/lei/Documents/Research/envMapData/maskedSelector";
-    string controlPointPose_path= "/home/lei/Documents/Research/envMapData/scene0704_01_control_cam_pose.txt";
+    std::string envMap_Folder="/home/lei/Documents/Research/envMapData/ThirtyPointsEnvMap";
+    string controlPointPose_path= "/home/lei/Documents/Research/envMapData/short0370_02_control_cam_pose.txt";
 
 
 
@@ -284,15 +284,14 @@ int main(int argc, char **argv) {
 	double Mean = 0.0, StdDev = 0;
 	//	float densities[] = {0.03, 0.003, 0.05, 0.15, 0.5, 1}; /// number of optimized depths,  current index is 1
 
-
     imshow("normal_map",normal_map);
     waitKey(0);
 
 	PhotometricBAOptions options;
     Mat newNormalMap = normal_map;
 //    Mat newNormalMap = normal_map_GT;
-	double distanceThres = 0.007;
-//    double distanceThres = 0.0035;
+//	double distanceThres = 0.007;
+    double distanceThres = 0.0035;
 //    double distanceThres = 0.002;
 
 	float upper = 2.0;
@@ -410,9 +409,6 @@ int main(int argc, char **argv) {
                  << 100 * translationErr(xi_GT.translation(), Translation) << "(%) "
                  << "\n Show depth error :" << depthErr(depth_ref_gt, inv_depth_ref).val[0]
                  << endl;
-
-
-
 
 
             std::cout << "\n Start calculating delta map ... " << endl;

@@ -388,10 +388,8 @@ namespace DSONL {
                 //				 if(inliers_filter.count(u)==0){continue;}
                 //				 if(inliers_filter[u]!=v ){continue;}
 
-
                 //=====================================Area of interest Filter=====================================
 //                                if ( (v<boundingBoxUpperLeft_AoI.val[1] || v>boundingBoxBotRight_AoI.val[1]) || (u< boundingBoxUpperLeft_AoI.val[0] ||  u> boundingBoxBotRight_AoI.val[0])){ continue;}
-
 
                 // ====================================use DSO pixel selector================================================
                 //                if (statusMap!=NULL && statusMap[u*depth_map.cols+v]==0 ){ continue;}
@@ -620,9 +618,9 @@ namespace DSONL {
 				float delta_b = radiance_beta_prime.val[2] / radiance_beta.val[2];
 				deltaMap.at<float>(u, v) = delta_g;
 
-//                cout<<"\n Checking radiance vals:"<< "left Coord: u:"<<u<<", v:"<<v<<"left_radiance:"<< radiance_beta.val[1]
-//                    << "and right_intensity at pixel_x:"<<"pixel_x"<<", pixel_y:"<< "pixel_y"<< "is:"<<  radiance_beta_prime.val[1]
-//                    <<"  show delta_g: "<<delta_g <<endl;
+                cout<<"\n Checking radiance vals:"<< "left Coord: u:"<<u<<", v:"<<v<<"left_radiance:"<< radiance_beta.val[1]
+                    << "and right_intensity at pixel_x:"<<"pixel_x"<<", pixel_y:"<< "pixel_y"<< "is:"<<  radiance_beta_prime.val[1]
+                    <<"  show delta_g: "<<delta_g <<endl;
 
 
 

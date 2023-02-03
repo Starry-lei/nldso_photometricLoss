@@ -143,7 +143,9 @@ namespace DSONL {
 
 //    }
 
-                });
+                }
+
+                );
 
         if (ControlpointCloud->empty()){std::cerr<<"\n Wrong Control-pointCloud!"<< endl;}
         kdtree.setInputCloud(ControlpointCloud);

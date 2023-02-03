@@ -33,7 +33,7 @@ namespace DSONL {
 
     DSONL::ctrlPointSelector::ctrlPointSelector(Sophus::SE3d Camera1_extrin, string controlPointPose_path, Mat Image,
                                                 Mat depthImage,
-                                                Eigen::Matrix<float, 3, 3> &K,
+                                                Eigen::Matrix<float, 3, 3> &K
     , Mat pointOfInterest) {
 
         // constants

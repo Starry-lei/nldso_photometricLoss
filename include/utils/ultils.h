@@ -603,9 +603,9 @@ namespace DSONL {
 					float delta = right_intensity / left_intensity;
 					//float delta= abs(left_intensity-right_intensity);
 
-//                    cout<<"\n Checking radiance vals:"<< "left Coord: u:"<<x<<", v:"<<y<<"left_intensity:"<< left_intensity
-//                    << "and right_intensity at pixel_x:"<<pixel_x<<", pixel_y:"<< pixel_y<< "is:"<<  right_intensity
-//                            <<"show GT delta: "<<delta <<endl;
+                    cout<<"\n Checking radiance vals:"<< "left Coord: u:"<<x<<", v:"<<y<<"left_intensity:"<< left_intensity
+                    << "and right_intensity at pixel_x:"<<pixel_x<<", pixel_y:"<< pixel_y<< "is:"<<  right_intensity
+                            <<"show GT delta: "<<delta <<endl;
 
 
                     float diff_orig = std::abs(left_intensity - right_intensity);
