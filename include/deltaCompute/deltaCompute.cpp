@@ -86,7 +86,8 @@ namespace DSONL {
 
 	Vec2f IBL_Radiance::directionToSphericalEnvmap(Vec3f dir) {
 
-		float s = 1.0 - glslmod(1.0 / (2.0 * M_PI) * atan2(dir.val[1], dir.val[0]), 1.0);
+//		float s = 1.0 - glslmod(1.0 / (2.0 * M_PI) * atan2(dir.val[1], dir.val[0]), 1.0);
+        float s =  glslmod(1.0 / (2.0 * M_PI) * atan2(-dir.val[1], dir.val[0]), 1.0);
 		//      float s = 1.0 - mod(1.0 / (2.0*M_PI) * atan2(dir.val[1], dir.val[0]), 1.0);
 		float t = 1.0 / (M_PI) *acos(-dir.val[2]);
 		if (s > 1.0 || t > 1.0) { std::cerr << "UV coordinates overflow!" << std::endl; }
@@ -490,7 +491,9 @@ namespace DSONL {
 
 
                 // Get pyramid
-                std::string renderedEnvLight_path="/home/lei/Documents/Research/envMapData/maskedSelector";
+                std::string renderedEnvLight_path="/home/lei/Documents/Research/envMapData/ThirtyPointsEnvMap";
+
+                // home/lei/Documents/Research/envMapData/ThirtyPointsEnvMap
                 stringstream ss;
                 string img_idx_str;
                 ss << ctrlIndex;
@@ -511,10 +514,6 @@ namespace DSONL {
                 diffuseMap *diffuseMap = new DSONL::diffuseMap;
                 diffuseMap->makeDiffuseMap(pEnv.EnvmapSampler, envMapDiffuse); // index_1: diffuse
                 delete diffuseMap;
-
-
-
-
 
                 prefilteredEnvmapSampler= & (pEnv.EnvmapSampler[0]);
                 brdfSampler_ = & (EnvLightLookup->brdfSampler[0]);
