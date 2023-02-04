@@ -433,6 +433,9 @@ namespace DSONL {
 
 		mergeImagePyramid();
 
+        imshow("image_pyramid[0]",image_pyramid[0]);
+        waitKey(0);
+
 		//                double min_depth_val, max_depth_val;
 		//                cv::minMaxLoc(image_pyramid[0], &min_depth_val,&max_depth_val);
 		//                cout<<"show original image_pyramid range:"<<min_depth_val<<","<<max_depth_val<<endl;
@@ -490,7 +493,11 @@ namespace DSONL {
 		//                cout << "\n============SampleA val------------------------(RGBA):\n" << SampleA.b << "," << SampleA.g << "," << SampleA.r << "," <<SampleA.a << endl;
 		//                gli::vec4 SampleAAAAAA =prefilteredEnvmapSampler->texture_lod(gli::fsampler2D::normalized_type(0.5f,0.75f), 0.0f); // transform the texture coordinate
 		//                cout << "\n============SampleAAAAAA val(RGBA):\n"<< SampleAAAAAA.b << "," << SampleAAAAAA.g << "," <<SampleAAAAAA.r << "," << SampleAAAAAA.a << endl;
-	}
+
+
+
+
+    }
 
 	class brdfIntegrationMap {
 

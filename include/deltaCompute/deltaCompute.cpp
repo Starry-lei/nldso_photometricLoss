@@ -3,7 +3,7 @@
 //
 
 #include "deltaCompute.h"
-
+#include <cmath>
 
 namespace DSONL {
 
@@ -82,13 +82,63 @@ namespace DSONL {
 
 	Vec2f IBL_Radiance::directionToSphericalEnvmap(Vec3f dir) {
 
-		float s = 1.0 - glslmod(1.0 / (2.0 * M_PI) * atan2(dir.val[1], dir.val[0]), 1.0);
+        std::cerr<<"show atan2(dir.val[2], dir.val[1]):"<<atan2(-dir.val[1], dir.val[0])<<std::endl;
+
+		float s =  glslmod(1.0 / (2.0 * M_PI) * atan2(-dir.val[1], dir.val[0]), 1.0);
+//        float s = 1.0 - glslmod(1.0 / (2.0 * M_PI) * atan2(dir.val[1], dir.val[0]), 1.0);
+
+
+//        float s = 1.0 / (2.0 * M_PI) * atan2(-dir.val[1], dir.val[0]);
+
+
 		//      float s = 1.0 - mod(1.0 / (2.0*M_PI) * atan2(dir.val[1], dir.val[0]), 1.0);
+		float t = 1.0 / (M_PI) * (acos(-dir.val[2]));
+        std::cerr<<"t:"<<t<<std::endl;
 
-		float t = 1.0 / (M_PI) *acos(-dir.val[2]);
 		if (s > 1.0 || t > 1.0) { std::cerr << "UV coordinates overflow!" << std::endl; }
-
 		return Vec2f(s, t);
+
+
+//
+////        float s = 1.0 - glslmod(1.0 / (2.0 * M_PI) * atan2(dir.val[2], dir.val[1]), 1.0);
+////        //      float s = 1.0 - mod(1.0 / (2.0*M_PI) * atan2(dir.val[1], dir.val[0]), 1.0);
+////        float t = 1.0 / (M_PI) *acos(-dir.val[0]);
+////
+////
+////
+////        if (s > 1.0 || t > 1.0) { std::cerr << "UV coordinates overflow!" << std::endl; }
+////        return Vec2f(s, t);
+//
+//        // cartitian coordinates of ray direction (normalized)
+//        float x = dir.val[0];
+//        float y = dir.val[1];
+//        float z = dir.val[2];
+//
+//
+//        // step 1: cartitian to spherical coordinates
+//        // https://en.wikipedia.org/wiki/Spherical_coordinate_system#/media/File:3D_Spherical.svg
+//        float phi = atan2(y, x); // phi \in [-pi, pi]
+//        float theta = acos(z); // theta \in [0, pi]
+
+        // step 2: inverse Zhengqin https://github.com/Dawnborn/Optixrenderer/blob/812ef6e3f70d4508c166d581db1afe7eecc93a94/src/optixRenderer/src/camera/path_trace_camera.cu#L94
+        // float phi = d.x * M_PIf;
+        // theta = 0.5f * (-d.y + 1.0f) * M_PIf;
+
+//        float dx = phi / M_PI; // dx \in [-1, 1]
+//        float dy = -(theta / M_PI * 2 - 1); // dy \in [-1, 1]
+//
+//        // step 3: compatible with GSN Composer [0, 1]
+//        float s = (dx + 1) / 2;
+//        float t = (dy + 1) / 2;
+//		return Vec2f(s, t);
+////
+//
+//
+//
+//
+
+
+
 	}
 
 	Vec3f IBL_Radiance::specularIBL(Vec3f F0, float roughness, Vec3f N, Vec3f V, const Eigen::Matrix3d Camera1_c2w) {
@@ -105,19 +155,63 @@ namespace DSONL {
 		// convert coordinate system
 		Eigen::Vector3f R_w = Camera1_c2w.cast<float>() * R_c_;
 
-		Vec2f uv = directionToSphericalEnvmap(Vec3f(R_w.x(), R_w.y(), R_w.z()));
+//		Vec2f uv = directionToSphericalEnvmap(Vec3f(R_w.x(), R_w.y(), R_w.z()));
 
 
-		if (uv.val[0] > 1.0 || uv.val[1] > 1.0) {
+        Vec3f dir_test_1= Vec3f(1,0,0);
+        //  Checking===specularIBL=======Show UV=================:[1, 0.5]--------->no exchange
+        //  Checking===specularIBL=======Show UV=================:[1, 1]   ---------->with exchange
+
+        Vec3f dir_test_2= Vec3f(0,1,0);
+        Vec3f dir_test_3= Vec3f(0,0,1);
+        Vec3f dir_test_4= Vec3f(1,0,1);
+        dir_test_4=cv::normalize(dir_test_4);
+        Vec3f dir_test_5= Vec3f(0,1,1);
+        dir_test_5=cv::normalize(dir_test_5);
+
+        Vec3f dir_test_6= Vec3f(1,1,0);
+        dir_test_6=cv::normalize(dir_test_6);
+        Vec3f dir_test_7= Vec3f(1,1,1);
+        dir_test_7=cv::normalize(dir_test_7);
+
+
+
+        Vec2f uv = directionToSphericalEnvmap(dir_test_3);
+
+        Vec2f uv1 = directionToSphericalEnvmap(dir_test_1);
+        Vec2f uv2 = directionToSphericalEnvmap(dir_test_2);
+        Vec2f uv3 = directionToSphericalEnvmap(dir_test_3);
+        Vec2f uv4 = directionToSphericalEnvmap(dir_test_4);
+        Vec2f uv5 = directionToSphericalEnvmap(dir_test_5);
+
+        Vec2f uv6 = directionToSphericalEnvmap(dir_test_6);
+        Vec2f uv7 = directionToSphericalEnvmap(dir_test_7);
+
+        std::cerr << "\n 1Checking===specularIBL=======Show UV=================:" << uv1 << std::endl;
+        std::cerr << "\n 2Checking===specularIBL=======Show UV=================:" << uv2 << std::endl;
+        std::cerr << "\n 3Checking===specularIBL=======Show UV=================:" << uv3 << std::endl;
+        std::cerr << "\n 4Checking===specularIBL=======Show UV=================:" << uv4 << std::endl;
+        std::cerr << "\n 5Checking===specularIBL=======Show UV=================:" << uv5 << std::endl;
+
+        std::cerr << "\n 6Checking===specularIBL=======Show UV=================:" << uv6 << std::endl;
+        std::cerr << "\n 7Checking===specularIBL=======Show UV=================:" << uv7 << std::endl;
+
+
+
+        if (uv.val[0] > 1.0 || uv.val[1] > 1.0) {
 			std::cerr << "\n===specularIBL=======Show UV=================:" << uv << std::endl;
 		}
+
+        //
 
 
 		//      std::cout<<"uv:"<<uv<<"show roughness*float(mipCount)"<<roughness*float(mipCount)<<std::endl;
 
-		Vec3f prefiltered_Color = prefilteredColor(uv.val[0], uv.val[1], roughness * float(mipCount));
+//		Vec3f prefiltered_Color = prefilteredColor(uv.val[0], uv.val[1], roughness * float(mipCount));
 
-		//      std::cout<<"prefiltered_Color:"<<prefiltered_Color<<std::endl;
+        Vec3f prefiltered_Color = prefilteredColor(uv.val[0], uv.val[1], 0.0);
+
+        std::cerr <<"prefiltered_Color:"<<prefiltered_Color<<std::endl;
 
 		//
 		//    uv:[0.179422, 0.400616]show roughness*float(mipCount)1.5
