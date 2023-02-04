@@ -43,8 +43,13 @@ int main(int argc, char **argv) {
 //    std::string envMap_Folder="/media/lei/Data/datasetProcessing/ToolBox/data/formattedEnvMap_denser";
 //    string controlPointPose_path= "/media/lei/Data/Kitchen_scene/Frame10to16_denser/scene0704_01_control_cam_pose3k.txt";
 
-    std::string envMap_Folder="/media/lei/Data/LivingRoom_scene/formattedEnvmap";
-    string controlPointPose_path= "/home/lei/Documents/Research/envMapData/short0370_02_control_cam_pose.txt";
+//    std::string envMap_Folder="/media/lei/Data/LivingRoom_scene/formattedEnvmap";
+//    string controlPointPose_path= "/home/lei/Documents/Research/envMapData/short0370_02_control_cam_pose.txt";
+
+    std::string envMap_Folder="/media/lei/Data/LivingRoom_scene/formatted17EnvMap";
+    string controlPointPose_path= "/home/lei/Documents/Research/envMapData/scene0370_02_control_cam_pose.txt";
+
+
 
 
 
