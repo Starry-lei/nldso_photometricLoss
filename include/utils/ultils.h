@@ -647,8 +647,8 @@ namespace DSONL {
 
 		showMinus(minus_original, minus_adjust, minus_mask);
 
-//		 writer.write("PointCloud_Transformed_02.pcd",*cloud, false);// do we need the sensor acquisition origin?
-//		 writer.write("PointCloud_right_HD_02.pcd",*cloud_rig, false);// do we need the sensor acquisition origin?
+//		 writer.write("PointCloud_Transformed_06.pcd",*cloud, false);// do we need the sensor acquisition origin?
+//		 writer.write("PointCloud_right_HD_06.pcd",*cloud_rig, false);// do we need the sensor acquisition origin?
 
 		double max_n, min_n;
 		cv::minMaxLoc(deltaMapGT, &min_n, &max_n);

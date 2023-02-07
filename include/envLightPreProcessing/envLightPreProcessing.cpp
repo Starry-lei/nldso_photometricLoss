@@ -178,9 +178,7 @@ namespace DSONL {
 
 
         std::mutex mtx;
-
         int counter=0;
-
         int seletcEnvMap=36;
         int seletcEnvMap2=200;
 
@@ -248,8 +246,6 @@ namespace DSONL {
         kdtree.setInputCloud(ControlpointCloud);
 
         // ======================serialization============================
-
-
     }
 
 

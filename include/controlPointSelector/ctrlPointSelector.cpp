@@ -45,10 +45,6 @@ namespace DSONL {
         Vec2i boundingBoxUpperLeft( 83, 76);// 83, 76
         Vec2i boundingBoxBotRight(240, 320);
 
-
-
-
-
         pcl::PCDWriter writer;
 
         // check PointCloud

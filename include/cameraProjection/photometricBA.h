@@ -63,23 +63,23 @@ namespace DSONL {
 
         Mat AOI( image.rows, image.cols, CV_8UC1, Scalar(0));
 
-		for (int u = 0; u < image.rows; u++)// colId, cols: 0 to 480
-		{
-			for (int v = 0; v < image.cols; v++)// rowId,  rows: 0 to 640
-			{
-
-                if ( (v<boundingBoxUpperLeft.val[1] || v>boundingBoxBotRight.val[1]) || (u< boundingBoxUpperLeft.val[0] ||  u> boundingBoxBotRight.val[0])){ continue;}
-                if (statusMap!=NULL && statusMap[u*image.cols+v]==0 ){ continue;}
-                inliers_filter.emplace(u, v);
-                counter++;
-                AOI.at<uchar>(u,v)=255;
-
-//                if (statusMap != NULL && statusMap[u * image.cols + v] != 0) {
-//					inliers_filter.emplace(u, v);
-//					counter++;
-//				}
-			}
-		}
+//		for (int u = 0; u < image.rows; u++)// colId, cols: 0 to 480
+//		{
+//			for (int v = 0; v < image.cols; v++)// rowId,  rows: 0 to 640
+//			{
+//
+//                if ( (v<boundingBoxUpperLeft.val[1] || v>boundingBoxBotRight.val[1]) || (u< boundingBoxUpperLeft.val[0] ||  u> boundingBoxBotRight.val[0])){ continue;}
+//                if (statusMap!=NULL && statusMap[u*image.cols+v]==0 ){ continue;}
+//                inliers_filter.emplace(u, v);
+//                counter++;
+//                AOI.at<uchar>(u,v)=255;
+//
+////                if (statusMap != NULL && statusMap[u * image.cols + v] != 0) {
+////					inliers_filter.emplace(u, v);
+////					counter++;
+////				}
+//			}
+//		}
 
 //        for (int u = 0; u < image.rows; u++)// colId, cols: 0 to 480
 //        {
@@ -118,7 +118,7 @@ namespace DSONL {
 
 
 //
-		  cerr << "show counter for used points in BA:" << counter << endl;
+//		  cerr << "show counter for used points in BA:" << counter << endl;
 
 
 		//		double intensity_ref;
@@ -159,8 +159,6 @@ namespace DSONL {
 //                 if (inliers_filter[u] != v) { continue; }      // ~~~~~~~~~~~~~~Filter~~~~~~~~~~~~~~~~~~~~~~~
 
                 if (AOI.at<uchar>(u,v)!=255){ continue;}
-
-
                 num_points_used+=1;
 
 

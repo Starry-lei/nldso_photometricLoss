@@ -491,7 +491,7 @@ namespace DSONL {
 
 
                 // Get pyramid
-                std::string renderedEnvLight_path="/home/lei/Documents/Research/envMapData/ThirtyPointsEnvMap";
+                std::string renderedEnvLight_path="/home/lei/Documents/Research/envMapData/SeventeenPointsEnvMap";
 
                 // home/lei/Documents/Research/envMapData/ThirtyPointsEnvMap
                 stringstream ss;

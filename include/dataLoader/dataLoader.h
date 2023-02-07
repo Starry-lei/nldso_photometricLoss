@@ -115,25 +115,45 @@ namespace DSONL {
 //                image_ref_roughness_path =  "../data/SimulationEnvData/leftImage/bgrroughness_10.pfm";
 
 //                image_ref_path =            "../data/SimulationEnvData/leftImage/bgr_10.png"; // LDR
-                image_ref_path =            "../data/Exp_specular_floor/leftImage/orig_2.pfm"; // HDR
+//                image_ref_path =            "../data/Exp_specular_floor/leftImage/orig_2.pfm"; // HDR
+                image_ref_path =            "../data/Exp_specular_floor_forLoss/leftImage/orig_6.pfm"; // HDR
 
-                image_ref_seletor_path =    "../data/Exp_specular_floor/leftImage/orig_2.pfm";
+//                image_ref_seletor_path =    "../data/Exp_specular_floor/leftImage/orig_2.pfm";
+                image_ref_seletor_path =    "../data/Exp_specular_floor_forLoss/leftImage/orig_6.pfm";
 
-                depth_ref_path =            "../data/Exp_specular_floor/leftImage/origdepth_2.png";
+//                depth_ref_path =            "../data/Exp_specular_floor/leftImage/origdepth_2.png";
+                depth_ref_path =            "../data/Exp_specular_floor_forLoss/leftImage/origdepth_6.png";
 
 //                image_ref_baseColor_path =  "../data/SimulationEnvData/leftImage/DSNL/bgrbaseColor_10.pfm";
-                image_ref_baseColor_path =  "../data/Exp_specular_floor/leftImage/non_lambertian/origbaseColor_2.pfm";
-                image_ref_metallic_path  =    "../data/Exp_specular_floor/leftImage/non_lambertian/origmetallic_2.pfm";
-                image_ref_roughness_path =  "../data/Exp_specular_floor/leftImage/non_lambertian/origroughness_2.pfm";
+//                image_ref_baseColor_path =  "../data/Exp_specular_floor/leftImage/non_lambertian/origbaseColor_2.pfm";
+//                image_ref_metallic_path  =    "../data/Exp_specular_floor/leftImage/non_lambertian/origmetallic_2.pfm";
+//                image_ref_roughness_path =  "../data/Exp_specular_floor/leftImage/non_lambertian/origroughness_2.pfm";
 
-                image_normal_GT_path =      "../data/Exp_specular_floor/leftImage/non_lambertian/orignormal_2.dat"; //normals11  normals10 normals9  //data/SimulationEnvData/leftImage/DSNL/normal_10.data
+                image_ref_baseColor_path =  "../data/Exp_specular_floor_forLoss/leftImage/non_lambertian/origbaseColor_6.pfm";
+                image_ref_metallic_path  =    "../data/Exp_specular_floor_forLoss/leftImage/non_lambertian/origmetallic_6.pfm";
+                image_ref_roughness_path =  "../data/Exp_specular_floor_forLoss/leftImage/non_lambertian/origroughness_6.pfm";
+
+
+//                image_normal_GT_path =      "../data/Exp_specular_floor/leftImage/non_lambertian/orignormal_2.dat"; //normals11  normals10 normals9  //data/SimulationEnvData/leftImage/DSNL/normal_10.data
+
+                image_normal_GT_path =      "../data/Exp_specular_floor_forLoss/leftImage/non_lambertian/orignormal_6.dat"; //normals11  normals10 normals9  //data/SimulationEnvData/leftImage/DSNL/normal_10.data
+
+//                data/Exp_specular_floor_forLoss/leftImage/non_lambertian/orignormal_6.pfm
+
+
 
 				Eigen::Matrix3d R1_w_l, R1_w_r;// left-handed and right-handed
 				Eigen::Vector3d t1_w_l;
 
+                //  3.607157085028365184e-01 8.906232514292543589e-01 -1.940714441068365215e-01 1.975112053407775681e-01 -1.828000000000000069e+00 2.909999999999999809e-01 4.580000000000000182e-01
 
-                t1_w_l << -2.228000000000000203e+00, 2.909999999999999809e-01, 4.580000000000000182e-01;
-                Eigen::Quaternion<double> quaternionR1(  2.915518455604547698e-01, 8.724267396286820020e-01 ,-1.240161990092776972e-01 ,3.721412201227538019e-01);
+//                t1_w_l << -2.228000000000000203e+00, 2.909999999999999809e-01, 4.580000000000000182e-01;
+//                Eigen::Quaternion<double> quaternionR1(  2.915518455604547698e-01, 8.724267396286820020e-01 ,-1.240161990092776972e-01 ,3.721412201227538019e-01);
+
+                t1_w_l << -1.828000000000000069e+00, 2.909999999999999809e-01, 4.580000000000000182e-01;
+                Eigen::Quaternion<double> quaternionR1(  3.607157085028365184e-01, 8.906232514292543589e-01, -1.940714441068365215e-01, 1.975112053407775681e-01);
+
+
 				R1 = quaternionR1.toRotationMatrix();
 
                 // get extrinsic of camera 1
@@ -208,6 +228,9 @@ namespace DSONL {
                 ifstream readIn(image_normal_GT_path, ios::in | ios::binary);
                 readIn.read((char*) &normalArray, sizeof normalArray);
                 cv::Mat normal_A(480,640,CV_32FC3, &normalArray);
+//                imshow("normal_A",normal_A);
+//                waitKey(0);
+
                 normal_map_GT = normal_A.clone();
 
 //                normal_map_GT = loadPFM(image_normal_GT_path);
@@ -220,16 +243,25 @@ namespace DSONL {
 				if (options_.baseline == 0) {
 
 //					image_target_path = "../data/SimulationEnvData/rightImage/bgr_16.png";
-                    image_target_path = "../data/Exp_specular_floor/rightImage/orig_6.pfm";
+//                    image_target_path = "../data/Exp_specular_floor/rightImage/orig_6.pfm";
+//
+//					depth_target_path = "../data/Exp_specular_floor/rightImage/origdepth_6.png";
 
-					depth_target_path = "../data/Exp_specular_floor/rightImage/origdepth_6.png";
+                    image_target_path = "../data/Exp_specular_floor_forLoss/rightImage/orig_7.pfm";
+                    depth_target_path = "../data/Exp_specular_floor_forLoss/rightImage/origdepth_7.png";
 
 					Eigen::Matrix3d R2_w_l, R1_w_r, R2_w_r;
 					Eigen::Vector3d t2_w_l;
 
-                    t2_w_l << -1.828000000000000069e+00, 2.909999999999999809e-01, 4.580000000000000182e-01;
+                    // 3.607157085028365184e-01 8.906232514292543589e-01 -1.940714441068365492e-01 1.975112053407774571e-01 -1.627999999999999892e+00 2.909999999999999809e-01 4.580000000000000182e-01
 
-                    Eigen::Quaterniond quaternionR2( 3.607157085028365184e-01, 8.906232514292543589e-01, -1.940714441068365215e-01, 1.975112053407775681e-01);
+//                    t2_w_l << -1.828000000000000069e+00, 2.909999999999999809e-01, 4.580000000000000182e-01;
+//                    Eigen::Quaterniond quaternionR2( 3.607157085028365184e-01, 8.906232514292543589e-01, -1.940714441068365215e-01, 1.975112053407775681e-01);
+
+                    t2_w_l << -1.627999999999999892e+00, 2.909999999999999809e-01, 4.580000000000000182e-01;
+                    Eigen::Quaterniond quaternionR2( 3.607157085028365184e-01, 8.906232514292543589e-01, -1.940714441068365492e-01, 1.975112053407774571e-01);
+
+
 					R2 = quaternionR2.toRotationMatrix();
 					R12 = R2.transpose() * R1;
 					t12 = R2.transpose() * (t1_w_l - t2_w_l);
