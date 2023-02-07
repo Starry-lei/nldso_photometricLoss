@@ -84,7 +84,7 @@ namespace DSONL {
 
         // temp method for find rendering 30 env lights
         selectedIndex.clear();
-        for(int i=1; i<= 30; i ++){
+        for(int i=1; i<= fileNames.size(); i ++){
             selectedIndex.emplace(i, 1);
             cout<<"\n show selectedIndex :"<<i<<endl;
         }
@@ -93,7 +93,7 @@ namespace DSONL {
 
         for (size_t i=1;i<=fileNames.size();i++) {
 
-            cout<<"show fileNames.size()"<<fileNames.size()<<endl;
+//            cout<<"show fileNames.size()"<<fileNames.size()<<endl;
             if (selectedIndex.count(static_cast<int>(i))==0){continue;}
 
             stringstream ss;
