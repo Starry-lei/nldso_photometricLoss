@@ -136,8 +136,12 @@ namespace DSONL {
 
 
         AOI= statusMap_NonLambCand.clone();
-        imshow("AOI", AOI);
-        waitKey(0);
+
+//        imshow("AOI", AOI);
+//        waitKey(0);
+
+
+
 		for (int u = 0; u < image.rows; u++)// colId, cols: 0 to 480
 		{
 			for (int v = 0; v < image.cols; v++)// rowId,  rows: 0 to 640

@@ -491,7 +491,11 @@ namespace DSONL {
 
 
                 // Get pyramid
-                std::string renderedEnvLight_path="/home/lei/Documents/Research/envMapData/SeventeenPointsEnvMap";
+//                std::string renderedEnvLight_path="/home/lei/Documents/Research/envMapData/SeventeenPointsEnvMap";
+
+                std::string renderedEnvLight_path="/home/lei/Documents/Research/envMapData/EnvMap_2358";
+
+
 
                 // home/lei/Documents/Research/envMapData/ThirtyPointsEnvMap
                 stringstream ss;
@@ -617,9 +621,9 @@ namespace DSONL {
 				float delta_b = radiance_beta_prime.val[2] / radiance_beta.val[2];
 				deltaMap.at<float>(u, v) = delta_g;
 
-                cout<<"\n Checking radiance vals:"<< "left Coord: u:"<<u<<", v:"<<v<<"left_radiance:"<< radiance_beta.val[1]
-                    << "and right_intensity at pixel_x:"<<"pixel_x"<<", pixel_y:"<< "pixel_y"<< "is:"<<  radiance_beta_prime.val[1]
-                    <<"  show delta_g: "<<delta_g <<endl;
+//                cout<<"\n Checking radiance vals:"<< "left Coord: u:"<<u<<", v:"<<v<<"left_radiance:"<< radiance_beta.val[1]
+//                    << "and right_intensity at pixel_x:"<<"pixel_x"<<", pixel_y:"<< "pixel_y"<< "is:"<<  radiance_beta_prime.val[1]
+//                    <<"  show delta_g: "<<delta_g <<endl;
 
 
 
@@ -627,6 +631,10 @@ namespace DSONL {
 			}
 		}
 
+
+        // save deltaMap
+
+        imwrite("deltaMap.png",deltaMap);
 
 		double max_n, min_n;
 		cv::minMaxLoc(deltaMap, &min_n, &max_n);

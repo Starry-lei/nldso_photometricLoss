@@ -22,13 +22,8 @@ using namespace cv;
 using namespace std;
 using namespace DSONL;
 
-
-
-
 // control points  pose # qw qx qy qz x y z
 int main(int argc, char **argv) {
-
-    // TODO(Binghui): A and B to be parallelized
 
     // A: line: 26-27
     dataLoader *dataLoader = new DSONL::dataLoader();
@@ -48,12 +43,11 @@ int main(int argc, char **argv) {
 //    string controlPointPose_path= "/home/lei/Documents/Research/envMapData/short0370_02_control_cam_pose.txt";
 
 
-    std::string envMap_Folder="/home/lei/Documents/Research/envMapData/SeventeenPointsEnvMap";
-    string controlPointPose_path= "/home/lei/Documents/Research/envMapData/scene0370_02_control_cam_pose.txt";
+//    std::string envMap_Folder="/home/lei/Documents/Research/envMapData/SeventeenPointsEnvMap";
+//    string controlPointPose_path= "/home/lei/Documents/Research/envMapData/scene0370_02_control_cam_pose.txt";
 
-
-
-
+    std::string envMap_Folder="/home/lei/Documents/Research/envMapData/EnvMap_2358";
+    string controlPointPose_path= "/home/lei/Documents/Research/envMapData/2frame0370_02_control_cam_pose_2358.txt";
 
     Mat grayImage_target, grayImage_ref, depth_ref, depth_target, image_ref_baseColor, image_target_baseColor;
     Mat image_ref_metallic = dataLoader->image_ref_metallic;
@@ -72,35 +66,34 @@ int main(int argc, char **argv) {
     Eigen::Matrix3f K;
     K = dataLoader->camera_intrinsics;
 
-    Mat pointOfInterestArea(grayImage_ref.rows, grayImage_ref.cols, CV_8UC1, Scalar(0) );
+    Mat pointOfInterestArea(grayImage_ref.rows, grayImage_ref.cols, CV_8UC1, Scalar(0));
 //    string pointOfInterest= "../data/Exp_specular_floor/point_of_Interest.txt";
 //    string pointOfInterest= "../data/Exp_specular_floor/point_of_I2.txt";
 //    readUV(pointOfInterest, pointOfInterestArea);
 
-    pointOfInterestArea= imread("../data/Exp_specular_floor_forLoss/leftImage/spointMask_38880.png", IMREAD_ANYCOLOR | IMREAD_ANYDEPTH);
+//    pointOfInterestArea= imread("../data/Exp_specular_floor_forLoss/leftImage/spointMask_38880.png", IMREAD_ANYCOLOR | IMREAD_ANYDEPTH);
+//    pointOfInterestArea= imread("../data/Exp_specular_floor_forLoss/leftImage/sPointLambertianMask_30118.png", IMREAD_ANYCOLOR | IMREAD_ANYDEPTH);
+//    pointOfInterestArea= imread("../data/Exp_specular_floor_forLoss/leftImage/sPointLambertianMask_17512.png", IMREAD_ANYCOLOR | IMREAD_ANYDEPTH);
 
-//    pointOfInterestArea= imread("../data/Exp_specular_floor_forLoss/leftImage/sPointLambertianMask_30118.png");
-//    pointOfInterestArea= imread("../data/Exp_specular_floor_forLoss/leftImage/sPointLambertianMask_17512.png");
-//    pointOfInterestArea= imread("../data/Exp_specular_floor_forLoss/leftImage/sPointLambertianMask_14976.png");
-
-    imshow("pointOfInterestArea",pointOfInterestArea);
+//    Mat sPointLambertianMask_15402= imread("../data/Exp_specular_floor_forLoss/leftImage/sPointLambertianMask_15402.png", IMREAD_ANYCOLOR | IMREAD_ANYDEPTH);
+    Mat sPointLambertianMask_10011= imread("../data/Exp_specular_floor_forLoss/leftImage/sPointLambertianMask_10011.png", IMREAD_ANYCOLOR | IMREAD_ANYDEPTH);
+    Mat pointOfInterestArea_Non_Lambertian_2358= imread("../data/Exp_specular_floor_forLoss/leftImage/spointMask_non_Lambertian_2358.png", IMREAD_ANYCOLOR | IMREAD_ANYDEPTH);
 
     int num_points_used =0;
-    for (int u = 0; u < pointOfInterestArea.rows; u++)// colId, cols: 0 to 480
+    for (int u = 0; u < grayImage_ref.rows; u++)
     {
-        for (int v = 0; v < pointOfInterestArea.cols; v++)// rowId,  rows: 0 to 640
+        for (int v = 0; v < grayImage_ref.cols; v++)
         {
-            if (static_cast<int>(pointOfInterestArea.at<uchar>(u, v))==255){ num_points_used+=1;}
-
+             if (static_cast<int>(sPointLambertianMask_10011.at<uchar>(u, v))==255 || static_cast<int>(pointOfInterestArea_Non_Lambertian_2358.at<uchar>(u, v))==255 ){
+//            if (int(pointOfInterestArea_Non_Lambertian_2358.at<uchar>(u, v))==255 ) {
+                num_points_used+=1;
+                pointOfInterestArea.at<uchar>(u,v)= 255;
+            }
         }
     }
-
-     cout<<"check num_points_used "<<num_points_used<<endl;
-
-    cout<<"check num_points_used "<<num_points_used<<endl;
+    imshow("pointOfInterestArea",pointOfInterestArea);
+    cout<<"check channel of sPointLambertianMask_10011:"<<sPointLambertianMask_10011.channels()<<" check num_points_used "<<num_points_used<<endl;
     waitKey(0);
-
-
 
     // ----------------------------------------optimization variable: R, t--------------------------------------
     Sophus::SE3d xi, xi_GT;
@@ -245,16 +238,11 @@ int main(int argc, char **argv) {
 //        }
 //
 
-
-
-
-
 // ===========================ctrlPoint Selector==========================================
     ctrlPointSelector  * ctrlPoint_Selector= new ctrlPointSelector(dataLoader->camPose1, controlPointPose_path,grayImage_ref, depth_ref_GT,K, pointOfInterestArea);
 //     TODO(parallelization)
 
     envLightLookup  *EnvLightLookup= new envLightLookup(ctrlPoint_Selector->selectedIndex, argc, argv, envMap_Folder,controlPointPose_path);
-
 
     cout<<"\n The preComputation of EnvMap is ready!"<<endl;
     imshow("grayImage_target", grayImage_target);
@@ -307,7 +295,7 @@ int main(int argc, char **argv) {
 
 	double trErr;
 	Eigen::Vector3d T_GT(xi_GT.translation());
-	Eigen::Vector3d perturbedTranslation = translation_pertabation(0.0, 0.0, 0.0, T_GT, trErr); // percentage
+	Eigen::Vector3d perturbedTranslation = translation_pertabation(0.05, 0.05, 0.05, T_GT, trErr); // percentage
 	double Mean = 0.0, StdDev = 0;
 	//	float densities[] = {0.03, 0.003, 0.05, 0.15, 0.5, 1}; /// number of optimized depths,  current index is 1
 
@@ -317,6 +305,7 @@ int main(int argc, char **argv) {
 	PhotometricBAOptions options;
     Mat newNormalMap = normal_map;
 //    Mat newNormalMap = normal_map_GT;
+//    double distanceThres = 0.009;
 //	double distanceThres = 0.007;
     double distanceThres = 0.0035;
 //    double distanceThres = 0.002;
@@ -326,6 +315,9 @@ int main(int argc, char **argv) {
 	float up_new = upper;
 	float butt_new = buttom;
 	Mat deltaMap(depth_ref.rows, depth_ref.cols, CV_32FC1, Scalar(1)); // storing delta
+    Mat deltaMap_GT(depth_ref.rows, depth_ref.cols, CV_32FC1, Scalar(1)); // storing delta
+    Mat deltaRatio(depth_ref.rows, depth_ref.cols, CV_32FC1, Scalar(1)); // storing delta
+
 	int lvl_target, lvl_ref;
 
 	double depth_upper_bound = 0.5;  // 0.5; 1
@@ -339,7 +331,7 @@ int main(int argc, char **argv) {
 	options.usePixelSelector = false;
 	dataLoader->options_.remove_outlier_manually = false;
 	options.huber_parameter = 0.25*4.0 / 255.0;   /// 0.25*4/255 :   or 4/255
-
+bool useImgPyramid = true;
 	// -----------------------------------------Initialize the pose xi with GT or just use the default value---------------------
 //	Eigen::Vector3d initial_translation;
 //	initial_translation<< -0.2, -0.1, 0;
@@ -376,11 +368,9 @@ int main(int argc, char **argv) {
 	double min_gt_special, max_gt_special;
 	cv::minMaxLoc(inv_depth_ref, &min_gt_special, &max_gt_special);
 	cout << "\n show inv_depth_ref min, max:\n" << min_gt_special << "," << max_gt_special << endl;
-
 	//	Mat inv_depth_ref_for_show = inv_depth_ref * (1.0 / (max_gt_special - min_gt_special)) +(-min_gt_special * (1.0 / (max_gt_special - min_gt_special)));
 	//	string depth_ref_name = "inv_depth_ref";
 	//	imshow(depth_ref_name, inv_depth_ref_for_show);
-
 
 	for (int lvl = 1; lvl >= 1; lvl--) {
 		cout << "\n Show the value of lvl:" << lvl << endl;
@@ -392,7 +382,6 @@ int main(int argc, char **argv) {
 		downscale(grayImage_ref, inv_depth_ref, K, lvl_ref, IRef, DRef, Klvl);
 		downscale(grayImage_target, depth_target, K, lvl_target, I, D, Klvl_ignore);
 		double min_gt_special, max_gt_special;
-
 		int i = 0;
 		while (i < 2) {
 			double max_n_, min_n_;
@@ -410,23 +399,9 @@ int main(int argc, char **argv) {
 			string depth_ref_name = "inv_depth_ref" + to_string(i);
 //			imshow(depth_ref_name, inv_depth_ref_for_show);
 //			cout<<"show the current depth:"<<inv_depth_ref.at<double>(359,470)<<endl;
-
-
-			if (dataLoader->options_.remove_outlier_manually) {
-				//				PhotometricBA(IRef, I, options, Klvl, xi, inv_depth_ref,deltaMap,depth_upper_bound, depth_lower_bound,dataLoader->outlier_mask_big_baseline);
-				//				//				inv_depth_ref.convertTo(inv_depth_ref, CV_32FC1);
-				//				//				showScaledImage(depth_ref_gt, inv_depth_ref);
-				//				//				waitKey(0);
-			} else {
-
-                statusMap_NonLambCand= pointOfInterestArea.clone();
-				PhotometricBA(IRef, I, options, Klvl, Rotation, Translation, inv_depth_ref, deltaMap, depth_upper_bound,depth_lower_bound, statusMap, statusMapB,statusMap_NonLambCand);
-			}
-
-                                                                                                    //			DSONL::updateDelta(dataLoader->camPose1, EnvLight,Rotation,Translation,Klvl,image_ref_baseColor,inv_depth_ref,image_ref_metallic ,image_ref_roughness,deltaMap,newNormalMap,up_new, butt_new);
-
-
-
+            // Photometric loss
+            statusMap_NonLambCand = pointOfInterestArea.clone();
+            PhotometricBA(IRef, I, options, Klvl, Rotation, Translation, inv_depth_ref, deltaMap, depth_upper_bound,depth_lower_bound, statusMap, statusMapB,statusMap_NonLambCand);
 
             // Result analysis
             cout << "\n show depth_ref min, max:\n" << min_gt_special << "," << max_gt_special << endl;
@@ -436,27 +411,59 @@ int main(int argc, char **argv) {
                  << 100 * translationErr(xi_GT.translation(), Translation) << "(%) "
                  << "\n Show depth error :" << depthErr(depth_ref_gt, inv_depth_ref).val[0]
                  << endl;
-
-
             std::cout << "\n Start calculating delta map ... " << endl;
             std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
 
 
+            // use estimated pose
+//            DSONL::updateDelta(dataLoader->camPose1,EnvLightLookup, statusMap,Rotation,Translation,Klvl,image_ref_baseColor,inv_depth_ref,image_ref_metallic ,image_ref_roughness,deltaMap,newNormalMap,up_new, butt_new, pointOfInterestArea_Non_Lambertian_2358);//         DSONL::updateDelta(dataLoader->camPose1,EnvLightLookup, statusMap,Rotation,Translation,Klvl,image_ref_baseColor,inv_depth_ref,image_ref_metallic ,image_ref_roughness,deltaMap,newNormalMap,up_new, butt_new);
+            // use GT  pose
+//            DSONL::updateDelta(dataLoader->camPose1,EnvLightLookup, statusMap,Rotation_GT,Translation_GT,Klvl,image_ref_baseColor,inv_depth_ref,image_ref_metallic ,image_ref_roughness,deltaMap,newNormalMap,up_new, butt_new, pointOfInterestArea_Non_Lambertian_2358);
+            // deltaMapGT
+//            Mat deltaMapGT_res= deltaMapGT(grayImage_ref,depth_ref,grayImage_target,depth_target,K.cast<double>(),distanceThres,xi_GT, upper, buttom, deltaMap, statusMap, pointOfInterestArea_Non_Lambertian_2358);
 
-// adjust here
-//            Mat deltaMapGT_res= deltaMapGT(grayImage_ref,depth_ref,grayImage_target,depth_target,K.cast<double>(),distanceThres,xi_GT, upper, buttom, deltaMap, statusMap, pointOfInterestArea);
+//            for (int u = 0; u < grayImage_ref.rows; u++)// colId, cols: 0 to 480
+//            {
+//                for (int v = 0; v < grayImage_ref.cols; v++)// rowId,  rows: 0 to 640
+//                {
+//                        if ( static_cast<int>(pointOfInterestArea_Non_Lambertian_2358.at<uchar>(u, v))==255 ){
+////                    if (static_cast<int>(pointOfInterestArea_Lambertian_14976.at<uchar>(u, v))==255 ){
+//                        num_points_used+=1;
+//                        pointOfInterestArea.at<uchar>(u,v)= 255;
+//                    }
+//                }
+//            }
+
+//            imshow("deltaMapGT_res",deltaMapGT_res);
+//            waitKey(0);
 
 
-//            DSONL::updateDelta(dataLoader->camPose1,EnvLightLookup, statusMap,Rotation,Translation,Klvl,image_ref_baseColor,inv_depth_ref,image_ref_metallic ,image_ref_roughness,deltaMap,newNormalMap,up_new, butt_new);
-//            DSONL::updateDelta(dataLoader->camPose1,EnvLightLookup, statusMap,Rotation_GT,Translation_GT,Klvl,image_ref_baseColor,inv_depth_ref,image_ref_metallic ,image_ref_roughness,deltaMap,newNormalMap,up_new, butt_new, pointOfInterestArea);
+            // compare deltaMap_GT with deltaMap:
+//            int counter_true=0, counter_all_pts=0;
+//            for (int u = 0; u < grayImage_ref.rows; u++)// colId, cols: 0 to 480
+//            {
+//                for (int v = 0; v < grayImage_ref.cols; v++)// rowId,  rows: 0 to 640
+//                {
+//                    if (pointOfInterestArea_Non_Lambertian_2358.at<uchar>(u,v)!=255){ continue;}
+//                    counter_all_pts+=1;
+////                    cout<<"check deltaMap_GT vals:"<<deltaMapGT_res.at<float>(u,v)<<"and, deltaMap.at<float>(u,v):"<<deltaMap.at<float>(u,v)<<endl;
+//                    if ((deltaMapGT_res.at<float>(u,v)>=1.0 && deltaMap.at<float>(u,v)>=1.0) || (deltaMapGT_res.at<float>(u,v)<1.0 && deltaMap.at<float>(u,v)<1.0) ){
+//                        counter_true+=1;
+//                    }
+//                    }
+//                }
+//        Mat mat_mean, mat_stddev;
+//        double mean_val, std_dev;
+//        meanStdDev(deltaRatio, mat_mean, mat_stddev);
+//        mean_val= mat_mean.at<double>(0,0);
+//        std_dev = mat_stddev.at<double>(0,0);
+
+//        std::cerr<<"show counter_all_pts and delta_true_ratio "<< counter_all_pts<<"and num of counter_true:"<<counter_true<<"show ratio:"<<   (float)counter_true/ (float)counter_all_pts<<endl;
 
 
-
-
-            std::chrono::steady_clock::time_point t2 = std::chrono::steady_clock::now();
-            std::chrono::duration<double> time_used =std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1);
-            std::cout << "\n Delta map is done ... "<< " and costs time:" << time_used.count() << " seconds." << endl;
-
+//            std::chrono::steady_clock::time_point t2 = std::chrono::steady_clock::now();
+//            std::chrono::duration<double> time_used =std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1);
+//            std::cout << "\n Delta map is done ... "<< " and costs time:" << time_used.count() << " seconds." << endl;
 //			Mat deltaMapGT_res= deltaMapGT(grayImage_ref,depth_ref,grayImage_target,depth_target,K.cast<double>(),distanceThres,xi_GT, upper, buttom, deltaMap);
 //
 //          Mat showGTdeltaMap=colorMap(deltaMapGT_res, upper, buttom);
@@ -481,8 +488,6 @@ int main(int argc, char **argv) {
 
 //			imwrite("GT_deltaMap.exr", showGTdeltaMap);
 //			imwrite("ES_deltaMap.exr", showESdeltaMap);
-
-
 			i += 1;
 
 		}

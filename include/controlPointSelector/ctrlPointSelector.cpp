@@ -126,11 +126,11 @@ namespace DSONL {
                 if (kdtree.nearestKSearch(searchPoint, kNearest, pointIdxKNNSearch, pointKNNSquaredDistance) > 0) {
 
 
-                std::cout << "\n---The Nearest point---"<<
-                                    (*(ControlpointCloud))[ pointIdxKNNSearch[0]].x
-                          << " " << (*(ControlpointCloud))[ pointIdxKNNSearch[0]].y
-                          << " " << (*(ControlpointCloud))[ pointIdxKNNSearch[0]].z
-                          << " (squared distance: " << pointKNNSquaredDistance[0] << ")" << std::endl;
+//                std::cout << "\n---The Nearest point---"<<
+//                                    (*(ControlpointCloud))[ pointIdxKNNSearch[0]].x
+//                          << " " << (*(ControlpointCloud))[ pointIdxKNNSearch[0]].y
+//                          << " " << (*(ControlpointCloud))[ pointIdxKNNSearch[0]].z
+//                          << " (squared distance: " << pointKNNSquaredDistance[0] << ")" << std::endl;
 
 //                    cout<<"\n Show current shader point:\n"<<p_w1<<"\n show nearst envMap point coordinate:\n"<< (*(ControlpointCloud))[ pointIdxKNNSearch[0]]<<endl;
 

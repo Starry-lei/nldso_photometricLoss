@@ -561,6 +561,9 @@ namespace DSONL {
         Vec2i boundingBoxUpperLeft_AoI( 145,180);
         Vec2i boundingBoxBotRight_AoI(173,242);
 
+        ofstream delta_comp;
+        delta_comp.open ("delta_comp.txt");
+
         for (int x = 0; x < depth_left.rows; ++x) {
 			for (int y = 0; y < depth_left.cols; ++y) {
 
@@ -587,11 +590,11 @@ namespace DSONL {
 				cloud->push_back(pcl::PointXYZ(point_Trans.x(), point_Trans.y(), point_Trans.z()));
 				pcl::PointXYZ searchPoint(point_Trans.x(), point_Trans.y(), point_Trans.z());
 				if (kdtree.radiusSearch(searchPoint, radius, pointIdxRadiusSearch, pointRadiusSquaredDistance) > 0) {
-					//					for (std::size_t i = 0; i < pointIdxRadiusSearch.size (); ++i)
-					//						std::cout << "\n------"  <<   (*cloud_rig)[ pointIdxRadiusSearch[0] ].x
-					//						          << " " << (*cloud_rig)[ pointIdxRadiusSearch[0] ].y
-					//						          << " " << (*cloud_rig)[ pointIdxRadiusSearch[0] ].z
-					//						          << " (squared distance: " << pointRadiusSquaredDistance[0] << ")" << std::endl;
+//										for (std::size_t i = 0; i < pointIdxRadiusSearch.size (); ++i)
+//											std::cout << "\n------"  <<   (*cloud_rig)[ pointIdxRadiusSearch[0] ].x
+//											          << " " << (*cloud_rig)[ pointIdxRadiusSearch[0] ].y
+//											          << " " << (*cloud_rig)[ pointIdxRadiusSearch[0] ].z
+//											          << " (squared distance: " << pointRadiusSquaredDistance[0] << ")" << std::endl;
 					//
 					float left_intensity = Img_left.at<double>(x, y);
 					float pointCorres_x = (*cloud_rig)[pointIdxRadiusSearch[0]].x;
@@ -603,15 +606,20 @@ namespace DSONL {
 					float delta = right_intensity / left_intensity;
 					//float delta= abs(left_intensity-right_intensity);
 
-                    cout<<"\n Checking radiance vals:"<< "left Coord: u:"<<x<<", v:"<<y<<"left_intensity:"<< left_intensity
-                    << "and right_intensity at pixel_x:"<<pixel_x<<", pixel_y:"<< pixel_y<< "is:"<<  right_intensity
-                            <<"show GT delta: "<<delta <<endl;
+//                    cout<<"\n Checking radiance vals:"<< "left Coord: u:"<<x<<", v:"<<y<<"left_intensity:"<< left_intensity
+//                    << "and right_intensity at pixel_x:"<<pixel_x<<", pixel_y:"<< pixel_y<< "is:"<<  right_intensity
+//                            <<"show GT delta: "<<delta <<endl;
 
 
                     float diff_orig = std::abs(left_intensity - right_intensity);
 					minus_original.at<float>(x, y) = diff_orig;
 					float delta_pred = pred_deltaMap.at<float>(x, y);
+
+                    float diff_residual = std::abs(right_intensity - left_intensity);
 					float diff_adj = std::abs(right_intensity - delta_pred * left_intensity);
+
+                    delta_comp <<x<<" "<<y<<" "<<diff_residual<<" "<<diff_adj<<"\n";
+
 					minus_adjust.at<float>(x, y) = diff_adj;
 					minus_mask.at<uchar>(x, y) = 1;
 
@@ -644,6 +652,9 @@ namespace DSONL {
 				//				cloud_rig->push_back(pcl::PointXYZ(p_c2.x(), p_c2.y(), p_c2.z()));
 			}
 		}
+
+
+        delta_comp.close();
 
 		showMinus(minus_original, minus_adjust, minus_mask);
 
