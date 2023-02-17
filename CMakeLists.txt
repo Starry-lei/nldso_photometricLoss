@@ -77,13 +77,33 @@ include_directories(thirdparty/cereal/include)
 include_directories(thirdparty/CLI11/include)
 
 # include_directories(thirdparty/g2o/include)
-include_directories(include)
+#find_package(g2o REQUIRED "${g2o_DIR}")
+#find_package(g2o REQUIRED )
+#IF(G2O_FOUND)
+#  include_directories(${G2O_INCLUDE_DIR})
+#  message("G2O lib is found:${G2O_INCLUDE_DIR}")
+#ENDIF(G2O_FOUND)
 
+set(G2O_LIBS
+        "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/g2o/lib/libg2o_types_icp.so"
+        "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/g2o/lib/libg2o_types_slam3d.so"
+        "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/g2o/lib/libg2o_core.so"
+        "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/g2o/lib/libg2o_solver_dense.so"
+        "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/g2o/lib/libg2o_stuff.so"
+        "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/g2o/lib/libg2o_types_sba.so"
+        "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/g2o/lib/libg2o_opengl_helper.so"
+        # "${CMAKE_CURRENT_SOURCE_DIR}/thiredparty/g2o/lib/libg2o_csparse_extension.so"
+
+        )
+include_directories(include)
+#${G2O_LIBS}  ${g2o_DIR}
+ message(STATUS "show G2O-----${G2O_LIBS} ")
 # to use link to target "ceres"
 # Note: always link to ceres first, as otherwise a system-wide install might
 # be found before our custom build. For example on macOS a both pangolin and
 # TBB have /usr/local/include as part of their include directories.
 find_package(Ceres 2.0 REQUIRED CONFIG HINTS "${CERES_ROOT}" NO_DEFAULT_PATH)
+#find_package(g2o REQUIRED)
 
 # to use link to target "pangolin"
 set(Pangolin_DIR ${PANGOLIN_ROOT})
@@ -204,16 +224,6 @@ target_link_libraries(photometricLoss
   ${OPENGL_LIBRARIES}
   ${GLUT_LIBRARIES}
   ${GLEW_LIBRARIES}
+        ${G2O_LIBS}
 )
 
-#add_executable(test_functions src/test_functions.cpp)
-#target_link_libraries(test_functions
-#  Ceres::ceres
-#  TBB::tbb
-#  OpenCV
-#  ${PCL_LIBRARIES}
-#  dsonl
-#  ${OPENGL_LIBRARIES}
-#  ${GLUT_LIBRARIES}
-#  ${GLEW_LIBRARIES}
-#)

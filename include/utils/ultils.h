@@ -530,7 +530,6 @@ namespace DSONL {
 				Eigen::Matrix<double, 3, 1> p_3d_no_d_r;
 				p_3d_no_d_r << (y - cx) / fx, (x - cy) / fy, 1.0;
 				Eigen::Matrix<double, 3, 1> p_c2 = d_r * p_3d_no_d_r;
-
 				cloud_rig->push_back(pcl::PointXYZ(p_c2.x(), p_c2.y(), p_c2.z()));
 			}
 		}
@@ -622,7 +621,6 @@ namespace DSONL {
 
 					minus_adjust.at<float>(x, y) = diff_adj;
 					minus_mask.at<uchar>(x, y) = 1;
-
 					deltaMapGT.at<float>(x, y) = delta;
 				}
 

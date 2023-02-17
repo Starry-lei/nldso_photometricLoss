@@ -93,7 +93,7 @@ int main(int argc, char **argv) {
     }
     imshow("pointOfInterestArea",pointOfInterestArea);
     cout<<"check channel of sPointLambertianMask_10011:"<<sPointLambertianMask_10011.channels()<<" check num_points_used "<<num_points_used<<endl;
-    waitKey(0);
+//    waitKey(0);
 
     // ----------------------------------------optimization variable: R, t--------------------------------------
     Sophus::SE3d xi, xi_GT;
@@ -246,7 +246,7 @@ int main(int argc, char **argv) {
 
     cout<<"\n The preComputation of EnvMap is ready!"<<endl;
     imshow("grayImage_target", grayImage_target);
-    waitKey(0);
+//    waitKey(0);
 	// show the depth image with noise
 	double min_depth_val, max_depth_val;
 	cv::minMaxLoc(depth_ref, &min_depth_val, &max_depth_val);
@@ -295,7 +295,7 @@ int main(int argc, char **argv) {
 
 	double trErr;
 	Eigen::Vector3d T_GT(xi_GT.translation());
-	Eigen::Vector3d perturbedTranslation = translation_pertabation(0.05, 0.05, 0.05, T_GT, trErr); // percentage
+	Eigen::Vector3d perturbedTranslation = translation_pertabation(0.0, 0.0, 0.0, T_GT, trErr); // percentage
 	double Mean = 0.0, StdDev = 0;
 	//	float densities[] = {0.03, 0.003, 0.05, 0.15, 0.5, 1}; /// number of optimized depths,  current index is 1
 
@@ -400,17 +400,18 @@ bool useImgPyramid = true;
 //			imshow(depth_ref_name, inv_depth_ref_for_show);
 //			cout<<"show the current depth:"<<inv_depth_ref.at<double>(359,470)<<endl;
             // Photometric loss
-            statusMap_NonLambCand = pointOfInterestArea.clone();
-            PhotometricBA(IRef, I, options, Klvl, Rotation, Translation, inv_depth_ref, deltaMap, depth_upper_bound,depth_lower_bound, statusMap, statusMapB,statusMap_NonLambCand);
+             statusMap_NonLambCand = pointOfInterestArea.clone();
+             PhotometricBA(IRef, I, options, Klvl, depth_ref, deltaMap,statusMap_NonLambCand, xi);
 
             // Result analysis
+            Rotation = xi.rotationMatrix();
+            Translation=xi.translation();
             cout << "\n show depth_ref min, max:\n" << min_gt_special << "," << max_gt_special << endl;
             cout << "\n Show optimized rotation:\n" << Rotation.matrix() << "\n Show optimized translation:\n"<< Translation << endl;
             cout << "\n Show Rotational error :" << rotationErr(xi_GT.rotationMatrix(), Rotation.matrix())
                  << "(degree)." << "\n Show translational error :"
                  << 100 * translationErr(xi_GT.translation(), Translation) << "(%) "
-                 << "\n Show depth error :" << depthErr(depth_ref_gt, inv_depth_ref).val[0]
-                 << endl;
+                 << "\n Show depth error :" << depthErr(depth_ref_gt, inv_depth_ref).val[0] << endl;
             std::cout << "\n Start calculating delta map ... " << endl;
             std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
 
@@ -421,6 +422,9 @@ bool useImgPyramid = true;
 //            DSONL::updateDelta(dataLoader->camPose1,EnvLightLookup, statusMap,Rotation_GT,Translation_GT,Klvl,image_ref_baseColor,inv_depth_ref,image_ref_metallic ,image_ref_roughness,deltaMap,newNormalMap,up_new, butt_new, pointOfInterestArea_Non_Lambertian_2358);
             // deltaMapGT
 //            Mat deltaMapGT_res= deltaMapGT(grayImage_ref,depth_ref,grayImage_target,depth_target,K.cast<double>(),distanceThres,xi_GT, upper, buttom, deltaMap, statusMap, pointOfInterestArea_Non_Lambertian_2358);
+//            Mat deltaMapGT_res= deltaMapGT(grayImage_ref,depth_ref,grayImage_target,depth_target,K.cast<double>(),distanceThres,xi_GT, upper, buttom, deltaMap, statusMap, statusMap_NonLambCand);
+
+            //
 
 //            for (int u = 0; u < grayImage_ref.rows; u++)// colId, cols: 0 to 480
 //            {
@@ -461,9 +465,9 @@ bool useImgPyramid = true;
 //        std::cerr<<"show counter_all_pts and delta_true_ratio "<< counter_all_pts<<"and num of counter_true:"<<counter_true<<"show ratio:"<<   (float)counter_true/ (float)counter_all_pts<<endl;
 
 
-//            std::chrono::steady_clock::time_point t2 = std::chrono::steady_clock::now();
-//            std::chrono::duration<double> time_used =std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1);
-//            std::cout << "\n Delta map is done ... "<< " and costs time:" << time_used.count() << " seconds." << endl;
+            std::chrono::steady_clock::time_point t2 = std::chrono::steady_clock::now();
+            std::chrono::duration<double> time_used =std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1);
+            std::cout << "\n Delta map is done ... "<< " and costs time:" << time_used.count() << " seconds." << endl;
 //			Mat deltaMapGT_res= deltaMapGT(grayImage_ref,depth_ref,grayImage_target,depth_target,K.cast<double>(),distanceThres,xi_GT, upper, buttom, deltaMap);
 //
 //          Mat showGTdeltaMap=colorMap(deltaMapGT_res, upper, buttom);
