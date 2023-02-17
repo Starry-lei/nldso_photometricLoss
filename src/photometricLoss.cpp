@@ -105,6 +105,7 @@ int main(int argc, char **argv) {
 
 //    imshow("image_ref_baseColor",image_ref_baseColor);
 //    waitKey(0);
+
     // ====================================== pointSelector========================================
     bool usePixelSelector= true;
     float densities[] = {0.03,0.003, 0.05,0.15,0.5,1}; /// number of optimized depths,  current index is 1
