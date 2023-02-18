@@ -59,6 +59,10 @@ namespace DSONL {
     envLight::envLight(std::unordered_map<int, int> selectedIndex, int argc, char **argv, string envMap_Folder, string controlPointPose_path) {
 
 
+        pcl::PCDWriter writer;
+
+
+
         std::vector<string> fileNames;
         GetFileNames(envMap_Folder,fileNames);
         std::cout<<" \n Show fileNames.size():"<<fileNames.size()<< std::endl;
@@ -158,6 +162,7 @@ namespace DSONL {
                                    string envMap_Folder, string controlPointPose_path) {
 
 
+        pcl::PCDWriter writer;
         std::vector<string> fileNames;
         GetFileNames(envMap_Folder,fileNames);
         std::cout<<" \n Show fileNames.size():"<<fileNames.size()<< std::endl;
@@ -242,8 +247,56 @@ namespace DSONL {
 
                 });
 
+        // sparsify the control point cloud
+
+        ofstream sparsifyPointCloud;
+        sparsifyPointCloud.open ("ControlpointCloud_Sparsfied.txt");
+        pcl::PointCloud<pcl::PointXYZ>::Ptr ControlpointCloud_voxelgrid (new pcl::PointCloud<pcl::PointXYZ>);
+
+        pcl::KdTreeFLANN<pcl::PointXYZ> kdtree_temp;
+        kdtree_temp.setInputCloud(ControlpointCloud);
+        pcl::PointCloud<pcl::PointXYZ>::Ptr downSampledCloud (new pcl::PointCloud<pcl::PointXYZ>);
+        std::vector<int> pointIdxKNNSearch(1);
+        std::vector<float> pointKNNSquaredDistance(1);
+
+        *downSampledCloud=*ControlpointCloud;
+
+        if (false){
+            downSampledCloud->clear();
+            // save point cloud
+            writer.write("ControlpointCloud_not_sparsfied.pcd",*ControlpointCloud, false);
+            std::cout << "EnvMap PointCloud before filtering: " << ControlpointCloud->width * ControlpointCloud->height<< " data points (" << pcl::getFieldsList (*ControlpointCloud) << ")." << std::endl;
+            pcl::VoxelGrid<pcl::PointXYZ>  downsample;
+            downsample.setInputCloud(ControlpointCloud);
+            downsample.setLeafSize(0.005f,0.005,0.005f); // leaf size: 1cm, 5mm
+            downsample.filter(*ControlpointCloud_voxelgrid);
+
+            std::vector<int> neighbor_indices;
+            for (const auto& point: *ControlpointCloud_voxelgrid){
+                sparsifyPointCloud <<point.x<<" "<<point.y<<" "<<point.z<<"\n";
+                pcl::PointXYZ searchPoint(point.x,point.y,point.z);
+                if ( kdtree_temp.nearestKSearch (searchPoint, 1, pointIdxKNNSearch, pointKNNSquaredDistance) > 0 ){
+
+//                    std::cout << "    "  <<   (*ControlpointCloud)[ pointIdxKNNSearch[0] ].x
+//                              << " " << (*ControlpointCloud)[ pointIdxKNNSearch[0] ].y
+//                              << " " << (*ControlpointCloud)[ pointIdxKNNSearch[0] ].z
+//                              << " (squared distance: " << pointKNNSquaredDistance[0] << ")" << std::endl;
+
+                    downSampledCloud->push_back(pcl::PointXYZ( (*ControlpointCloud)[ pointIdxKNNSearch[0] ].x, (*ControlpointCloud)[ pointIdxKNNSearch[0] ].y, (*ControlpointCloud)[ pointIdxKNNSearch[0] ].z));
+
+                }
+            }
+            // save sparsified point cloud
+            writer.write("ControlpointCloud_sparsfied.pcd",*ControlpointCloud_voxelgrid, false);
+        }
+
+        sparsifyPointCloud.close();
+
+        std::cout << "EnvMap PointCloud after filtering: " << downSampledCloud->width * downSampledCloud->height<< " data points (" << pcl::getFieldsList (*downSampledCloud) << ")." << std::endl;
+
+        writer.write("ControlpointCloud_downSampledCloud.pcd",*downSampledCloud, false);
         if (ControlpointCloud->empty()){std::cerr<<"\n Wrong Control-pointCloud!"<< endl;}
-        kdtree.setInputCloud(ControlpointCloud);
+        kdtree.setInputCloud(downSampledCloud);
 
         // ======================serialization============================
     }
@@ -251,9 +304,7 @@ namespace DSONL {
 
 
 
-    envLight::~envLight() {
-
-    }
+    envLight::~envLight() {}
 
     pointEnvlight::pointEnvlight(const pointEnvlight & old) {
         pointEnvlight();

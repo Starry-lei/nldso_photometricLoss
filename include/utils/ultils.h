@@ -546,7 +546,7 @@ namespace DSONL {
 		//new image
 
 
-		inliers_filter.emplace(213, 295);//yes
+		inliers_filter.emplace(388, 482);//yes
 		std::vector<int> pointIdxRadiusSearch;
 		std::vector<float> pointRadiusSquaredDistance;
 
@@ -558,17 +558,17 @@ namespace DSONL {
 //        Vec2i boundingBoxUpperLeft(83, 76);
 //        Vec2i boundingBoxBotRight(240, 320);
 
-        Vec2i boundingBoxUpperLeft_AoI( 145,180);
+        Vec2i boundingBoxUpperLeft_AoI(145,180);
         Vec2i boundingBoxBotRight_AoI(173,242);
 
         ofstream delta_comp;
-        delta_comp.open ("delta_comp.txt");
+        delta_comp.open ("delta_comp_sparsed.txt");
 
         for (int x = 0; x < depth_left.rows; ++x) {
 			for (int y = 0; y < depth_left.cols; ++y) {
 
-				//				if(inliers_filter.count(x)==0){continue;}// ~~~~~~~~~~~~~~Filter~~~~~~~~~~~~~~~~~~~~~~~
-				//				if(inliers_filter[x]!=y ){continue;}// ~~~~~~~~~~~~~~Filter~~~~~~~~~~~~~~
+								if(inliers_filter.count(x)==0){continue;}// ~~~~~~~~~~~~~~Filter~~~~~~~~~~~~~~~~~~~~~~~
+								if(inliers_filter[x]!=y ){continue;}// ~~~~~~~~~~~~~~Filter~~~~~~~~~~~~~~
 
 //                    if ( (y<boundingBoxUpperLeft_AoI.val[1] || y>boundingBoxBotRight_AoI.val[1]) || (x< boundingBoxUpperLeft_AoI.val[0] ||  x> boundingBoxBotRight_AoI.val[0])){ continue;}
 //                    if (statusMap!=NULL && static_cast<int>(statusMap[x * depth_left.cols + y])!= 255){ continue;}
@@ -606,9 +606,9 @@ namespace DSONL {
 					float delta = right_intensity / left_intensity;
 					//float delta= abs(left_intensity-right_intensity);
 
-//                    cout<<"\n Checking radiance vals:"<< "left Coord: u:"<<x<<", v:"<<y<<"left_intensity:"<< left_intensity
-//                    << "and right_intensity at pixel_x:"<<pixel_x<<", pixel_y:"<< pixel_y<< "is:"<<  right_intensity
-//                            <<"show GT delta: "<<delta <<endl;
+                    cout<<"\n Checking radiance vals:"<< "left Coord: u:"<<x<<", v:"<<y<<"left_intensity:"<< left_intensity
+                    << "and right_intensity at pixel_x:"<<pixel_x<<", pixel_y:"<< pixel_y<< "is:"<<  right_intensity
+                            <<"show intensity difference: "<<left_intensity-right_intensity <<"show GT delta: "<<delta <<endl;
 
 
                     float diff_orig = std::abs(left_intensity - right_intensity);

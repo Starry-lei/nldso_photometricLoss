@@ -6,6 +6,9 @@
 
 #include <pcl/kdtree/kdtree_flann.h>
 #include <pcl/point_cloud.h>
+#include <pcl/octree/octree_search.h>
+#include <pcl/io/pcd_io.h>
+#include <pcl/filters/voxel_grid.h>
 #include "sophus/se3.hpp"
 #include <unordered_map>
 

@@ -345,7 +345,12 @@ namespace DSONL {
 //		inliers_filter.emplace(108, 97 );//cabinet
 //        inliers_filter.emplace(125, 102);//table
 
-        inliers_filter.emplace( 112, 130); // 112, 130
+//        388 482 1.37622 1.55019 // bad  5mm
+//        388 482 1.37622 0.416063 //good
+//        388 482 1.37622 0.760425 // bad 1cm
+
+
+        inliers_filter.emplace( 388,482);
 
 //        inliers_filter_i.emplace(108,97);
 //        inliers_filter_i.emplace(105,119);
@@ -371,6 +376,7 @@ namespace DSONL {
 
         // TODO: to be parallelized
         // K nearest neighbor search
+//        int num_K = 1;
         int num_K = 1;
         Vec2i boundingBoxUpperLeft(83, 76);
         Vec2i boundingBoxBotRight(240, 320);
@@ -386,8 +392,8 @@ namespace DSONL {
 			{
 
                 //=====================================Inliers Filter=====================================
-                //				 if(inliers_filter.count(u)==0){continue;}
-                //				 if(inliers_filter[u]!=v ){continue;}
+                				 if(inliers_filter.count(u)==0){continue;}
+                				 if(inliers_filter[u]!=v ){continue;}
 
                 //=====================================Area of interest Filter=====================================
 //                                if ( (v<boundingBoxUpperLeft_AoI.val[1] || v>boundingBoxBotRight_AoI.val[1]) || (u< boundingBoxUpperLeft_AoI.val[0] ||  u> boundingBoxBotRight_AoI.val[0])){ continue;}
@@ -467,25 +473,25 @@ namespace DSONL {
 				if ( EnvLightLookup->kdtree.nearestKSearch(searchPoint, num_K, pointIdxKNNSearch, pointKNNSquaredDistance) > 0) {
 
 
-//					for (std::size_t i = 0; i < pointIdxKNNSearch.size (); ++i)
-//                    {
-//                        std::cout << "\n------"<<
-//                                           (*(EnvLightLookup->ControlpointCloud))[ pointIdxKNNSearch[0] ].x
-//                                  << " " << (*(EnvLightLookup->ControlpointCloud))[ pointIdxKNNSearch[0]].y
-//                                  << " " << (*(EnvLightLookup->ControlpointCloud))[ pointIdxKNNSearch[0]].z
-//                                  << " (squared distance: " << pointKNNSquaredDistance[0] << ")" << std::endl;
-//                    }
+					for (std::size_t i = 0; i < pointIdxKNNSearch.size (); ++i)
+                    {
+                        std::cout << "\n------"<<
+                                           (*(EnvLightLookup->ControlpointCloud))[ pointIdxKNNSearch[i] ].x
+                                  << " " << (*(EnvLightLookup->ControlpointCloud))[ pointIdxKNNSearch[i]].y
+                                  << " " << (*(EnvLightLookup->ControlpointCloud))[ pointIdxKNNSearch[i]].z
+                                  << " (squared distance: " << pointKNNSquaredDistance[i] << ")" << std::endl;
+                    }
 
                     key4Search.val[0] = (*(EnvLightLookup->ControlpointCloud))[pointIdxKNNSearch[0]].x;
                     key4Search.val[1] = (*(EnvLightLookup->ControlpointCloud))[pointIdxKNNSearch[0]].y;
                     key4Search.val[2] = (*(EnvLightLookup->ControlpointCloud))[pointIdxKNNSearch[0]].z;
 				}
-//                cout<<"\n Show current shader point:\n"<<p_c1_w<<"\n show nearst envMap point coordinate:\n"<<key4Search<<endl;
-//                cout<<"\n show count of envLightMap"<<  EnvLightLookup->envLightIdxMap.count(key4Search)<<endl;
-//                cout<<"show EnvLight size:"<< EnvLightLookup->envLightIdxMap.size()<<endl;
+                cout<<"\n Show current shader point:\n"<<p_c1_w<<"\n show nearst envMap point coordinate:\n"<<key4Search<<endl;
+                cout<<"\n show count of envLightMap"<<  EnvLightLookup->envLightIdxMap.count(key4Search)<<endl;
+                cout<<"show EnvLight size:"<< EnvLightLookup->envLightIdxMap.size()<<endl;
 //
                 int ctrlIndex= EnvLightLookup->envLightIdxMap[key4Search];
-//                cout<<"\n show ctrlIndex :"<< ctrlIndex<<endl;
+                cout<<"\n ==================>>>>>>>>>>>>>>>>>show ctrlIndex :"<< ctrlIndex<<endl;
 
                 if ( EnvLightLookup->envLightIdxMap.size()==0){std::cerr<<"Error in EnvLight->envLightIdxMap! "<<endl;}
 
@@ -621,9 +627,10 @@ namespace DSONL {
 				float delta_b = radiance_beta_prime.val[2] / radiance_beta.val[2];
 				deltaMap.at<float>(u, v) = delta_g;
 
-//                cout<<"\n Checking radiance vals:"<< "left Coord: u:"<<u<<", v:"<<v<<"left_radiance:"<< radiance_beta.val[1]
-//                    << "and right_intensity at pixel_x:"<<"pixel_x"<<", pixel_y:"<< "pixel_y"<< "is:"<<  radiance_beta_prime.val[1]
-//                    <<"  show delta_g: "<<delta_g <<endl;
+                cout<<"\n Checking radiance vals:"<< "left Coord: u:"<<u<<", v:"<<v<<"left_radiance:"<< radiance_beta.val[1]
+                    << "and right_intensity at pixel_x:"<<"pixel_x"<<", pixel_y:"<< "pixel_y"<< "is:"<<  radiance_beta_prime.val[1]
+                        << "and intensity difference:"<<radiance_beta.val[1]-radiance_beta_prime.val[1]
+                    <<"  show delta_g: "<<delta_g <<endl;
 
 
 
