@@ -173,7 +173,10 @@ namespace DSONL {
         selectedIndex_vec.erase(unique(selectedIndex_vec.begin(), selectedIndex_vec.end()), selectedIndex_vec.end());
 
 
-        for (int idx:selectedIndex_vec) { selectedIndex.emplace(idx,1); cout<<"show selected index:"<< idx<<endl;}
+        for (int idx:selectedIndex_vec) {
+            selectedIndex.emplace(idx,1);
+            cout<<"show selected index:"<< idx<<endl;
+        }
 
 
 

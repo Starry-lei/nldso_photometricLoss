@@ -332,7 +332,8 @@ namespace DSONL {
 	        Mat &newNormalMap,
 	        float &upper_b,
 	        float &lower_b
-            , Mat pointOfInterest
+            , Mat pointOfInterest,
+            string renderedEnvMapPath
             ) {
 
 		// ===================================RENDERING PARAMETERS:====================================
@@ -350,17 +351,7 @@ namespace DSONL {
 //        388 482 1.37622 0.760425 // bad 1cm
 
 
-        inliers_filter.emplace( 388,482);
-
-//        inliers_filter_i.emplace(108,97);
-//        inliers_filter_i.emplace(105,119);
-//        inliers_filter_i.emplace(105,117);
-//        inliers_filter_i.emplace(98,202);
-//        inliers_filter_i.emplace(95,242);
-//        inliers_filter_i.emplace(125,102);
-
-
-
+        inliers_filter.emplace( 360,435);
 
 
         Mat ctrlPointMask(deltaMap.rows, deltaMap.cols, CV_8UC3, Scalar(0,0,0));
@@ -374,14 +365,11 @@ namespace DSONL {
         Mat specularityMap(deltaMap.rows, deltaMap.cols, CV_32FC3, Scalar(0));
         Mat DiffuseMap(deltaMap.rows, deltaMap.cols, CV_32FC3, Scalar(0));
 
-        // TODO: to be parallelized
         // K nearest neighbor search
 //        int num_K = 1;
         int num_K = 1;
         Vec2i boundingBoxUpperLeft(83, 76);
         Vec2i boundingBoxBotRight(240, 320);
-
-
         Vec2i boundingBoxUpperLeft_AoI( 145,180);
         Vec2i boundingBoxBotRight_AoI(173,242);
 
@@ -405,8 +393,6 @@ namespace DSONL {
 //                                if (statusMap!=NULL && static_cast<int>(statusMap[u * depth_map.cols + v])!= 255){ continue;}
 
                 if (pointOfInterest.at<uchar>(u,v)!=255){ continue;}
-
-
 
                 // cout<<"show current index:"<< u<<","<<v<<endl;
                 // get image_roughnes!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1
@@ -489,7 +475,7 @@ namespace DSONL {
                 cout<<"\n Show current shader point:\n"<<p_c1_w<<"\n show nearst envMap point coordinate:\n"<<key4Search<<endl;
                 cout<<"\n show count of envLightMap"<<  EnvLightLookup->envLightIdxMap.count(key4Search)<<endl;
                 cout<<"show EnvLight size:"<< EnvLightLookup->envLightIdxMap.size()<<endl;
-//
+////
                 int ctrlIndex= EnvLightLookup->envLightIdxMap[key4Search];
                 cout<<"\n ==================>>>>>>>>>>>>>>>>>show ctrlIndex :"<< ctrlIndex<<endl;
 
@@ -498,12 +484,12 @@ namespace DSONL {
 
                 // Get pyramid
 //                std::string renderedEnvLight_path="/home/lei/Documents/Research/envMapData/SeventeenPointsEnvMap";
+//                std::string renderedEnvLight_path="/home/lei/Documents/Research/envMapData/EnvMap_2358";
 
-                std::string renderedEnvLight_path="/home/lei/Documents/Research/envMapData/EnvMap_2358";
+                std::string renderedEnvLight_path=renderedEnvMapPath;
 
 
 
-                // home/lei/Documents/Research/envMapData/ThirtyPointsEnvMap
                 stringstream ss;
                 string img_idx_str;
                 ss << ctrlIndex;
@@ -615,6 +601,8 @@ namespace DSONL {
                 specularityMap.at<Vec3f>(u,v)=ibl_Radiance->Specularity;
                 DiffuseMap.at<Vec3f>(u,v)=ibl_Radiance->diffusity;
 
+                cout<<"\n ==================>>>>>>>>>>>>>>>>>show data vals :"<< "ibl_Radiance->Specularity"
+                <<ibl_Radiance->Specularity<< "ibl_Radiance->diffusity;"<<ibl_Radiance->diffusity <<endl;
 
 
 				//  ===================================TONE MAPPING===========================================

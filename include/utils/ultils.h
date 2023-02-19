@@ -546,7 +546,9 @@ namespace DSONL {
 		//new image
 
 
-		inliers_filter.emplace(388, 482);//yes
+		inliers_filter.emplace(360, 435);
+
+
 		std::vector<int> pointIdxRadiusSearch;
 		std::vector<float> pointRadiusSquaredDistance;
 
@@ -618,6 +620,7 @@ namespace DSONL {
                     float diff_residual = std::abs(right_intensity - left_intensity);
 					float diff_adj = std::abs(right_intensity - delta_pred * left_intensity);
 
+                    std::cerr<<x<<" "<<y<<" "<<diff_residual<<diff_adj<<" "<<endl;
                     delta_comp <<x<<" "<<y<<" "<<diff_residual<<" "<<diff_adj<<"\n";
 
 					minus_adjust.at<float>(x, y) = diff_adj;

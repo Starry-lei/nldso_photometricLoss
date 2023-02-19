@@ -196,7 +196,7 @@ namespace DSONL {
         tbb::parallel_for(
                 (size_t)1, (size_t)(fileNames.size()+1), [&] (size_t i) {
 
-                    if (selectedIndex.count(static_cast<int>(i)) == 0) { return ; }
+                    if (selectedIndex.count(static_cast<int>(i)) == 0 ) { return ; }
 
 
 //                    stringstream ss;
@@ -261,6 +261,9 @@ namespace DSONL {
 
         *downSampledCloud=*ControlpointCloud;
 
+
+
+
         if (false){
             downSampledCloud->clear();
             // save point cloud
@@ -268,8 +271,10 @@ namespace DSONL {
             std::cout << "EnvMap PointCloud before filtering: " << ControlpointCloud->width * ControlpointCloud->height<< " data points (" << pcl::getFieldsList (*ControlpointCloud) << ")." << std::endl;
             pcl::VoxelGrid<pcl::PointXYZ>  downsample;
             downsample.setInputCloud(ControlpointCloud);
-            downsample.setLeafSize(0.005f,0.005,0.005f); // leaf size: 1cm, 5mm
+            downsample.setLeafSize(0.1f,0.1,0.1f); // leaf size: 1cm, 5m
             downsample.filter(*ControlpointCloud_voxelgrid);
+
+//            downsample.setFilterLimits()
 
             std::vector<int> neighbor_indices;
             for (const auto& point: *ControlpointCloud_voxelgrid){
@@ -291,9 +296,7 @@ namespace DSONL {
         }
 
         sparsifyPointCloud.close();
-
         std::cout << "EnvMap PointCloud after filtering: " << downSampledCloud->width * downSampledCloud->height<< " data points (" << pcl::getFieldsList (*downSampledCloud) << ")." << std::endl;
-
         writer.write("ControlpointCloud_downSampledCloud.pcd",*downSampledCloud, false);
         if (ControlpointCloud->empty()){std::cerr<<"\n Wrong Control-pointCloud!"<< endl;}
         kdtree.setInputCloud(downSampledCloud);
