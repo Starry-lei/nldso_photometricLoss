@@ -53,8 +53,12 @@ int main(int argc, char **argv) {
 //    std::string envMap_Folder="/media/lei/Data/LivingRoom_scene/EnvMapSparse/formattedEnvMap";
 //    string controlPointPose_path="/home/lei/Documents/Research/envMapData/control_cam_pose_ControlpointCloud_Sparsfied_764.txt";
 
-    std::string envMap_Folder="/media/lei/Data/LivingRoom_scene/EnvMapSparse/formattedEnvMap91";
-    string controlPointPose_path="/home/lei/Documents/Research/envMapData/control_cam_pose_ControlpointCloud_Sparsfied_91.txt";
+//    std::string envMap_Folder="/media/lei/Data/LivingRoom_scene/EnvMapSparse/formattedEnvMap91";
+//    string controlPointPose_path="/home/lei/Documents/Research/envMapData/control_cam_pose_ControlpointCloud_Sparsfied_91.txt";
+
+
+    std::string envMap_Folder="/media/lei/Data/LivingRoom_scene/EnvMapSparse/formattedEnvMap150";
+    string controlPointPose_path="/home/lei/Documents/Research/envMapData/2frame0370_02_control_cam_pose_150.txt";
 
 
 
