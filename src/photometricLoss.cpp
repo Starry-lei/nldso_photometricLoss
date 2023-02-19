@@ -46,13 +46,17 @@ int main(int argc, char **argv) {
 //    std::string envMap_Folder="/home/lei/Documents/Research/envMapData/SeventeenPointsEnvMap";
 //    string controlPointPose_path= "/home/lei/Documents/Research/envMapData/scene0370_02_control_cam_pose.txt";
 
-    std::string envMap_Folder=    "/home/lei/Documents/Research/envMapData/EnvMap_2358";
-    string controlPointPose_path= "/home/lei/Documents/Research/envMapData/2frame0370_02_control_cam_pose_2358.txt";
-    string  renderedEnvMapPath=  "/home/lei/Documents/Research/envMapData/EnvMap_2358";
+//    std::string envMap_Folder=    "/home/lei/Documents/Research/envMapData/EnvMap_2358";
+//    string controlPointPose_path= "/home/lei/Documents/Research/envMapData/2frame0370_02_control_cam_pose_2358.txt";
+//    string  renderedEnvMapPath=  "/home/lei/Documents/Research/envMapData/EnvMap_2358";
 
 //    std::string envMap_Folder="/home/lei/Documents/Research/envMapData/EnvMap_764";
 //    string controlPointPose_path= "/home/lei/Documents/Research/envMapData/control_cam_pose_ControlpointCloud_Sparsfied_764.txt";
 //    string  renderedEnvMapPath=   "/home/lei/Documents/Research/envMapData/EnvMap_764";
+
+    std::string envMap_Folder="/home/lei/Documents/Research/envMapData/EnvMap_91";
+    string controlPointPose_path= "/home/lei/Documents/Research/envMapData/control_cam_pose_ControlpointCloud_Sparsfied_91.txt";
+    string  renderedEnvMapPath=   "/home/lei/Documents/Research/envMapData/EnvMap_91";
 
 
 
