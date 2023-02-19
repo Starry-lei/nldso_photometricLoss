@@ -50,8 +50,8 @@ int main(int argc, char **argv) {
 //    string controlPointPose_path= "/home/lei/Documents/Research/envMapData/scene0370_02_control_cam_pose.txt";
 
 
-    std::string envMap_Folder="/media/lei/Data/LivingRoom_scene/leitest3/formattedEnvMap";
-    string controlPointPose_path="/home/lei/Documents/Research/envMapData/2frame0370_02_control_cam_pose.txt";
+    std::string envMap_Folder="/media/lei/Data/LivingRoom_scene/EnvMapSparse/formattedEnvMap";
+    string controlPointPose_path="/home/lei/Documents/Research/envMapData/control_cam_pose_ControlpointCloud_Sparsfied_764.txt";
 
 
 

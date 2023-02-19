@@ -210,7 +210,7 @@ namespace DSONL {
 //        string renderedEnvLight_path="/home/lei/Documents/Research/envMapData/envMapData_Dense01";
 //        string renderedEnvLight_path="/home/lei/Documents/Research/envMapData/maskedSelector";
 //        string renderedEnvLight_path="/home/lei/Documents/Research/envMapData/SeventeenPointsEnvMap";
-        string renderedEnvLight_path="/home/lei/Documents/Research/envMapData/EnvMap_2358";
+        string renderedEnvLight_path="/home/lei/Documents/Research/envMapData/EnvMap_764";
 
 
         string renderedEnvLightfolder= renderedEnvLight_path+ "/envMap"+lightIdx+"/renderedEnvLight";  //+"/renderedEnvLight";
@@ -455,7 +455,7 @@ namespace DSONL {
 //        string renderedEnvLight_path="/home/lei/Documents/Research/envMapData/maskedSelector";
 //        string renderedEnvLight_path="/home/lei/Documents/Research/envMapData/SeventeenPointsEnvMap";
 
-        string renderedEnvLight_path="/home/lei/Documents/Research/envMapData/EnvMap_2358";
+        string renderedEnvLight_path="/home/lei/Documents/Research/envMapData/EnvMap_764";
 
         string renderedEnvLightDiffuse= renderedEnvLight_path+ "/envMap"+lightIdx+"/renderedEnvLightDiffuse"; //+"/renderedEnvLight";
         if (boost::filesystem::create_directories(renderedEnvLightDiffuse)){
