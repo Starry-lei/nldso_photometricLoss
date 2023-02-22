@@ -75,8 +75,6 @@ namespace DSONL {
         imshow("slamImg", Image);
 
         std::unordered_map<int, int> inliers_filter, inliers_filter_i;
-
-
 //        inliers_filter.emplace(108, 97 );//cabinet
 //        inliers_filter.emplace(125, 102);//table
         // new test point in shadow:  108, 108
@@ -173,12 +171,13 @@ namespace DSONL {
         selectedIndex_vec.erase(unique(selectedIndex_vec.begin(), selectedIndex_vec.end()), selectedIndex_vec.end());
 
 
-//        for (int idx:selectedIndex_vec) {
-//            selectedIndex.emplace(idx,1);
-//            cout<<"show selected index:"<< idx<<endl;
-//        }
+        for (int idx:selectedIndex_vec) {
+            selectedIndex.emplace(idx,1);
+            cout<<"show selected index:"<< idx<<endl;
+        }
 
-        selectedIndex.emplace(int(44),1);
+//        selectedIndex.emplace(int(44),1);
+//        selectedIndex.emplace(int(105),1);
 
 
 

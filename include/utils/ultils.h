@@ -513,6 +513,19 @@ namespace DSONL {
 		//		Mat normalMap_left=getNormals(K_,depth_left);
 		//		Mat normalMap_right=getNormals(K_,depth_right);
 
+        Mat envMapWorkMap(pointOfInterest.rows, pointOfInterest.cols, CV_8UC3, Scalar(0,0,0));
+
+        for (int x = 0; x < pointOfInterest.rows; ++x) {
+            for (int y = 0; y < pointOfInterest.cols; ++y) {
+                if (pointOfInterest.at<uchar>(x, y) == 255) {
+                    envMapWorkMap.at<Vec3b>(x, y)[0] = 255;
+                    envMapWorkMap.at<Vec3b>(x, y)[1] = 255;
+                    envMapWorkMap.at<Vec3b>(x, y)[2] = 255;
+                }
+            }
+        }
+
+
 		Mat deltaMapGT(depth_left.rows, depth_left.cols, CV_32FC1, Scalar(-1));// default value 1.0
 		                                                                       //		Mat deltaMapGT(depth_left.rows, depth_left.cols, CV_32FC1, Scalar(1)); // default value 1.0
 		double fx = K_(0, 0), cx = K_(0, 2), fy = K_(1, 1), cy = K_(1, 2);
@@ -608,22 +621,37 @@ namespace DSONL {
 					float delta = right_intensity / left_intensity;
 					//float delta= abs(left_intensity-right_intensity);
 
-                    cout<<"\n Checking radiance vals:"<< "left Coord: u:"<<x<<", v:"<<y<<"left_intensity:"<< left_intensity
-                    << "and right_intensity at pixel_x:"<<pixel_x<<", pixel_y:"<< pixel_y<< "is:"<<  right_intensity
-                            <<"show intensity difference: "<<left_intensity-right_intensity <<"show GT delta: "<<delta <<endl;
-
+//                    cout<<"\n Checking radiance vals:"<< "left Coord: u:"<<x<<", v:"<<y<<"left_intensity:"<< left_intensity
+//                    << "and right_intensity at pixel_x:"<<pixel_x<<", pixel_y:"<< pixel_y<< "is:"<<  right_intensity
+//                            <<"show intensity difference: "<<left_intensity-right_intensity <<"show GT delta: "<<delta <<endl;
 
                     float diff_orig = std::abs(left_intensity - right_intensity);
 					minus_original.at<float>(x, y) = diff_orig;
 					float delta_pred = pred_deltaMap.at<float>(x, y);
 
+                    if (delta_pred==1.0){ continue;}
                     float diff_residual = std::abs(right_intensity - left_intensity);
 					float diff_adj = std::abs(right_intensity - delta_pred * left_intensity);
 
-                    std::cerr<<x<<" "<<y<<" "<<diff_residual<<diff_adj<<" "<<endl;
+//                    envMapWorkMap.at<Vec3b>(x,y)[1]=255;
+
+
+//                    std::cerr<<x<<" "<<y<<" "<<diff_residual<<diff_adj<<" "<<endl;
                     delta_comp <<x<<" "<<y<<" "<<diff_residual<<" "<<diff_adj<<"\n";
 
-					minus_adjust.at<float>(x, y) = diff_adj;
+                    if (diff_residual>diff_adj){
+                        envMapWorkMap.at<Vec3b>(x,y)[0]=0;
+                        envMapWorkMap.at<Vec3b>(x,y)[1]=255 * (diff_residual-diff_adj)/diff_residual;
+                        envMapWorkMap.at<Vec3b>(x,y)[2]=0;
+
+                    }else if (diff_residual<diff_adj){
+                        envMapWorkMap.at<Vec3b>(x,y)[0]=0;
+                        envMapWorkMap.at<Vec3b>(x,y)[1]=0;
+                        envMapWorkMap.at<Vec3b>(x,y)[2]=255* (diff_adj-diff_residual)/diff_residual;
+                    }
+
+
+                    minus_adjust.at<float>(x, y) = diff_adj;
 					minus_mask.at<uchar>(x, y) = 1;
 
 					deltaMapGT.at<float>(x, y) = delta;
@@ -660,6 +688,10 @@ namespace DSONL {
         delta_comp.close();
 
 		showMinus(minus_original, minus_adjust, minus_mask);
+
+        imshow("envMapWorkMap",envMapWorkMap);
+        // save the image
+        imwrite("envMapWorkMap.png",envMapWorkMap);
 
 //		 writer.write("PointCloud_Transformed_06.pcd",*cloud, false);// do we need the sensor acquisition origin?
 //		 writer.write("PointCloud_right_HD_06.pcd",*cloud_rig, false);// do we need the sensor acquisition origin?

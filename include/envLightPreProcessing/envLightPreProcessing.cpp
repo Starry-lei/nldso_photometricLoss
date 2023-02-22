@@ -143,8 +143,6 @@ namespace DSONL {
                         cout << "\n show current envMap index: " << i << endl;
                         cout << "\n show number of envMap added: " << counter << endl;
                     }
-
-
 //    }
 
                 }
@@ -259,9 +257,7 @@ namespace DSONL {
         std::vector<int> pointIdxKNNSearch(1);
         std::vector<float> pointKNNSquaredDistance(1);
 
-        *downSampledCloud=*ControlpointCloud;
-
-
+//        *downSampledCloud=*ControlpointCloud;
 
 
         if (false){
@@ -296,10 +292,11 @@ namespace DSONL {
         }
 
         sparsifyPointCloud.close();
-        std::cout << "EnvMap PointCloud after filtering: " << downSampledCloud->width * downSampledCloud->height<< " data points (" << pcl::getFieldsList (*downSampledCloud) << ")." << std::endl;
-        writer.write("ControlpointCloud_downSampledCloud.pcd",*downSampledCloud, false);
+//        std::cout << "EnvMap PointCloud after filtering: " << ControlpointCloud->width * ControlpointCloud->height<< " data points (" << pcl::getFieldsList (*downSampledCloud) << ")." << std::endl;
+//        writer.write("ControlpointCloud_downSampledCloud.pcd",*ControlpointCloud, false);
+//        *ControlpointCloud=*downSampledCloud;
         if (ControlpointCloud->empty()){std::cerr<<"\n Wrong Control-pointCloud!"<< endl;}
-        kdtree.setInputCloud(downSampledCloud);
+        kdtree.setInputCloud(ControlpointCloud);
 
         // ======================serialization============================
     }

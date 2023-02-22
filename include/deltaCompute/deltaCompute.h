@@ -106,6 +106,7 @@ namespace DSONL
             float& lower_b
             , Mat pointOfInterest,
             string  renderedEnvMapPath
+            ,Mat envMapWorkMask
         );
 
 
