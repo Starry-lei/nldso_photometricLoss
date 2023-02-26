@@ -10,8 +10,8 @@ set(CMAKE_PREFIX_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/eigen3" ${CMAKE
 
 set(EIGEN_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/eigen")
 set(CERES_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/build-ceres-solver")
+ set(PANGOLIN_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/build-Pangolin/src")
 
-# set(PANGOLIN_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/build-Pangolin/src")
 # set(OPENGV_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/build-opengv")
 # set(g2o_DIR "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/g2o/lib/cmake/g2o")
 
@@ -87,9 +87,8 @@ find_package(Ceres 2.0 REQUIRED CONFIG HINTS "${CERES_ROOT}" NO_DEFAULT_PATH)
 
 # to use link to target "pangolin"
 set(Pangolin_DIR ${PANGOLIN_ROOT})
-
-# find_package(Pangolin REQUIRED CONFIG NO_DEFAULT_PATH)
-# message(STATUS "Found Pangolin headers in: ${Pangolin_INCLUDE_DIR}")
+ find_package(Pangolin REQUIRED CONFIG NO_DEFAULT_PATH)
+ message(STATUS "Found Pangolin headers in: ${Pangolin_INCLUDE_DIR}")
 
 # to use link to target "opengv"
 # find_package(opengv REQUIRED CONFIG HINTS ${OPENGV_ROOT} NO_DEFAULT_PATH)
@@ -204,6 +203,8 @@ target_link_libraries(photometricLoss
   ${OPENGL_LIBRARIES}
   ${GLUT_LIBRARIES}
   ${GLEW_LIBRARIES}
+        pangolin
+
 )
 
 #add_executable(test_functions src/test_functions.cpp)
