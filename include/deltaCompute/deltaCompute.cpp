@@ -353,6 +353,7 @@ namespace DSONL {
         // K nearest neighbor search
 //        int num_K = 1;
         int num_K = 6;
+        float lift=0.002f; // 2mm
         Vec2i boundingBoxUpperLeft(83, 76);
         Vec2i boundingBoxBotRight(240, 320);
         Vec2i boundingBoxUpperLeft_AoI( 145,180);
@@ -458,8 +459,8 @@ namespace DSONL {
                                            (*(EnvLightLookup->ControlpointCloud))[ pointIdxKNNSearch[i] ].y,
                                            (*(EnvLightLookup->ControlpointCloud))[ pointIdxKNNSearch[i] ].z);
 
-                        std::cout << "\n------"<<envMap_point.val[0]<< " " << envMap_point.val[1]<< " " << envMap_point.val[2]
-                                  << " (squared distance: " << pointKNNSquaredDistance[i] << ")" << std::endl;
+//                        std::cout << "\n------"<<envMap_point.val[0]<< " " << envMap_point.val[1]<< " " << envMap_point.val[2]
+//                                  << " (squared distance: " << pointKNNSquaredDistance[i] << ")" << std::endl;
 
                         // 0.004367 is the squared distance of the closest control point
                         if (pointKNNSquaredDistance[i]>0.004367){
@@ -468,7 +469,6 @@ namespace DSONL {
 
 
                         // calculate control point normal
-
                         // transform envMap_point to camera coordinate system
                         Eigen::Vector3f envMap_point_c1 = Camera1_extrin.inverse().cast<float>() * Eigen::Vector3f(envMap_point.val[0], envMap_point.val[1], envMap_point.val[2]);
                         // project envMap_point to image plane
@@ -486,12 +486,9 @@ namespace DSONL {
                         if (angle_consine<0.9962){ continue;} // 0.9848 is the cos(10 degree), 0.9962 is the cos(5 degree)
 
                         // calculate the euclidean distance between shader point and envMap point
-//                        float disPoint2EnvPoint_squa= powf(envMap_point.val[0]-p_c1_w.x(),2)+powf(envMap_point.val[1]-p_c1_w.y(),2)+powf(envMap_point.val[2]-p_c1_w.z(),2);
-
+                        //float disPoint2EnvPoint_squa= powf(envMap_point.val[0]-p_c1_w.x(),2)+powf(envMap_point.val[1]-p_c1_w.y(),2)+powf(envMap_point.val[2]-p_c1_w.z(),2);
 
                         float disPoint2Env=  pointKNNSquaredDistance[i]/(ctrlPointNormal.dot(N_));
-//                        consine_Dis.emplace(i,disPoint2Env);
-
                         if (disPoint2Env<disPoint2Env_min){
                             disPoint2Env_min=disPoint2Env;
                             targetEnvMapIdx=i;
@@ -525,9 +522,6 @@ namespace DSONL {
 //                            key4Search.val[2] = envMap_point.val[2];
 //                            break;
 //                        }
-
-
-
 
 //                        if (vector_point2Env.dot(N_)>=0){
 //                            key4Search.val[0] = envMap_point.val[0];
@@ -642,7 +636,9 @@ namespace DSONL {
                 if (std::isnan(delta_g)){
                     continue;
                 }
-
+                if(std::abs(delta_g-1.0f)<1e-3){
+                    continue;
+                }
                 deltaMap.at<float>(u, v) = delta_g;
 
 //                cout<<"\n Checking radiance vals:"<< "left Coord: u:"<<u<<", v:"<<v<<"left_radiance:"<< radiance_beta.val[1]
@@ -682,10 +678,14 @@ namespace DSONL {
 		cv::minMaxLoc(radianceMap_left, &min_n_radiance, &max_n_radiance);
 		std::cout << "------->show max and min of estimated radianceMap_left<-----------------:" << max_n_radiance << "," << min_n_radiance << std::endl;
 
+//      imshow("newNormalMap", newNormalMap);
 		imshow("radianceMap_left", radianceMap_left);
         imshow("specularityMap", specularityMap);
         imshow("DiffuseMap", DiffuseMap);
         imshow("ctrlPointMask",ctrlPointMask);
+
+
+
 
 //
 //        for (int u = 0; u < depth_map.rows; u++)// colId, cols: 0 to 480

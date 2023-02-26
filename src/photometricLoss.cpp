@@ -58,9 +58,13 @@ int main(int argc, char **argv) {
 //    string controlPointPose_path= "/home/lei/Documents/Research/envMapData/control_cam_pose_ControlpointCloud_Sparsfied_91.txt";
 //    string  renderedEnvMapPath=   "/home/lei/Documents/Research/envMapData/EnvMap_91";
 
-    std::string envMap_Folder="/home/lei/Documents/Research/envMapData/EnvMap150_wholeImg";
-    string controlPointPose_path= "/home/lei/Documents/Research/envMapData/2frame0370_02_control_cam_pose_150.txt";
-    string  renderedEnvMapPath=   "/home/lei/Documents/Research/envMapData/EnvMap150_wholeImg";
+//    std::string envMap_Folder="/home/lei/Documents/Research/envMapData/EnvMap150_wholeImg";
+//    string controlPointPose_path= "/home/lei/Documents/Research/envMapData/2frame0370_02_control_cam_pose_150.txt";
+//    string  renderedEnvMapPath=   "/home/lei/Documents/Research/envMapData/EnvMap150_wholeImg";
+
+    std::string envMap_Folder="/home/lei/Documents/Research/envMapData/EnvMap_156ctrlPoints";
+    string controlPointPose_path= "/home/lei/Documents/Research/envMapData/2frame0370_02_control_cam_pose156.txt";
+    string  renderedEnvMapPath=   "/home/lei/Documents/Research/envMapData/EnvMap_156ctrlPoints";
 
 
 
@@ -68,7 +72,18 @@ int main(int argc, char **argv) {
     Mat image_ref_metallic = dataLoader->image_ref_metallic;
     Mat image_ref_roughness = dataLoader->image_ref_roughness;
 	grayImage_ref = dataLoader->grayImage_ref;
-	grayImage_target = dataLoader->grayImage_target;
+
+
+//
+//    Vec2i point_test(450, 100);
+//    cv::circle(grayImage_ref, point_test, 2, cv::Scalar(255), 8);
+//    imshow("grayImage_ref", grayImage_ref);
+//    waitKey(0);
+
+
+
+
+    grayImage_target = dataLoader->grayImage_target;
 
 	depth_ref = dataLoader->depth_map_ref;
 	Mat depth_ref_GT = dataLoader->depth_map_ref;
@@ -451,8 +466,7 @@ int main(int argc, char **argv) {
 
             DSONL::updateDelta(dataLoader->camPose1,EnvLightLookup, statusMap,Rotation_GT,Translation_GT,Klvl,image_ref_baseColor,inv_depth_ref,
                                image_ref_metallic ,image_ref_roughness,deltaMap,newNormalMap,up_new, butt_new, pointOfInterestArea, renderedEnvMapPath
-                               ,envMapWorkMask
-                               );
+                               ,envMapWorkMask);
 
 
 
@@ -460,7 +474,11 @@ int main(int argc, char **argv) {
 //            Mat deltaMapGT_res= deltaMapGT(grayImage_ref,depth_ref,grayImage_target,depth_target,K.cast<double>(),distanceThres,xi_GT, upper, buttom, deltaMap, statusMap, pointOfInterestArea_allPoints_38880);
 //            Mat deltaMapGT_res= deltaMapGT(grayImage_ref,depth_ref,grayImage_target,depth_target,K.cast<double>(),distanceThres,xi_GT, upper, buttom, deltaMap, statusMap, pointOfInterestArea_Non_Lambertian_2358);
             Mat deltaMapGT_res= deltaMapGT(grayImage_ref,depth_ref,grayImage_target,depth_target,K.cast<double>(),distanceThres,xi_GT,
-                                           upper, buttom, deltaMap, statusMap, envMapWorkMask);
+                                           upper, buttom, deltaMap, statusMap, envMapWorkMask,
+                                           controlPointPose_path,
+                                           dataLoader->camPose1.cast<float>(),
+                                           newNormalMap
+                                           );
 
 
 //            for (int u = 0; u < grayImage_ref.rows; u++)// colId, cols: 0 to 480
@@ -531,6 +549,9 @@ int main(int argc, char **argv) {
 		cout << "\nShow current rotation perturbation error :" << roErr
 		     << "\nShow current translation perturbation error : " << trErr
 		     << "\nShow current depth perturbation error :" << depth_Error << endl;
+
+
+
 		waitKey(0);
 	}
 

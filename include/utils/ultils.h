@@ -328,11 +328,16 @@ namespace DSONL {
 //             0, 1361.1, 240,
 //             0,     0,    1;
 
-        K <<   577.8705, 0, 320,
-                0, 577.8705, 240,
+//        K <<   577.8705, 0, 320,
+//                0, 577.8705, 240,
+//                0, 0, 1;
+
+        K  <<   574.540648625183, 0, 320,
+                0, 574.540648625183, 240,
                 0, 0, 1;
 
-		double fx = K(0, 0), cx = K(0, 2), fy = K(1, 1), cy = K(1, 2);
+
+        double fx = K(0, 0), cx = K(0, 2), fy = K(1, 1), cy = K(1, 2);
 		Eigen::Matrix<double, 3, 1> p_3d_no_d;
 		p_3d_no_d << (uj - cx) / fx, (vj - cy) / fy, (double) 1.0;
 		Eigen::Matrix<double, 3, 1> p_c1;
@@ -507,13 +512,88 @@ namespace DSONL {
 	}
 
 
+    void readEnvMapCtrlPointPose(string fileName, vector<Sophus::SE3f, Eigen::aligned_allocator<Sophus::SE3f>> &pose) {
+
+        ifstream trajectory(fileName);
+        if (!trajectory.is_open()) {
+            cout << "No controlPointPose data!" << fileName << endl;
+            return;
+        }
+
+        float qw, qx, qy, qz, tx, ty, tz;
+        string line;
+        while (getline(trajectory, line)) {
+            stringstream lineStream(line);
+            lineStream >> qw >> qx >> qy >> qz >> tx >> ty >> tz;
+
+            Eigen::Vector3f t(tx, ty, tz);
+            Eigen::Quaternionf q = Eigen::Quaternionf(qw, qx, qy, qz).normalized();
+            Sophus::SE3f SE3_qt(q, t);
+            pose.push_back(SE3_qt);
+        }
+
+    }
+
+
+    void  drawEnvMapPoints(const string envMapPosePath, const Mat EnvLightWorkMap, int canvasId,  Eigen::Matrix3f K,  Sophus::SE3f cameraExtrinsics){
+
+        std::vector<Sophus::SE3f, Eigen::aligned_allocator<Sophus::SE3f>> controlPointPoses;
+
+        readEnvMapCtrlPointPose(envMapPosePath, controlPointPoses);
+        // output the envMapPosePath
+        cout << "envMapPosePath = " << envMapPosePath << endl;
+
+        // output number of control points
+        cout << "controlPointPoses.size() = " << controlPointPoses.size() << endl;
+
+        float fx = K(0, 0), cx = K(0, 2), fy = K(1, 1), cy = K(1, 2);
+
+        // draw control points
+
+        for (size_t i = 1; i <= controlPointPoses.size(); i++) {
+            Sophus::SE3f envMapPose_world = controlPointPoses[i - 1].cast<float>();
+            cv::Point3f pointBase = Vec3f(controlPointPoses[i - 1].translation().x(),
+                                          controlPointPoses[i - 1].translation().y(),
+                                          controlPointPoses[i - 1].translation().z());
+
+            Eigen::Vector3f envMap_point_c1 = cameraExtrinsics.inverse() * Eigen::Vector3f(pointBase.x, pointBase.y, pointBase.z);
+            // project envMap_point to image plane
+            float pixel_x = (fx * envMap_point_c1.x()) / envMap_point_c1.z() + cx;
+            float pixel_y = (fy * envMap_point_c1.y()) / envMap_point_c1.z() + cy;
+            cv::Point2i point(round(pixel_x),round(pixel_y));
+            cv::circle(EnvLightWorkMap, point, 2, cv::Scalar(0, 255, 255), -1); // 255,255,0 : yellow
+
+
+        }
+
+
+
+        // convert the name of EnvLightWorkMap to string
+        std::string ctrlPointUsed= "ctrlPointOnCanvas_" + std::to_string(canvasId);
+
+        imwrite(ctrlPointUsed + ".png", EnvLightWorkMap);
+
+        imshow(ctrlPointUsed, EnvLightWorkMap);
+
+
+    }
+
+
 	Mat deltaMapGT(Mat &Img_left, Mat &depth_left, Mat &Img_right, Mat &depth_right, const Eigen::Matrix<double, 3, 3> &K_, double &thres,
-	               const Sophus::SE3d &ExtrinsicPose, float &upper, float &buttom, Mat &pred_deltaMap, float *statusMap, Mat pointOfInterest ) {
+	               const Sophus::SE3d &ExtrinsicPose, float &upper, float &buttom, Mat &pred_deltaMap,
+                   float *statusMap, Mat pointOfInterest
+                   , string envMapPosePath
+                   , Sophus::SE3f cameraExtrinsics, Mat normal_left
+                   ) {
 
 		//		Mat normalMap_left=getNormals(K_,depth_left);
 		//		Mat normalMap_right=getNormals(K_,depth_right);
 
         Mat envMapWorkMap(pointOfInterest.rows, pointOfInterest.cols, CV_8UC3, Scalar(0,0,0));
+        Mat correspInLeft(pointOfInterest.rows, pointOfInterest.cols, CV_8UC1, Scalar(0));
+        Mat correspInRight(pointOfInterest.rows, pointOfInterest.cols, CV_8UC1, Scalar(0));
+
+
 
         for (int x = 0; x < pointOfInterest.rows; ++x) {
             for (int y = 0; y < pointOfInterest.cols; ++y) {
@@ -556,10 +636,19 @@ namespace DSONL {
 		cv::minMaxLoc(Img_right, &min, &max);
 //		cout << "\n show max and min of Img_right:\n"<< max << "," << min << endl;
 		std::unordered_map<int, int> inliers_filter;
+        std::unordered_map<int, int> inliers_filter_sixPoints;
 		//new image
 
 
 		inliers_filter.emplace(360, 435);
+
+        inliers_filter_sixPoints.emplace(334, 151);
+        inliers_filter_sixPoints.emplace(294,489);
+        inliers_filter_sixPoints.emplace(177,345);
+        inliers_filter_sixPoints.emplace(104, 323);
+        inliers_filter_sixPoints.emplace(64, 193);
+        inliers_filter_sixPoints.emplace(336,137);
+
 
 
 		std::vector<int> pointIdxRadiusSearch;
@@ -577,7 +666,9 @@ namespace DSONL {
         Vec2i boundingBoxBotRight_AoI(173,242);
 
         ofstream delta_comp;
+        ofstream delta_comp_sixPoints;
         delta_comp.open ("delta_comp_sparsed.txt");
+        delta_comp_sixPoints.open ("delta_comp_sixPoints.txt");
 
         for (int x = 0; x < depth_left.rows; ++x) {
 			for (int y = 0; y < depth_left.cols; ++y) {
@@ -593,9 +684,12 @@ namespace DSONL {
 
                 // calculate 3D point of left camera
 				double d = depth_left.at<double>(x, y);
-				// Mark: skip depth=15
-                //if (round(d) == 15.0) { continue; }
 
+
+
+
+                // Mark: skip depth=15
+                //if (round(d) == 15.0) { continue; }
 
                 // projection
 				Eigen::Matrix<double, 3, 1> p_3d_no_d;
@@ -611,6 +705,15 @@ namespace DSONL {
 //											          << " " << (*cloud_rig)[ pointIdxRadiusSearch[0] ].z
 //											          << " (squared distance: " << pointRadiusSquaredDistance[0] << ")" << std::endl;
 					//
+
+
+                    correspInLeft.at<uchar>(x,y)=255;
+
+
+//                    cv::Point2i point_l(y,x); // rowIdx,colIdx
+//                    cv::circle(Img_left, point_l, 2, cv::Scalar(255), -1);
+
+
 					float left_intensity = Img_left.at<double>(x, y);
 					float pointCorres_x = (*cloud_rig)[pointIdxRadiusSearch[0]].x;
 					float pointCorres_y = (*cloud_rig)[pointIdxRadiusSearch[0]].y;
@@ -618,7 +721,15 @@ namespace DSONL {
 					float pixel_x = (fx * pointCorres_x) / pointCorres_z + cx;
 					float pixel_y = (fy * pointCorres_y) / pointCorres_z + cy;
 					float right_intensity = Img_right.at<double>(round(pixel_y), round(pixel_x));
-					float delta = right_intensity / left_intensity;
+
+
+
+
+                    correspInRight.at<uchar>(round(pixel_y),round(pixel_x))=255;
+
+
+
+                    float delta = right_intensity / left_intensity;
 					//float delta= abs(left_intensity-right_intensity);
 
 //                    cout<<"\n Checking radiance vals:"<< "left Coord: u:"<<x<<", v:"<<y<<"left_intensity:"<< left_intensity
@@ -639,6 +750,17 @@ namespace DSONL {
 //                    std::cerr<<x<<" "<<y<<" "<<diff_residual<<diff_adj<<" "<<endl;
                     delta_comp <<x<<" "<<y<<" "<<diff_residual<<" "<<diff_adj<<"\n";
 
+
+                    // use the inlier filter
+                 if (inliers_filter_sixPoints.count(x) != 0 ) {
+
+                     delta_comp_sixPoints <<x<<" "<<y<<" "<<diff_residual<<" "<<diff_adj<<" "<<left_intensity<<" "<<right_intensity<<"\n";
+
+                 }
+
+
+
+
                     if (diff_residual>diff_adj){
                         envMapWorkMap.at<Vec3b>(x,y)[0]=0;
                         envMapWorkMap.at<Vec3b>(x,y)[1]=255 * (diff_residual-diff_adj)/diff_residual;
@@ -649,6 +771,17 @@ namespace DSONL {
                         envMapWorkMap.at<Vec3b>(x,y)[1]=0;
                         envMapWorkMap.at<Vec3b>(x,y)[2]=255* (diff_adj-diff_residual)/diff_residual;
                     }
+
+//                    if (diff_residual>diff_adj){
+//                        envMapWorkMap.at<Vec3b>(x,y)[0]=0;
+//                        envMapWorkMap.at<Vec3b>(x,y)[1]=255 ;
+//                        envMapWorkMap.at<Vec3b>(x,y)[2]=0;
+//
+//                    }else if (diff_residual<diff_adj){
+//                        envMapWorkMap.at<Vec3b>(x,y)[0]=0;
+//                        envMapWorkMap.at<Vec3b>(x,y)[1]=0;
+//                        envMapWorkMap.at<Vec3b>(x,y)[2]=255;
+//                    }
 
 
                     minus_adjust.at<float>(x, y) = diff_adj;
@@ -686,10 +819,43 @@ namespace DSONL {
 
 
         delta_comp.close();
+        delta_comp_sixPoints.close();
 
+
+        // draw the circle one left and right image
+
+        //  cv::Point2i point_r(round(pixel_x),round(pixel_y));
+        // cv::circle(Img_right, point_r, 2, cv::Scalar(255), -1);
+
+        for (int x = 0; x < depth_left.rows; ++x) {
+            for (int y = 0; y < depth_left.cols; ++y) {
+                if (correspInLeft.at<uchar>(x,y)==255){
+                    circle(Img_left, cv::Point2d(y,x), 1, Scalar(255), 1, 8, 0);
+                }
+                if (correspInRight.at<uchar>(x,y)==255){
+                    circle(Img_right, cv::Point2d(y,x),1, Scalar(255), 1, 8, 0);
+                }
+            }
+        }
+
+
+
+
+        imshow("Img_left", Img_left);
+        imshow("Img_right", Img_right);
 		showMinus(minus_original, minus_adjust, minus_mask);
 
         imshow("envMapWorkMap",envMapWorkMap);
+
+        // draw envmap points on the envMapWorkMap
+        drawEnvMapPoints(envMapPosePath,envMapWorkMap, 1, K_.cast<float>(), cameraExtrinsics);
+
+
+        drawEnvMapPoints(envMapPosePath, normal_left, 2, K_.cast<float>(), cameraExtrinsics);
+
+
+
+
         // save the image
         imwrite("envMapWorkMap.png",envMapWorkMap);
 
