@@ -292,7 +292,7 @@ namespace DSONL {
 
     ) {
 
-        idepth_ref.convertTo(idepth_ref, CV_32FC1);
+//        idepth_ref.convertTo(idepth_ref, CV_32FC1);
 
         // setup ceres problem
         ceres::Problem problem;
@@ -305,20 +305,36 @@ namespace DSONL {
         std::unique_ptr<ceres::Grid2D<double, 1> > image_grid;
         std::unique_ptr<ceres::BiCubicInterpolator<ceres::Grid2D<double, 1> > > compute_interpolation;
 
-        cv::Mat flat_l = image_left.reshape(1, image_left.total() * image_left.channels());
-        std::vector<double> grayImage_left_values = image_left.isContinuous() ? flat_l : flat_l.clone();
+//        image_left.convertTo(image_left, CV_32FC1);
+//        image_right.convertTo(image_right, CV_32FC1);
 
-        cv::Mat flat = image_right.reshape(1, image_right.total() * image_right.channels());
-        std::vector<double> grayImage_right_values = image_right.isContinuous() ? flat : flat.clone();
+//        cv::Mat flat_l = image_left.reshape(1, image_left.total() * image_left.channels());
+//        std::vector<double> grayImage_left_values = image_left.isContinuous() ? flat_l : flat_l.clone();
+//
+//        cv::Mat flat = image_right.reshape(1, image_right.total() * image_right.channels());
+//        std::vector<double> grayImage_right_values = image_right.isContinuous() ? flat : flat.clone();
+
+        std::vector<double> grayImage_left_values;
+        for (int r = 0; r < image_left.rows; r++){
+            for (int c = 0; c < image_left.cols; c++){
+                grayImage_left_values.push_back(static_cast<double>(image_left.at<uchar>(r, c)));
+            }
+        }
+
+        std::vector<double> grayImage_right_values;
+        for (int r = 0; r < image_left.rows; r++){
+            for (int c = 0; c < image_left.cols; c++){
+                grayImage_right_values.push_back(static_cast<double>(image_left.at<uchar>(r, c)));
+            }
+        }
+
+
+
+
+
 
         image_grid.reset(new ceres::Grid2D<double, 1>(&grayImage_left_values[0], 0, rows_, 0, cols_));
         compute_interpolation.reset(new ceres::BiCubicInterpolator<ceres::Grid2D<double, 1> >(*image_grid));
-
-
-
-//        std::vector<cv::Point3f> points3D;
-
-
 
 
         //-----------------------------------------------------------------divider------------------------------------------------------------
@@ -357,7 +373,7 @@ namespace DSONL {
                 //----------------------current PhotoBA---------------------------
                 // pixelSkip++;
 
-                if (AOI.at<uchar>(u,v)!=255){ continue;}
+//                if (AOI.at<uchar>(u,v)!=255){ continue;}
                 num_points_used+=1;
 
 
@@ -386,7 +402,8 @@ namespace DSONL {
                 if (options.use_huber){
                     ceres::LossFunction* loss_function = new ceres::HuberLoss(options.huber_parameter);
                 }
-                ceres::LossFunction* loss_function = NULL; // ceres::LossFunction* loss_function = new ceres::HuberLoss(40.0f);
+//                ceres::LossFunction* loss_function = NULL; // ceres::LossFunction* loss_function = new ceres::HuberLoss(40.0f);
+                ceres::LossFunction* loss_function = new ceres::HuberLoss(40.0f);
                 problem.AddResidualBlock(cost_fun, loss_function, &(camera_poses[7]), &(depth_array[u*idepth_ref.cols + v]));
 
 
@@ -422,14 +439,12 @@ namespace DSONL {
 
 
 
-
-
 //        std::cout << "\n Showing number of point used in directBA: " <<num_points_used<< endl;
         std::cout << "\n Solving ceres directBA ... " << endl;
         ceres::Solver::Options ceres_options;
 
 
-        ceres_options.linear_solver_type = ceres::SPARSE_SCHUR;
+        ceres_options.linear_solver_type = ceres::DENSE_SCHUR;
         ceres_options.minimizer_progress_to_stdout = true;
         ceres_options.max_num_iterations = 20;
         ceres_options.num_threads = std::thread::hardware_concurrency();

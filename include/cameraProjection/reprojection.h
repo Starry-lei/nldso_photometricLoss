@@ -24,7 +24,7 @@ namespace DSONL {
 
 	struct PhotometricBAOptions {
 		/// 0: silent, 1: ceres brief report (one line), 2: ceres full report
-		int verbosity_level = 1;
+		int verbosity_level = 2;
 
 		/// update intrinsics or keep fixed
 		bool optimize_depth = false;

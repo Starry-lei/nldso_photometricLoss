@@ -168,8 +168,6 @@ namespace DSONL {
                 camPose1.translation()=t1_w_l;
 
 //                cout<<"show camPose1:"<<camPose1.matrix()<<endl;
-
-
 //                Mat image_ref =imread(image_ref_path, IMREAD_ANYCOLOR | IMREAD_ANYDEPTH);// LDR
 
                 Mat image_ref = loadPFM(image_ref_path);

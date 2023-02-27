@@ -407,10 +407,26 @@ int main(int argc, char **argv) {
 
 	double min_gt_special, max_gt_special;
 	cv::minMaxLoc(inv_depth_ref, &min_gt_special, &max_gt_special);
-	cout << "\n show inv_depth_ref min, max:\n" << min_gt_special << "," << max_gt_special << endl;
-	//	Mat inv_depth_ref_for_show = inv_depth_ref * (1.0 / (max_gt_special - min_gt_special)) +(-min_gt_special * (1.0 / (max_gt_special - min_gt_special)));
-	//	string depth_ref_name = "inv_depth_ref";
-	//	imshow(depth_ref_name, inv_depth_ref_for_show);
+	cout << "\n show inv_depth_ref type, min, max:\n" <<inv_depth_ref.depth()<<" ,and "<<min_gt_special << "," << max_gt_special << endl;
+    Mat inv_depth_ref_for_show = inv_depth_ref * (1.0 / (max_gt_special - min_gt_special)) +(-min_gt_special * (1.0 / (max_gt_special - min_gt_special)));
+    string depth_ref_name = "inv_depth_ref";
+    imshow(depth_ref_name, inv_depth_ref_for_show);
+    waitKey(0);
+
+
+
+    std::string file_1 = "../data/PFMIamge06_pfm2png.png";
+    std::string file_2 = "../data/PFMIamge07_pfm2png.png";
+    std::string depth_file_1 = "../data/origdepth_6.png";
+    cv::Mat image_1 = cv::imread(file_1, 0);
+    cv::Mat image_2 = cv::imread(file_2, 0);
+    // load and convert depth
+    cv::Mat depth_1 = cv::imread(depth_file_1, -1);
+    cv::Mat idepth_1_float;
+    depth_1.convertTo(idepth_1_float, CV_32F);
+    idepth_1_float = 5000.0 / idepth_1_float;
+
+
 
 
 
@@ -429,11 +445,10 @@ int main(int argc, char **argv) {
 
 
     double idepth_array[grayImage_ref.rows * grayImage_ref.cols];
-    double camera_poses[] = {1, 0, 0, 0, 0, 0, 0,
-                             q12_gt.w(), q12_gt.x(), q12_gt.y(), q12_gt.z(), t12_gt[0], t12_gt[1], t12_gt[2]};
+    double camera_poses[] = {1, 0, 0, 0, 0, 0, 0,q12_gt.w(), q12_gt.x(), q12_gt.y(), q12_gt.z(), t12_gt[0], t12_gt[1], t12_gt[2]};
 
     std::vector<cv::Point3f> points3D;
-bool optRefFramePose= false;
+    bool optRefFramePose= false;
 
 	for (int lvl = 1; lvl >= 1; lvl--) {
 		cout << "\n Show the value of lvl:" << lvl << endl;
@@ -461,7 +476,7 @@ bool optRefFramePose= false;
 			Mat inv_depth_ref_for_show = inv_depth_ref * (1.0 / (max_gt_special - min_gt_special)) +(-min_gt_special * (1.0 / (max_gt_special - min_gt_special)));
 			string depth_ref_name = "inv_depth_ref" + to_string(i);
 //			imshow(depth_ref_name, inv_depth_ref_for_show);
-//			cout<<"show the current depth:"<<inv_depth_ref.at<double>(359,470)<<endl;
+
 
 
 
@@ -470,30 +485,45 @@ bool optRefFramePose= false;
 
             // Photometric loss
             statusMap_NonLambCand = pointOfInterestArea.clone();
-//            PhotometricBA(IRef, I, options, Klvl, Rotation, Translation, inv_depth_ref, deltaMap, depth_upper_bound,depth_lower_bound, statusMap, statusMapB,statusMap_NonLambCand);
+            //PhotometricBA(IRef, I, options, Klvl, Rotation, Translation, inv_depth_ref, deltaMap, depth_upper_bound,depth_lower_bound, statusMap, statusMapB,statusMap_NonLambCand);
 
-            // Photometric loss
-            PhotometricBA(points3D, optRefFramePose, IRef, I, idepth_array, camera_poses, options, Klvl, Rotation, Translation, inv_depth_ref, deltaMap, depth_upper_bound,depth_lower_bound, statusMap, statusMapB,statusMap_NonLambCand);
+
+            PhotometricBA(points3D, optRefFramePose, image_1, image_2, idepth_array, camera_poses, options, Klvl, Rotation, Translation, idepth_1_float, deltaMap, depth_upper_bound,depth_lower_bound, statusMap, statusMapB,statusMap_NonLambCand);
 
             Sophus::SE3d pose_2 = Sophus::SE3d(Eigen::Quaterniond(camera_poses[7], camera_poses[8], camera_poses[9], camera_poses[10]),
                                                Eigen::Vector3d(camera_poses[11], camera_poses[12], camera_poses[13]));
 
             std::cout << pose_2.matrix() << std::endl;
             double fx = K(0, 0), cx = K(0, 2), fy = K(1, 1), cy = K(1, 2);
-            showPointCloud(pose_2, points3D, fx, fy, cx, cy);
+
 
 
 
             // Result analysis
+
+            // store the optimized depth map to  idepth_ref
+//            for (int u = 0; u < grayImage_ref.rows; u++)// colId, cols: 0 to 480
+//            {
+//                for (int v = 0; v < grayImage_ref.cols; v++)// rowId,  rows: 0 to 640
+//                {
+//                    inv_depth_ref.at<double>(u, v) = idepth_array[u*grayImage_ref.cols + v];
+//                }
+//            }
+
+            // convert idepth_ref into cv_64f
+//            inv_depth_ref.convertTo(inv_depth_ref, CV_64FC1);
+
             cout << "\n show depth_ref min, max:\n" << min_gt_special << "," << max_gt_special << endl;
-            cout << "\n Show optimized rotation:\n" << Rotation.matrix() << "\n Show optimized translation:\n"<< Translation << endl;
-            cout << "\n Show Rotational error :" << rotationErr(xi_GT.rotationMatrix(), Rotation.matrix())
+            cout << "\n Show optimized rotation:\n" << pose_2.rotationMatrix()<< "\n Show optimized translation:\n"<< pose_2.translation() << endl;
+            cout << "\n Show Rotational error :" << rotationErr(xi_GT.rotationMatrix(), pose_2.rotationMatrix())
                  << "(degree)." << "\n Show translational error :"
-                 << 100 * translationErr(xi_GT.translation(), Translation) << "(%) "
+                 << 100 * translationErr(xi_GT.translation(), pose_2.translation()) << "(%) "
                  << "\n Show depth error :" << depthErr(depth_ref_gt, inv_depth_ref).val[0]
                  << endl;
             std::cout << "\n Start calculating delta map ... " << endl;
             std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
+
+            showPointCloud(pose_2, points3D, fx, fy, cx, cy);
 
 
             // use estimated pose

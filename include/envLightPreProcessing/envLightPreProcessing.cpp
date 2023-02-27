@@ -140,8 +140,8 @@ namespace DSONL {
                         ControlpointCloud->push_back(pcl::PointXYZ(pEnv.pointBase.x, pEnv.pointBase.y, pEnv.pointBase.z));
                         envLightMap.insert(make_pair(pEnv.pointBase, pEnv));
                         counter += 1;
-                        cout << "\n show current envMap index: " << i << endl;
-                        cout << "\n show number of envMap added: " << counter << endl;
+//                        cout << "\n show current envMap index: " << i << endl;
+//                        cout << "\n show number of envMap added: " << counter << endl;
                     }
 //    }
 
@@ -236,8 +236,8 @@ namespace DSONL {
                         ControlpointCloud->push_back(pcl::PointXYZ(pEnv.pointBase.x, pEnv.pointBase.y, pEnv.pointBase.z));
                         envLightIdxMap.insert(make_pair(pEnv.pointBase, static_cast<int>(i)));
                         counter += 1;
-                        cout << "\n show current envMap index: " << i << endl;
-                        cout << "\n show number of envMap added: " << counter << endl;
+//                        cout << "\n show current envMap index: " << i << endl;
+//                        cout << "\n show number of envMap added: " << counter << endl;
                     }
 
 
