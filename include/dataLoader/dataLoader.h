@@ -50,16 +50,12 @@ namespace DSONL {
 		EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
 		dataLoader();
-
 		~dataLoader();
 
 		dataOptions options_;
-        Mat image_ref_metallic;
         Mat image_ref_roughness;
 		Mat grayImage_ref;
-        Mat grayImage_ref_CV8UC1;
         Mat grayImage_selector_ref;
-
 
         Mat grayImage_target;
 		Mat depth_map_ref;
@@ -68,8 +64,7 @@ namespace DSONL {
 		Eigen::Matrix3f camera_intrinsics;
 		Eigen::Matrix4f M_matrix;
 		Mat normal_map_GT;
-		Mat image_ref_baseColor;
-		Mat image_target_baseColor;
+
 
 		Eigen::Matrix3d R12;
 		Eigen::Vector3d t12;
@@ -80,15 +75,11 @@ namespace DSONL {
 		int rows;
 		int cols;
 
-        double mean_val;
-        double std_dev;
+
 
 
 		void Init() {
 			// Camera intrinsics
-//			camera_intrinsics <<    1361.1, 0, 320,
-//			                        0, 1361.1, 240,
-//			                        0, 0, 1;
 
 //            camera_intrinsics <<   577.8705, 0, 320,
 //                                    0, 577.8705, 240,
@@ -115,160 +106,75 @@ namespace DSONL {
                 string image_normal_GT_path;
                 string image_ref_seletor_path;
 
-//                image_ref_path =            "../data/SimulationEnvData/leftImage/origfov_10.pfm";
-//                image_ref_baseColor_path =  "../data/SimulationEnvData/leftImage/bgrbaseColor_10.pfm";
-//                depth_ref_path =            "../data/SimulationEnvData/leftImage/origfovdepth_10.png";
-//                image_ref_metallic_path=    "../data/SimulationEnvData/leftImage/bgrmetallic_10.pfm";
-//                image_ref_roughness_path =  "../data/SimulationEnvData/leftImage/bgrroughness_10.pfm";
 
-//                image_ref_path =            "../data/SimulationEnvData/leftImage/bgr_10.png"; // LDR
-//                image_ref_path =            "../data/Exp_specular_floor/leftImage/orig_2.pfm"; // HDR
-                image_ref_path =            "../data/Exp_specular_floor_forLoss/leftImage/orig_6.pfm"; // HDR
-
-//                image_ref_seletor_path =    "../data/Exp_specular_floor/leftImage/orig_2.pfm";
+                image_ref_path =            "../data/Exp_specular_floor_forLoss/leftImage/orig_6.pfm.png"; // LDR
                 image_ref_seletor_path =    "../data/Exp_specular_floor_forLoss/leftImage/orig_6.pfm";
-
-//                depth_ref_path =            "../data/Exp_specular_floor/leftImage/origdepth_2.png";
                 depth_ref_path =            "../data/Exp_specular_floor_forLoss/leftImage/origdepth_6.png";
 
-//                image_ref_baseColor_path =  "../data/SimulationEnvData/leftImage/DSNL/bgrbaseColor_10.pfm";
-//                image_ref_baseColor_path =  "../data/Exp_specular_floor/leftImage/non_lambertian/origbaseColor_2.pfm";
-//                image_ref_metallic_path  =    "../data/Exp_specular_floor/leftImage/non_lambertian/origmetallic_2.pfm";
-//                image_ref_roughness_path =  "../data/Exp_specular_floor/leftImage/non_lambertian/origroughness_2.pfm";
-
-                image_ref_baseColor_path =  "../data/Exp_specular_floor_forLoss/leftImage/non_lambertian/origbaseColor_6.pfm";
-                image_ref_metallic_path  =    "../data/Exp_specular_floor_forLoss/leftImage/non_lambertian/origmetallic_6.pfm";
                 image_ref_roughness_path =  "../data/Exp_specular_floor_forLoss/leftImage/non_lambertian/origroughness_6.pfm";
-
-
-//                image_normal_GT_path =      "../data/Exp_specular_floor/leftImage/non_lambertian/orignormal_2.dat"; //normals11  normals10 normals9  //data/SimulationEnvData/leftImage/DSNL/normal_10.data
-
-                image_normal_GT_path =      "../data/Exp_specular_floor_forLoss/leftImage/non_lambertian/orignormal_6.dat"; //normals11  normals10 normals9  //data/SimulationEnvData/leftImage/DSNL/normal_10.data
-
-//                data/Exp_specular_floor_forLoss/leftImage/non_lambertian/orignormal_6.pfm
-
-
-
+                image_normal_GT_path =      "../data/Exp_specular_floor_forLoss/leftImage/non_lambertian/orignormal_6.dat";
 				Eigen::Matrix3d R1_w_l, R1_w_r;// left-handed and right-handed
 				Eigen::Vector3d t1_w_l;
-
-                //  3.607157085028365184e-01 8.906232514292543589e-01 -1.940714441068365215e-01 1.975112053407775681e-01 -1.828000000000000069e+00 2.909999999999999809e-01 4.580000000000000182e-01
-
-//                t1_w_l << -2.228000000000000203e+00, 2.909999999999999809e-01, 4.580000000000000182e-01;
-//                Eigen::Quaternion<double> quaternionR1(  2.915518455604547698e-01, 8.724267396286820020e-01 ,-1.240161990092776972e-01 ,3.721412201227538019e-01);
 
                 t1_w_l << -1.828000000000000069e+00, 2.909999999999999809e-01, 4.580000000000000182e-01;
                 Eigen::Quaternion<double> quaternionR1(  3.607157085028365184e-01, 8.906232514292543589e-01, -1.940714441068365215e-01, 1.975112053407775681e-01);
 
-
 				R1 = quaternionR1.toRotationMatrix();
-
                 // get extrinsic of camera 1
                 camPose1.setQuaternion(quaternionR1);
                 camPose1.translation()=t1_w_l;
-
 //                cout<<"show camPose1:"<<camPose1.matrix()<<endl;
 
-
-//                Mat image_ref =imread(image_ref_path, IMREAD_ANYCOLOR | IMREAD_ANYDEPTH);// LDR
-
-                Mat image_ref = loadPFM(image_ref_path);
-
+                Mat image_ref =imread(image_ref_path, IMREAD_ANYCOLOR | IMREAD_ANYDEPTH);// LDR
                 Mat image_ref_seletor= loadPFM(image_ref_seletor_path);
 
-                Mat depth_ref = imread(depth_ref_path, IMREAD_ANYCOLOR | IMREAD_ANYDEPTH);
-                Mat depth_reference(depth_ref.rows, depth_ref.cols, CV_64FC1);
-                for (int j = 0; j < depth_ref.rows; ++j) {
-                    for (int i = 0; i < depth_ref.cols; ++i) {
-                        depth_reference.at<double>(j,i)= 1.0/5000.0 * ((double ) depth_ref.at<unsigned short >(j,i));
-//                        cout << "\n show  depth_reference: " << depth_reference.at<double>(j,i)<<endl;
-                    }
-                }
 
-				image_ref_baseColor = loadPFM(image_ref_baseColor_path);
-//                image_ref_baseColor =imread(image_ref_baseColor_path, IMREAD_ANYCOLOR | IMREAD_ANYDEPTH);
-//                image_ref_baseColor.convertTo(image_ref_baseColor, CV_32FC3, 1.0/255.0);
+                // load and convert depth
+                cv::Mat depth_1 = cv::imread(depth_ref_path, -1);
+                cv::Mat idepth_1_float;
+                depth_1.convertTo(idepth_1_float, CV_32F);
+                idepth_1_float = 5000.0f / idepth_1_float;
 
 
-                Mat matallic_C1= loadPFM(image_ref_metallic_path);
                 Mat roughness_C1= loadPFM(image_ref_roughness_path);
 
 
 				int channelIdx = options_.channelIdx;
-				extractChannel(image_ref, grayImage_ref, channelIdx);
-                extractChannel(matallic_C1, matallic_C1, channelIdx);
+//				extractChannel(image_ref, grayImage_ref, channelIdx);
+                grayImage_ref= image_ref.clone();
+
                 extractChannel(roughness_C1, roughness_C1, channelIdx);
-
-//                imshow("matallic_C1",matallic_C1);
-//                cout<<"show channel of matallic_C1 "<< matallic_C1.channels()<< endl;
-//
-//                imshow("roughness_C1",matallic_C1);
-//                cout<<"show channel of roughness_C1 "<< roughness_C1.channels()<< endl;
-//
-//                waitKey(0);
-
-
-
-
-                Mat grayImg, mat_mean, mat_stddev;
-                meanStdDev(grayImage_ref, mat_mean, mat_stddev);
-                mean_val= mat_mean.at<double>(0,0);
-                std_dev = mat_stddev.at<double>(0,0);
-                grayImage_ref_CV8UC1= grayImage_ref.clone();
-
 
 
                 extractChannel(image_ref_seletor, grayImage_selector_ref, channelIdx);
 
-//                grayImage_ref.convertTo(grayImage_ref, CV_64FC1, 1/255.0);
-                grayImage_ref.convertTo(grayImage_ref, CV_64FC1);
 				rows = image_ref.rows;
 				cols = image_ref.cols;
 				setGlobalCalib(cols,rows,camera_intrinsics);
 				// ref image depth
 				Mat channel[3], metallic_ref_render, channel_rough[3], _tar_render;
-                image_ref_metallic=matallic_C1;
+
                 image_ref_roughness= roughness_C1;
-                depth_map_ref = depth_reference.clone();
+                depth_map_ref= idepth_1_float.clone();
 
                 float normalArray[480][640][3]={0.0f};
                 ifstream readIn(image_normal_GT_path, ios::in | ios::binary);
                 readIn.read((char*) &normalArray, sizeof normalArray);
                 cv::Mat normal_A(480,640,CV_32FC3, &normalArray);
-//                imshow("normal_A",normal_A);
-//                waitKey(0);
-
                 normal_map_GT = normal_A.clone();
 
-//                normal_map_GT = loadPFM(image_normal_GT_path);
-//                depth_map_ref.convertTo(depth_map_ref, CV_64FC1);
 				// -------------------------------------------Target image data loader-------------------------
 				string image_target_path;
 				string image_target_baseColor_path;
 				string depth_target_path;
 
 				if (options_.baseline == 0) {
-
-//					image_target_path = "../data/SimulationEnvData/rightImage/bgr_16.png";
-//                    image_target_path = "../data/Exp_specular_floor/rightImage/orig_6.pfm";
-//
-//					depth_target_path = "../data/Exp_specular_floor/rightImage/origdepth_6.png";
-
-                    image_target_path = "../data/Exp_specular_floor_forLoss/rightImage/orig_7.pfm";
+                    image_target_path = "../data/Exp_specular_floor_forLoss/rightImage/orig_7.pfm.png";
                     depth_target_path = "../data/Exp_specular_floor_forLoss/rightImage/origdepth_7.png";
-
 					Eigen::Matrix3d R2_w_l, R1_w_r, R2_w_r;
 					Eigen::Vector3d t2_w_l;
-
-                    // 3.607157085028365184e-01 8.906232514292543589e-01 -1.940714441068365492e-01 1.975112053407774571e-01 -1.627999999999999892e+00 2.909999999999999809e-01 4.580000000000000182e-01
-
-//                    t2_w_l << -1.828000000000000069e+00, 2.909999999999999809e-01, 4.580000000000000182e-01;
-//                    Eigen::Quaterniond quaternionR2( 3.607157085028365184e-01, 8.906232514292543589e-01, -1.940714441068365215e-01, 1.975112053407775681e-01);
-
                     t2_w_l << -1.627999999999999892e+00, 2.909999999999999809e-01, 4.580000000000000182e-01;
                     Eigen::Quaterniond quaternionR2( 3.607157085028365184e-01, 8.906232514292543589e-01, -1.940714441068365492e-01, 1.975112053407774571e-01);
-
-
 					R2 = quaternionR2.toRotationMatrix();
 					R12 = R2.transpose() * R1;
 					t12 = R2.transpose() * (t1_w_l - t2_w_l);
@@ -276,58 +182,24 @@ namespace DSONL {
 				}else if (options_.baseline == 1){
 					image_target_path = "../data/Env_light/right02/image_rightRGB0803.png";
 					depth_target_path = "../data/Env_light/right02/image_rightDepth0803.pfm";
-
 					Eigen::Matrix3d R2_w_l, R1_w_r, R2_w_r;
 					Eigen::Vector3d t2_w_l;
-
-//					R2_w_l << -0.945025,  0.022402,  -0.326230 ,
-//					        -0.326998,  -0.064742,  0.942805 ,
-//					        -0.000000,  0.997651,  0.068508;
-
-
 					t2_w_l << -1.000, 2.8900, 0.2100;
-
-//					R2_w_r = R2_w_l * S_x;
-
 					Eigen::Quaterniond quaternionR2(R2_w_r);
 					R2 = quaternionR2.toRotationMatrix();
 					R12 = R2.transpose() * R1;
 					t12 = R2.transpose() * (t1_w_l - t2_w_l);
 					q_12 = R12;
-
 				}
 
-
-
-//                Mat image_target= imread(image_target_path, IMREAD_ANYCOLOR | IMREAD_ANYDEPTH);
-                        //loadPFM(image_target_path);
-
-                Mat image_target= loadPFM(image_target_path);
-
-
-                Mat depth_target = imread(depth_target_path, IMREAD_ANYCOLOR | IMREAD_ANYDEPTH);
-
-
-                Mat depth_tar(depth_target.rows, depth_target.cols, CV_64FC1);
-
-                for (int j = 0; j < depth_target.rows; ++j) {
-                    for (int i = 0; i < depth_target.cols; ++i) {
-                        depth_tar.at<double>(j,i)= 1.0/5000.0 * ((double) depth_target.at<unsigned short >(j,i));
-//                        cout << "\n show  depth_target: " << depth_tar.at<float>(j,i)<<endl;
-                    }
-                }
-
-//				image_target_baseColor = imread(image_target_baseColor_path, CV_LOAD_IMAGE_ANYDEPTH | CV_LOAD_IMAGE_ANYCOLOR);
-//				image_target_baseColor.convertTo(image_target_baseColor, CV_64FC3);
-				extractChannel(image_target, grayImage_target, channelIdx);
-//              cout<<"show grayImage_target depth()"<<grayImage_target.depth()<<endl;
-
-//              grayImage_target.convertTo(grayImage_target, CV_64FC1, 1/255.0);
-                grayImage_target.convertTo(grayImage_target, CV_64FC1);
-
-                depth_map_target = depth_tar.clone();
-//				depth_map_target.convertTo(depth_map_target, CV_64FC1);
-
+                Mat image_target= imread(image_target_path, IMREAD_ANYCOLOR | IMREAD_ANYDEPTH);
+                grayImage_target= image_target.clone();
+                // load and convert depth
+                cv::Mat depth_2 = cv::imread(depth_target_path, -1);
+                cv::Mat idepth_2_float;
+                depth_2.convertTo(idepth_2_float, CV_32F);
+                idepth_2_float = 5000.0f / idepth_2_float;
+                depth_map_target= idepth_2_float.clone();
 
 			} else {
 				// RGB image without texture

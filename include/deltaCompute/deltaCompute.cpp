@@ -220,7 +220,8 @@ namespace DSONL {
         diffusity=diffuse;
 
 
-//        diffuse=Vec3f(0.0,0.0,0.0);
+        // only focus on specular property
+        diffuse=Vec3f(0.0,0.0,0.0);
 		// shading front-facing
         Vec3f color = pow(kD.mul(baseColorValue.mul(diffuse)) + specular, 1.0 / 2.2 * One);
 
@@ -228,7 +229,7 @@ namespace DSONL {
 
 //        cout<<"\n Checking vals:"<<"kD: "<<kD <<","<<"baseColorValue: "<< baseColorValue<< ","<<"diffuse: "<<diffuse<<","<<"specular: "<<specular<<endl;
 //        cout<<"Checking color:"<<color<<endl;
-		//      Vec3f color = specular;
+
 		//      Vec3f color=diffuse;
 
 
@@ -321,24 +322,22 @@ namespace DSONL {
 		// ===================================RENDERING PARAMETERS:====================================
 		float fx = K(0, 0), cx = K(0, 2), fy = K(1, 1), cy = K(1, 2);
 		float reflectance = 1.0f;
-		//      vec3 normal = normalize(wfn);
-		//      vec3 viewDir = normalize(cameraPos - vertPos);
+		// vec3 normal = normalize(wfn);
+		// vec3 viewDir = normalize(cameraPos - vertPos);
 		std::unordered_map<int, int> inliers_filter, inliers_filter_i;
 
-//		inliers_filter.emplace(108, 97 );//cabinet
-//        inliers_filter.emplace(125, 102);//table
+        //		  inliers_filter.emplace(108, 97 );//cabinet
+        //        inliers_filter.emplace(125, 102);//table
+        //        388 482 1.37622 1.55019 // bad  5mm
+        //        388 482 1.37622 0.416063 //good
+        //        388 482 1.37622 0.760425 // bad 1cm
 
-//        388 482 1.37622 1.55019 // bad  5mm
-//        388 482 1.37622 0.416063 //good
-//        388 482 1.37622 0.760425 // bad 1cm
-
-// 446,356 floor point
-//        360,435  // 446,356
-        inliers_filter.emplace( 446,356);
+        // 446,356 floor point
+        // 360,435  // 446,356
+        inliers_filter.emplace(446, 356);
 
 
         Mat ctrlPointMask(deltaMap.rows, deltaMap.cols, CV_8UC3, Scalar(0,0,0));
-
 		Mat radianceMap_left(deltaMap.rows, deltaMap.cols, CV_32FC3, Scalar(0));
 
 
@@ -362,11 +361,8 @@ namespace DSONL {
         // maintain envMaps of current frame here
 
         std::unordered_map<int, pointEnvlight> envLightMap_cur;
-
-
 		for (int u = 0; u < depth_map.rows; u++)// colId, cols: 0 to 480
 		{
-
             for (int v = 0; v < depth_map.cols; v++)// rowId,  rows: 0 to 640
 			{
 
@@ -400,7 +396,7 @@ namespace DSONL {
 				p_c1 << p_3d_no_d.x() / iDepth, p_3d_no_d.y() / iDepth, p_3d_no_d.z() / iDepth;
 
 				// record point cloud
-				//cloud->push_back(pcl::PointXYZ(p_c1.x(), p_c1.y(), p_c1.z()));
+				// cloud->push_back(pcl::PointXYZ(p_c1.x(), p_c1.y(), p_c1.z()));
 				// calculate normal for each point Transformation_wc
 
 				// ===================================NORMAL====================================

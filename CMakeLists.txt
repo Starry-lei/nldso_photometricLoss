@@ -194,7 +194,7 @@ set(dsonl_SOURCE_FILES
 
 add_library(dsonl ${dsonl_SOURCE_FILES})
 
-add_executable(photometricLoss src/photometricLoss.cpp)
+add_executable(photometricLoss src/photometricLoss.cpp src/SpecularHighlightRemoval/SpecularHighlightRemoval.cpp)
 target_link_libraries(photometricLoss
   Ceres::ceres
   TBB::tbb

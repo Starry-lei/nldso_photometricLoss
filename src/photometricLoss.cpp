@@ -11,13 +11,9 @@
 #include "cameraProjection/reprojection.h"
 #include "cameraProjection/photometricBA.h"
 #include "controlPointSelector/ctrlPointSelector.h"
-
-
-
 #include "deltaCompute/deltaCompute.h"
-
 #include "pixelSelector.h"
-
+#include "SpecularHighlightRemoval/SpecularHighlightRemoval.h"
 using namespace cv;
 using namespace std;
 using namespace DSONL;
@@ -32,120 +28,62 @@ int main(int argc, char **argv) {
 
     // ===========================Environment Light preprocessing module===========================================
 
-    // load env light maps
-//    std::string envMap_Folder="../data/SimulationEnvData/envMap_10To16";
-//    std::string envMap_Folder="/home/lei/Documents/Research/envMapData/envMap_10To16";
-
-//    std::string envMap_Folder="/home/lei/Documents/Research/envMapData/envMapData_Dense01";
-//    string controlPointPose_path= "/home/lei/Documents/Research/envMapData/envMapData_Dense0704_01_control_cam_pose3k.txt";
-
-//    std::string envMap_Folder="/home/lei/Documents/Research/envMapData/ThirtyPointsEnvMap";
-//    string controlPointPose_path= "/home/lei/Documents/Research/envMapData/short0370_02_control_cam_pose.txt";
-
-
-//    std::string envMap_Folder="/home/lei/Documents/Research/envMapData/SeventeenPointsEnvMap";
-//    string controlPointPose_path= "/home/lei/Documents/Research/envMapData/scene0370_02_control_cam_pose.txt";
-
-//    std::string envMap_Folder=    "/home/lei/Documents/Research/envMapData/EnvMap_2358";
-//    string controlPointPose_path= "/home/lei/Documents/Research/envMapData/2frame0370_02_control_cam_pose_2358.txt";
-//    string  renderedEnvMapPath=  "/home/lei/Documents/Research/envMapData/EnvMap_2358";
-
-//    std::string envMap_Folder="/home/lei/Documents/Research/envMapData/EnvMap_764";
-//    string controlPointPose_path= "/home/lei/Documents/Research/envMapData/control_cam_pose_ControlpointCloud_Sparsfied_764.txt";
-//    string  renderedEnvMapPath=   "/home/lei/Documents/Research/envMapData/EnvMap_764";
-
-//    std::string envMap_Folder="/home/lei/Documents/Research/envMapData/EnvMap_91";
-//    string controlPointPose_path= "/home/lei/Documents/Research/envMapData/control_cam_pose_ControlpointCloud_Sparsfied_91.txt";
-//    string  renderedEnvMapPath=   "/home/lei/Documents/Research/envMapData/EnvMap_91";
-
 //    std::string envMap_Folder="/home/lei/Documents/Research/envMapData/EnvMap150_wholeImg";
 //    string controlPointPose_path= "/home/lei/Documents/Research/envMapData/2frame0370_02_control_cam_pose_150.txt";
 //    string  renderedEnvMapPath=   "/home/lei/Documents/Research/envMapData/EnvMap150_wholeImg";
 
-    std::string envMap_Folder="/home/lei/Documents/Research/envMapData/EnvMap_156ctrlPoints";
+    std::string envMap_Folder=    "   /home/lei/Documents/Research/envMapData/EnvMap_156ctrlPoints";
     string controlPointPose_path= "/home/lei/Documents/Research/envMapData/2frame0370_02_control_cam_pose156.txt";
     string  renderedEnvMapPath=   "/home/lei/Documents/Research/envMapData/EnvMap_156ctrlPoints";
 
-
-
-    Mat grayImage_target, grayImage_ref, depth_ref, depth_target, image_ref_baseColor, image_target_baseColor;
-    Mat image_ref_metallic = dataLoader->image_ref_metallic;
-    Mat image_ref_roughness = dataLoader->image_ref_roughness;
-	grayImage_ref = dataLoader->grayImage_ref;
-
-
-//
-//    Vec2i point_test(450, 100);
-//    cv::circle(grayImage_ref, point_test, 2, cv::Scalar(255), 8);
-//    imshow("grayImage_ref", grayImage_ref);
-//    waitKey(0);
-
-
-
-
-    grayImage_target = dataLoader->grayImage_target;
-
-	depth_ref = dataLoader->depth_map_ref;
-	Mat depth_ref_GT = dataLoader->depth_map_ref;
-	depth_target = dataLoader->depth_map_target;
-	image_ref_baseColor = dataLoader->image_ref_baseColor;
-
-	image_target_baseColor = dataLoader->image_target_baseColor;
-    Mat normal_map_GT;
-    normal_map_GT = dataLoader->normal_map_GT;
+    // data loading
+    Mat Image_tar8UC3, Image_ref8UC3, depth_ref,depth_ref_inv, depth_target;
+    Mat normal_map_GT,image_ref_roughness,depth_ref_GT;
     Eigen::Matrix3f K;
+    normal_map_GT = dataLoader->normal_map_GT;
+    image_ref_roughness = dataLoader->image_ref_roughness;
+    Image_ref8UC3 = dataLoader->grayImage_ref;
+    Image_tar8UC3 = dataLoader->grayImage_target;
+    depth_target = dataLoader->depth_map_target;
+	depth_ref_inv = dataLoader->depth_map_ref;
     K = dataLoader->camera_intrinsics;
+    divide(Scalar(1), depth_ref_inv, depth_ref_GT);
 
-    Mat pointOfInterestArea(grayImage_ref.rows, grayImage_ref.cols, CV_8UC1, Scalar(0));
-//    string pointOfInterest= "../data/Exp_specular_floor/point_of_Interest.txt";
-//    string pointOfInterest= "../data/Exp_specular_floor/point_of_I2.txt";
-//    readUV(pointOfInterest, pointOfInterestArea);
+    // =============================intensity segmentation module===========================================
 
-//    pointOfInterestArea= imread("../data/Exp_specular_floor_forLoss/leftImage/spointMask_38880.png", IMREAD_ANYCOLOR | IMREAD_ANYDEPTH);
-//    pointOfInterestArea= imread("../data/Exp_specular_floor_forLoss/leftImage/sPointLambertianMask_30118.png", IMREAD_ANYCOLOR | IMREAD_ANYDEPTH);
-//    pointOfInterestArea= imread("../data/Exp_specular_floor_forLoss/leftImage/sPointLambertianMask_17512.png", IMREAD_ANYCOLOR | IMREAD_ANYDEPTH);
+    Mat specular_diffuse_transition_mask(Image_ref8UC3.rows, Image_ref8UC3.cols,CV_8UC1,Scalar(0));
+    Mat diffuse_mask(Image_ref8UC3.rows, Image_ref8UC3.cols,CV_8UC1,Scalar(0));
 
-//    Mat sPointLambertianMask_15402= imread("../data/Exp_specular_floor_forLoss/leftImage/sPointLambertianMask_15402.png", IMREAD_ANYCOLOR | IMREAD_ANYDEPTH);
-    Mat sPointLambertianMask_10011= imread("../data/Exp_specular_floor_forLoss/leftImage/sPointLambertianMask_10011.png", IMREAD_ANYCOLOR | IMREAD_ANYDEPTH);
-    Mat pointOfInterestArea_Non_Lambertian_2358= imread("../data/Exp_specular_floor_forLoss/leftImage/spointMask_non_Lambertian_2358.png", IMREAD_ANYCOLOR | IMREAD_ANYDEPTH);
-    Mat pointOfInterestArea_allPoints_38880= imread("../data/Exp_specular_floor_forLoss/leftImage/spointMask_38880.png", IMREAD_ANYCOLOR | IMREAD_ANYDEPTH);
+    SpecularHighlightRemoval specularHighlightRemoval;
+    specularHighlightRemoval.initialize(Image_ref8UC3.rows, Image_ref8UC3.cols);
+    cv::Mat outputImage = specularHighlightRemoval.run(Image_ref8UC3);
 
-    int num_points_used =0;
-    for (int u = 0; u < grayImage_ref.rows; u++)
-    {
-        for (int v = 0; v < grayImage_ref.cols; v++)
-        {
-//             if (static_cast<int>(sPointLambertianMask_10011.at<uchar>(u, v))==255 || static_cast<int>(pointOfInterestArea_Non_Lambertian_2358.at<uchar>(u, v))==255 ){
-            if (int(pointOfInterestArea_allPoints_38880.at<uchar>(u, v))==255 ) {
-                num_points_used+=1;
-                pointOfInterestArea.at<uchar>(u,v)= 255;
-            }
-
-//            if (int(pointOfInterestArea_Non_Lambertian_2358.at<uchar>(u, v))==255 ) {
-//                num_points_used+=1;
-//                pointOfInterestArea.at<uchar>(u,v)= 255;
-//            }
+    Mat diffuseImage= specularHighlightRemoval.diffuseImage;
+    Mat specularImage= specularHighlightRemoval.specularImage;
+    Mat Img_range=specularHighlightRemoval.rangeImage;
+    Mat clusterImage=specularHighlightRemoval.clusterImage; //  1: specular_diffuse transition, 2: diffuse, 3: specular
 
 
-        }
-    }
-    imshow("pointOfInterestArea",pointOfInterestArea);
-    cout<<"check channel of pointOfInterestArea_Non_Lambertian_2358:"<<pointOfInterestArea_Non_Lambertian_2358.channels()<<" check num_points_used "<<num_points_used<<endl;
-//    waitKey(0);
+    // select a single channel of image
+    int channelIdx = 1;// green channel
+    Mat grayImage_ref,grayImage_ref_green;
 
-    // ----------------------------------------optimization variable: R, t--------------------------------------
-    Sophus::SE3d xi, xi_GT;
-    Eigen::Matrix3d Camera1_c2w= dataLoader->R1;
-    Eigen::Matrix<double,3,3> R;
-    R = dataLoader->q_12.normalized().toRotationMatrix();
-    xi_GT.setRotationMatrix(R);
-    xi_GT.translation() = dataLoader->t12;
+//    extractChannel(Image_ref8UC3, grayImage_ref_green, channelIdx);
+//    cvtColor(Image_ref8UC3, grayImage_ref, CV_BGR2GRAY);
 
-//    imshow("image_ref_baseColor",image_ref_baseColor);
-//    waitKey(0);
+    extractChannel(diffuseImage, grayImage_ref_green, channelIdx);
+    cvtColor(diffuseImage, grayImage_ref, CV_BGR2GRAY);
+
+    Mat grayImg, mat_mean, mat_stddev;
+    double mean_val;
+    double std_dev;
+    meanStdDev(grayImage_ref, mat_mean, mat_stddev);
+    mean_val= mat_mean.at<double>(0,0);
+    std_dev = mat_stddev.at<double>(0,0);
+
 
     // ====================================== pointSelector========================================
-    bool usePixelSelector= false;
+    bool usePixelSelector= true;
     float densities[] = {0.03,0.003, 0.05,0.15,0.5,1}; /// number of optimized depths,  current index is 1
     PixelSelector* pixelSelector=NULL;
     FrameHessian* newFrame_ref=NULL;
@@ -156,18 +94,14 @@ int main(int argc, char **argv) {
     float* depthMapArray_ref=NULL;
     float* statusMap=NULL;
     bool*  statusMapB=NULL;
-    Mat statusMap_NonLambCand(grayImage_ref.rows,  grayImage_ref.cols, CV_8UC1, Scalar(0));
+    Mat transitionField(grayImage_ref.rows,  grayImage_ref.cols, CV_8UC1, Scalar(0));
 
     if (usePixelSelector){
-        double min_gray,max_gray;
-        Mat grayImage_ref_CV8U;
-        Mat grayImage_tar_CV8U;
-        imshow("grayImage_selector_ref",dataLoader->grayImage_selector_ref);
-        dataLoader->grayImage_selector_ref.convertTo(grayImage_ref_CV8U,CV_8UC1, 255.0);
-//        grayImage_target.convertTo(grayImage_tar_CV8U,CV_8UC1, 255.0);
 
-        imshow("grayImage_ref_CV8U",grayImage_ref_CV8U);
-        waitKey(0);
+        double min_gray,max_gray;
+
+        imshow("grayImage_ref",grayImage_ref);
+
         newFrame_ref= new FrameHessian();
         newFrame_tar= new FrameHessian();
 
@@ -179,9 +113,8 @@ int main(int argc, char **argv) {
 
         for (int row = 0; row < hG[0]; ++row) {
 
-            uchar *pixel_ref=grayImage_ref_CV8U.ptr<uchar>(row);
-            uchar *pixel_tar=grayImage_ref_CV8U.ptr<uchar>(row);
-//            float * pixel_depth_ref= inv_depth_ref.ptr<float>(row);
+            uchar *pixel_ref=grayImage_ref.ptr<uchar>(row);
+            uchar *pixel_tar=grayImage_ref.ptr<uchar>(row);
 
             for (int col = 0; col < wG[0]; ++col) {
                 color_ref[row*wG[0]+col]= (float) pixel_ref[col];
@@ -206,12 +139,12 @@ int main(int argc, char **argv) {
         for(int i=0; i>=0; i--) {
 
             cout << "\n pyrLevelsUsed:" << i << endl;
-			plotImPyr(newFrame_ref, i, "newFrame_ref");
+//			plotImPyr(newFrame_ref, i, "newFrame_ref");
 //			plotImPyr(newFrame_tar, i, "newFrame_tar");
 //			plotImPyr(depthMap_ref, i, "depthMap_ref");
-            npts[i] = pixelSelector->makeMaps(newFrame_ref, statusMap, densities[1] * wG[0] * hG[0], 1, true, 2);
+            npts[i] = pixelSelector->makeMaps(newFrame_ref, statusMap, densities[1] * wG[0] * hG[0], 1, false, 2);
             cout << "\n npts[i]: " << npts[i] << "\n densities[i]*wG[0]*hG[0]:" << densities[i] * wG[0] * hG[0] << endl;
-            waitKey(0);
+//            waitKey(0);
 
 //            cv::Mat image_ref(hG[i], wG[i], CV_32FC1);
 //            memcpy(image_ref.data, newFrame_ref->img_pyr[i], wG[i] * hG[i] * sizeof(float));
@@ -220,56 +153,82 @@ int main(int argc, char **argv) {
         }
 
 
-        float metallic_threshold = 0.8;
         float roughness_threshold = 0.3;
 //        float scale_std= 0.6; // LDR
-        float scale_std= 0.6; // HDR maybe wrong
-//        float scale_std= 0.8; // HDR only for test
+//        float scale_std= 0.6; // HDR maybe wrong
+        float scale_std= 0.8; // HDR only for test
 
-
-
-//        show point_counter:720
-//        show dso_point_counter:38878
-//        Image averge:0.360396
-//        Image std:0.521962
 
 
         int point_counter=0;
         int dso_point_counter=0;
-
         for (int u = 0; u< grayImage_ref.rows; u++) // colId, cols: 0 to 480
         {
             for (int v = 0; v < grayImage_ref.cols; v++) // rowId,  rows: 0 to 640
             {
                 if (statusMap!=NULL && statusMap[u*grayImage_ref.cols+v]!=0 ){
                     dso_point_counter+=1;
+                    selectedPointMask1.at<uchar>(u,v)= 255;
 
                     // ================================save the selectedPoint mask here=======================
+                    // apply the intensity segmentation here
+                    // && (grayImage_ref.at<uchar>(u,v)>(mean_val+scale_std*std_dev) )
+                    if ( (image_ref_roughness.at<float>(u,v) < roughness_threshold)  && clusterImage.at<int>(u, v) == 1 ){
+                        transitionField.at<uchar>(u,v)= 255;
 
-                    if ( (image_ref_roughness.at<float>(u,v) < roughness_threshold || image_ref_metallic.at<float>(u,v)>metallic_threshold) && (grayImage_ref.at<double>(u,v)>(dataLoader->mean_val+scale_std*dataLoader->std_dev) )){
-                        statusMap_NonLambCand.at<uchar>(u,v)= 255;
                         statusMap[u*grayImage_ref.cols+v]=255;
                         point_counter+=1;
                     }
-
-
-//                    if ( (image_ref_roughness.at<float>(u,v) < roughness_threshold || image_ref_metallic.at<float>(u,v)>metallic_threshold) && (dataLoader->grayImage_ref_CV8UC1.at<uchar>(u,v)>(dataLoader->mean_val+scale_std*dataLoader->std_dev) )){
-//                        statusMap_NonLambCand.at<uchar>(u,v)= 255;
-//                        statusMap[u*grayImage_ref.cols+v]=255;
-//                        point_counter+=1;
-//                    }
 
                 }
             }
         }
         // refine the point selector
-//        imshow("selectedPointMask1",selectedPointMask1);
-        imshow("statusMap_NonLambCand", statusMap_NonLambCand);
+
+
+
+
+        Mat inputImage= Image_ref8UC3.clone();
+        Mat inputImage_copy_1= inputImage.clone();
+        Mat inputImage_copy_2= inputImage.clone();
+        Mat inputImage_copy_3= inputImage.clone();
+
+
+        for (int i = 0; i < clusterImage.rows; i++) {
+        for (int j = 0; j < clusterImage.cols; j++) {
+        if (clusterImage.at<int>(i, j) == 1) {
+        circle(inputImage_copy_1, Point(j, i), 1, Scalar(255, 0, 0), 1, 8, 0);
+        circle(inputImage, Point(j, i), 1, Scalar(255, 0, 0), 1, 8, 0);
+        }
+        else if (clusterImage.at<int>(i,j)==2){
+        circle(inputImage_copy_2, Point(j, i), 1, Scalar(0, 255, 0), 1, 8, 0);
+        circle(inputImage, Point(j, i), 1, Scalar(0, 255, 0), 1, 8, 0);
+        }else if (clusterImage.at<int>(i,j)==3){
+        circle(inputImage_copy_3, Point(j, i), 1, Scalar(0, 0, 255), 1, 8, 0);
+        circle(inputImage, Point(j, i), 1, Scalar(0, 0, 255), 1, 8, 0);
+        }
+        }
+        }
+
+        imshow("inputImage_specular_Distribution_1", inputImage_copy_1);
+        imshow("inputImage_specular_Distribution_2", inputImage_copy_2);
+        imshow("inputImage_specular_Distribution_3", inputImage_copy_3);
+
+        clusterImage.convertTo(clusterImage, CV_8UC1, 255.0);
+        imshow("Img_range",Img_range);
+        imshow("diffuseImage", diffuseImage);
+        imshow("specularImage", specularImage);
+
+        cv::imshow("Input Image", Image_ref8UC3);
+        cv::imshow("Output Image", outputImage);
+
+        imshow("Specular_Diffuse_TransitionField", transitionField);
+        imshow("DSO_selectedPointMask", selectedPointMask1);
 
         std::cerr<<"\n show point_counter:"<<point_counter<<endl;
         std::cerr<<"\n show dso_point_counter:"<<dso_point_counter<<endl;
-        cout<<"\n Image averge:"<< dataLoader->mean_val<<endl;
-        cout<<" Image std:"<<dataLoader->std_dev<<endl;
+        cout<<"\n Image averge:"<< mean_val<<endl;
+        cout<<" Image std:"<<std_dev<<endl;
 //        imwrite("pointMask.png", statusMap_NonLambCand);
 //        imwrite("selectedPointMask1.png",selectedPointMask1);
         waitKey(0);
@@ -277,298 +236,508 @@ int main(int argc, char **argv) {
         }
 
 
-// ===========================ctrlPoint Selector==========================================
-    ctrlPointSelector  * ctrlPoint_Selector= new ctrlPointSelector(dataLoader->camPose1, controlPointPose_path,grayImage_ref, depth_ref_GT,K, pointOfInterestArea);
-    envLightLookup  *EnvLightLookup= new envLightLookup(ctrlPoint_Selector->selectedIndex, argc, argv, envMap_Folder,controlPointPose_path);
-
-    cout<<"\n The preComputation of EnvMap is ready!"<<endl;
-    imshow("grayImage_target", grayImage_target);
-    waitKey(0);
-	// show the depth image with noise
-	double min_depth_val, max_depth_val;
-	cv::minMaxLoc(depth_ref, &min_depth_val, &max_depth_val);
-	cout << "\n show original depth_ref min, max:\n" << min_depth_val << "," << max_depth_val << endl;
-
-	// grayImage_ref
-    double min_radiance_val, max_radiance_val;
-    cv::minMaxLoc(grayImage_ref, &min_radiance_val, &max_radiance_val);
-    cout << "\n show original grayImage_ref min, max:\n" << min_radiance_val << "," << max_radiance_val << endl;
-
-
-//	imshow("grayImage_ref",grayImage_ref);
-//	imshow("grayImage_target",grayImage_target);
-//	waitKey(0);
-
-	// ----------------------------------------optimization variable: depth --------------------------------------
-	cout << "\n Show GT rotation:\n" << xi_GT.rotationMatrix() << "\n Show GT translation:\n" << xi_GT.translation()<< endl;
-	// -------------------------------------------------Movingleast algorithm-----------------------------------------
-	std::vector<Eigen::Vector3d> pts;
-	cv::Mat normal_map(depth_ref.rows, depth_ref.cols, CV_32FC3);
-	//MLS();
-	//--------------------------------------------------normal_map_GT---------------------------------------------------
-	for (int u = 0; u < depth_ref.rows; u++) // colId, cols: 0 to 480
-	{
-		for (int v = 0; v < depth_ref.cols; v++) // rowId,  rows: 0 to 640
-		{
-
-			Eigen::Vector3f normal_new(normal_map_GT.at<cv::Vec3f>(u, v)[0], normal_map_GT.at<cv::Vec3f>(u, v)[1],normal_map_GT.at<cv::Vec3f>(u, v)[2]);
-            //			normal_new = (dataLoader->R1.cast<float>()).transpose()* normal_new;
-			Eigen::Vector3f principal_axis(0, 0, 1);
-			if (normal_new.dot(principal_axis) > 0) {normal_new = -normal_new;}
-			normal_map.at<Vec3f>(u, v)[0] = normal_new(0);
-			normal_map.at<Vec3f>(u, v)[1] = normal_new(1);
-			normal_map.at<Vec3f>(u, v)[2] = normal_new(2);
-
-		}
-	}
-
-    //	//-------------------------------------------------Data perturbation--------------------------------------------------------------------
-    //	// Add noise to original depth image, depth_ref_NS
-	Mat inv_depth_ref, depth_ref_gt;
-	Mat depth_ref_NS;
-	double roErr;
-	Eigen::Matrix3d R_GT(xi_GT.rotationMatrix());
-	Eigen::Matrix3d perturbedRotation = rotation_pertabation(0.0, 0.0, 0.0, R_GT, roErr); // degree
-
-	double trErr;
-	Eigen::Vector3d T_GT(xi_GT.translation());
-	Eigen::Vector3d perturbedTranslation = translation_pertabation(0.0, 0.0, 0.0, T_GT, trErr); // percentage
-	double Mean = 0.0, StdDev = 0;
-	//	float densities[] = {0.03, 0.003, 0.05, 0.15, 0.5, 1}; /// number of optimized depths,  current index is 1
-
-    imshow("normal_map",normal_map);
-    waitKey(0);
-
-	PhotometricBAOptions options;
-    Mat newNormalMap = normal_map;
-//    Mat newNormalMap = normal_map_GT;
-//    double distanceThres = 0.009;
-//	double distanceThres = 0.007;
-    double distanceThres = 0.0035;
-//    double distanceThres = 0.002;
-
-	float upper = 2.0;
-	float buttom = 0.5;
-	float up_new = upper;
-	float butt_new = buttom;
-	Mat deltaMap(depth_ref.rows, depth_ref.cols, CV_32FC1, Scalar(1)); // storing delta
-    Mat envMapWorkMask(deltaMap.rows, deltaMap.cols, CV_8UC1, Scalar(0)); //
-
-
-    Mat deltaMap_GT(depth_ref.rows, depth_ref.cols, CV_32FC1, Scalar(1)); // storing delta
-    Mat deltaRatio(depth_ref.rows, depth_ref.cols, CV_32FC1, Scalar(1)); // storing delta
-
-	int lvl_target, lvl_ref;
-
-	double depth_upper_bound = 0.5;  // 0.5; 1
-	double depth_lower_bound = 0.1;  // 0.001
-
-	options.optimize_depth = false;
-	options.useFilterController = false; // control the number of optimized depth
-	options.optimize_pose = true;
-	options.use_huber = false;
-	options.lambertianCase = false;
-	options.usePixelSelector = false;
-	dataLoader->options_.remove_outlier_manually = false;
-	options.huber_parameter = 0.25*4.0 / 255.0;   /// 0.25*4/255 :   or 4/255
-    bool useImgPyramid = true;
-	// -----------------------------------------Initialize the pose xi with GT or just use the default value---------------------
-//	Eigen::Vector3d initial_translation;
-//	initial_translation<< -0.2, -0.1, 0;
-
-	xi.setRotationMatrix(perturbedRotation);
-	xi.translation() = perturbedTranslation;
-
-//	xi.translation() = initial_translation;
-
-	Sophus::SO3d Rotation(xi.rotationMatrix());
-	Eigen::Matrix<double, 3, 1> Translation(xi.translation());
-
-    Sophus::SO3d Rotation_GT(xi_GT.rotationMatrix());
-    Eigen::Matrix<double, 3, 1> Translation_GT(xi_GT.translation());
-
-
-
-	AddGaussianNoise_Opencv(depth_ref, depth_ref_NS, Mean, StdDev, statusMap);
-	divide(Scalar(1), depth_ref, depth_ref_gt);
-	divide(Scalar(1), depth_ref_NS, inv_depth_ref);
-	Mat inv_depth_tar;
-	divide(Scalar(1), depth_target, inv_depth_tar);
-
-
-	Mat depth_ref_NS_before = inv_depth_ref.clone();
-	double min_inv, max_inv;
-	cv::minMaxLoc(inv_depth_ref, &min_inv, &max_inv);
-	cout << "\n show original inv_depth_ref min, max:\n" << min_inv << "," << max_inv << endl;
-	Scalar_<double> depth_Err = depthErr(depth_ref_gt, inv_depth_ref);
-	double depth_Error = depth_Err.val[0];
-	cout << "\n Show initial rotation:\n" << Rotation.matrix() << "\n Show initial translation:\n" << Translation<< endl;
-	cout << "\nShow current rotation perturbation error :" << roErr<< "\n Show current translation perturbation error : " << trErr << "\nShow current depth perturbation error :"<< depth_Error << endl;
-
-	double min_gt_special, max_gt_special;
-	cv::minMaxLoc(inv_depth_ref, &min_gt_special, &max_gt_special);
-	cout << "\n show inv_depth_ref min, max:\n" << min_gt_special << "," << max_gt_special << endl;
-	//	Mat inv_depth_ref_for_show = inv_depth_ref * (1.0 / (max_gt_special - min_gt_special)) +(-min_gt_special * (1.0 / (max_gt_special - min_gt_special)));
-	//	string depth_ref_name = "inv_depth_ref";
-	//	imshow(depth_ref_name, inv_depth_ref_for_show);
 
 
 
 
-	for (int lvl = 1; lvl >= 1; lvl--) {
-		cout << "\n Show the value of lvl:" << lvl << endl;
-		Mat IRef, DRef, I, D;
-		Eigen::Matrix3f Klvl, Klvl_ignore;
-		lvl_target = lvl;
-		lvl_ref = lvl;
-
-		downscale(grayImage_ref, inv_depth_ref, K, lvl_ref, IRef, DRef, Klvl);
-		downscale(grayImage_target, depth_target, K, lvl_target, I, D, Klvl_ignore);
-		double min_gt_special, max_gt_special;
-		int i = 0;
-		while (i < 2) {
-			double max_n_, min_n_;
-			cv::minMaxLoc(deltaMap, &min_n_, &max_n_);
-			cout << "->>>>>>>>>>>>>>>>>show max and min of estimated deltaMap:" << max_n_ << "," << min_n_ << endl;
-            Mat mask = cv::Mat(deltaMap != deltaMap);
-			deltaMap.setTo(1.0, mask);
-			if (i == 1) {
-				cout << "depthErr(depth_ref_gt, inv_depth_ref).val[0]:" << depthErr(depth_ref_gt, inv_depth_ref).val[0]<< endl;
-				showScaledImage(depth_ref_NS_before, depth_ref_gt, inv_depth_ref);
-			}
-			cv::minMaxLoc(inv_depth_ref, &min_gt_special, &max_gt_special);
-			cout << "\n show inv_depth_ref min, max:\n" << min_gt_special << "," << max_gt_special << endl;
-			Mat inv_depth_ref_for_show = inv_depth_ref * (1.0 / (max_gt_special - min_gt_special)) +(-min_gt_special * (1.0 / (max_gt_special - min_gt_special)));
-			string depth_ref_name = "inv_depth_ref" + to_string(i);
-//			imshow(depth_ref_name, inv_depth_ref_for_show);
-//			cout<<"show the current depth:"<<inv_depth_ref.at<double>(359,470)<<endl;
-            // Photometric loss
-            statusMap_NonLambCand = pointOfInterestArea.clone();
-//            PhotometricBA(IRef, I, options, Klvl, Rotation, Translation, inv_depth_ref, deltaMap, depth_upper_bound,depth_lower_bound, statusMap, statusMapB,statusMap_NonLambCand);
-
-            // Result analysis
-            cout << "\n show depth_ref min, max:\n" << min_gt_special << "," << max_gt_special << endl;
-            cout << "\n Show optimized rotation:\n" << Rotation.matrix() << "\n Show optimized translation:\n"<< Translation << endl;
-            cout << "\n Show Rotational error :" << rotationErr(xi_GT.rotationMatrix(), Rotation.matrix())
-                 << "(degree)." << "\n Show translational error :"
-                 << 100 * translationErr(xi_GT.translation(), Translation) << "(%) "
-                 << "\n Show depth error :" << depthErr(depth_ref_gt, inv_depth_ref).val[0]
-                 << endl;
-            std::cout << "\n Start calculating delta map ... " << endl;
-            std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
-
-
-            // use estimated pose
-//            DSONL::updateDelta(dataLoader->camPose1,EnvLightLookup, statusMap,Rotation,Translation,Klvl,image_ref_baseColor,inv_depth_ref,image_ref_metallic ,image_ref_roughness,deltaMap,newNormalMap,up_new, butt_new, pointOfInterestArea_Non_Lambertian_2358);//         DSONL::updateDelta(dataLoader->camPose1,EnvLightLookup, statusMap,Rotation,Translation,Klvl,image_ref_baseColor,inv_depth_ref,image_ref_metallic ,image_ref_roughness,deltaMap,newNormalMap,up_new, butt_new);
-            // use GT  pose
-//            DSONL::updateDelta(dataLoader->camPose1,EnvLightLookup, statusMap,Rotation_GT,Translation_GT,Klvl,image_ref_baseColor,inv_depth_ref,image_ref_metallic ,image_ref_roughness,deltaMap,newNormalMap,up_new, butt_new, pointOfInterestArea_allPoints_38880, renderedEnvMapPath);
-//            DSONL::updateDelta(dataLoader->camPose1,EnvLightLookup, statusMap,Rotation_GT,Translation_GT,Klvl,image_ref_baseColor,inv_depth_ref,image_ref_metallic ,image_ref_roughness,deltaMap,newNormalMap,up_new, butt_new, pointOfInterestArea_Non_Lambertian_2358, renderedEnvMapPath);
-
-            DSONL::updateDelta(dataLoader->camPose1,EnvLightLookup, statusMap,Rotation_GT,Translation_GT,Klvl,image_ref_baseColor,inv_depth_ref,
-                               image_ref_metallic ,image_ref_roughness,deltaMap,newNormalMap,up_new, butt_new, pointOfInterestArea, renderedEnvMapPath
-                               ,envMapWorkMask);
 
 
 
-            // deltaMapGT
-//            Mat deltaMapGT_res= deltaMapGT(grayImage_ref,depth_ref,grayImage_target,depth_target,K.cast<double>(),distanceThres,xi_GT, upper, buttom, deltaMap, statusMap, pointOfInterestArea_allPoints_38880);
-//            Mat deltaMapGT_res= deltaMapGT(grayImage_ref,depth_ref,grayImage_target,depth_target,K.cast<double>(),distanceThres,xi_GT, upper, buttom, deltaMap, statusMap, pointOfInterestArea_Non_Lambertian_2358);
-            Mat deltaMapGT_res= deltaMapGT(grayImage_ref,depth_ref,grayImage_target,depth_target,K.cast<double>(),distanceThres,xi_GT,
-                                           upper, buttom, deltaMap, statusMap, envMapWorkMask,
-                                           controlPointPose_path,
-                                           dataLoader->camPose1.cast<float>(),
-                                           newNormalMap
-                                           );
 
 
-//            for (int u = 0; u < grayImage_ref.rows; u++)// colId, cols: 0 to 480
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//    Mat pointOfInterestArea(grayImage_ref.rows, grayImage_ref.cols, CV_8UC1, Scalar(0));
+//    //    string pointOfInterest= "../data/Exp_specular_floor/point_of_Interest.txt";
+//    //    string pointOfInterest= "../data/Exp_specular_floor/point_of_I2.txt";
+//    //    readUV(pointOfInterest, pointOfInterestArea);
+//
+//    //    pointOfInterestArea= imread("../data/Exp_specular_floor_forLoss/leftImage/spointMask_38880.png", IMREAD_ANYCOLOR | IMREAD_ANYDEPTH);
+//    //    pointOfInterestArea= imread("../data/Exp_specular_floor_forLoss/leftImage/sPointLambertianMask_30118.png", IMREAD_ANYCOLOR | IMREAD_ANYDEPTH);
+//    //    pointOfInterestArea= imread("../data/Exp_specular_floor_forLoss/leftImage/sPointLambertianMask_17512.png", IMREAD_ANYCOLOR | IMREAD_ANYDEPTH);
+//
+//    //    Mat sPointLambertianMask_15402= imread("../data/Exp_specular_floor_forLoss/leftImage/sPointLambertianMask_15402.png", IMREAD_ANYCOLOR | IMREAD_ANYDEPTH);
+//    Mat sPointLambertianMask_10011= imread("../data/Exp_specular_floor_forLoss/leftImage/sPointLambertianMask_10011.png", IMREAD_ANYCOLOR | IMREAD_ANYDEPTH);
+//    Mat pointOfInterestArea_Non_Lambertian_2358= imread("../data/Exp_specular_floor_forLoss/leftImage/spointMask_non_Lambertian_2358.png", IMREAD_ANYCOLOR | IMREAD_ANYDEPTH);
+//    Mat pointOfInterestArea_allPoints_38880= imread("../data/Exp_specular_floor_forLoss/leftImage/spointMask_38880.png", IMREAD_ANYCOLOR | IMREAD_ANYDEPTH);
+//
+//    int num_points_used =0;
+//    for (int u = 0; u < grayImage_ref.rows; u++)
+//    {
+//        for (int v = 0; v < grayImage_ref.cols; v++)
+//        {
+////             if (static_cast<int>(sPointLambertianMask_10011.at<uchar>(u, v))==255 || static_cast<int>(pointOfInterestArea_Non_Lambertian_2358.at<uchar>(u, v))==255 ){
+//            if (int(pointOfInterestArea_allPoints_38880.at<uchar>(u, v))==255 )
 //            {
-//                for (int v = 0; v < grayImage_ref.cols; v++)// rowId,  rows: 0 to 640
-//                {
-//                        if ( static_cast<int>(pointOfInterestArea_Non_Lambertian_2358.at<uchar>(u, v))==255 ){
-////                    if (static_cast<int>(pointOfInterestArea_Lambertian_14976.at<uchar>(u, v))==255 ){
-//                        num_points_used+=1;
-//                        pointOfInterestArea.at<uchar>(u,v)= 255;
+//                num_points_used+=1;
+//                pointOfInterestArea.at<uchar>(u,v)= 255;
+//            }
+//
+////            if (int(pointOfInterestArea_Non_Lambertian_2358.at<uchar>(u, v))==255 ) {
+////                num_points_used+=1;
+////                pointOfInterestArea.at<uchar>(u,v)= 255;
+////            }
+//
+//
+//        }
+//    }
+//    imshow("pointOfInterestArea",pointOfInterestArea);
+//    cout<<"check channel of pointOfInterestArea_Non_Lambertian_2358:"<<pointOfInterestArea_Non_Lambertian_2358.channels()<<" check num_points_used "<<num_points_used<<endl;
+////    waitKey(0);
+//
+//    // ----------------------------------------optimization variable: R, t--------------------------------------
+//    Sophus::SE3d xi, xi_GT;
+//    Eigen::Matrix3d Camera1_c2w= dataLoader->R1;
+//    Eigen::Matrix<double,3,3> R;
+//    R = dataLoader->q_12.normalized().toRotationMatrix();
+//    xi_GT.setRotationMatrix(R);
+//    xi_GT.translation() = dataLoader->t12;
+//
+
+//
+//    // ====================================== pointSelector========================================
+//    bool usePixelSelector= false;
+//    float densities[] = {0.03,0.003, 0.05,0.15,0.5,1}; /// number of optimized depths,  current index is 1
+//    PixelSelector* pixelSelector=NULL;
+//    FrameHessian* newFrame_ref=NULL;
+//    FrameHessian* newFrame_tar=NULL;
+//    FrameHessian* depthMap_ref=NULL;
+//    float* color_ref=NULL;
+//    float* color_tar=NULL;
+//    float* depthMapArray_ref=NULL;
+//    float* statusMap=NULL;
+//    bool*  statusMapB=NULL;
+//    Mat statusMap_NonLambCand(grayImage_ref.rows,  grayImage_ref.cols, CV_8UC1, Scalar(0));
+//
+//    if (usePixelSelector){
+//        double min_gray,max_gray;
+//        Mat grayImage_ref_CV8U;
+//        Mat grayImage_tar_CV8U;
+//        imshow("grayImage_selector_ref",dataLoader->grayImage_selector_ref);
+//        dataLoader->grayImage_selector_ref.convertTo(grayImage_ref_CV8U,CV_8UC1, 255.0);
+////        grayImage_target.convertTo(grayImage_tar_CV8U,CV_8UC1, 255.0);
+//
+//        imshow("grayImage_ref_CV8U",grayImage_ref_CV8U);
+//        waitKey(0);
+//        newFrame_ref= new FrameHessian();
+//        newFrame_tar= new FrameHessian();
+//
+//
+//        pixelSelector= new PixelSelector(wG[0],hG[0]);
+//        color_ref= new float[wG[0]*hG[0]];
+//        color_tar= new float[wG[0]*hG[0]];
+//
+//
+//        for (int row = 0; row < hG[0]; ++row) {
+//
+//            uchar *pixel_ref=grayImage_ref_CV8U.ptr<uchar>(row);
+//            uchar *pixel_tar=grayImage_ref_CV8U.ptr<uchar>(row);
+////            float * pixel_depth_ref= inv_depth_ref.ptr<float>(row);
+//
+//            for (int col = 0; col < wG[0]; ++col) {
+//                color_ref[row*wG[0]+col]= (float) pixel_ref[col];
+//                color_tar[row*wG[0]+col]= (float)pixel_tar[col];
+////              depthMapArray_ref[row*wG[0]+col]=pixel_depth_ref[col];
+//
+//            }
+//        }
+//        newFrame_ref->makeImages(color_ref); // make image_ref pyramid
+//        newFrame_tar->makeImages(color_tar); // make image_tar pyramid
+//        statusMap= new float[wG[0]*hG[0]];
+//        statusMapB = new bool[wG[0]*hG[0]];
+//        int setting_desiredImmatureDensity=1500;
+//        float densities[] = {1,0.5,0.15,0.05,0.03}; // 不同层取得点密度
+//
+//        int  npts[pyrLevelsUsed];
+//        Mat selectedPointMask1(grayImage_ref.rows,  grayImage_ref.cols, CV_8UC1, Scalar(0));
+//
+//
+//        // MinimalImageB3 imgShow[pyrLevelsUsed];
+//        pixelSelector->currentPotential= 3;
+//        for(int i=0; i>=0; i--) {
+//
+//            cout << "\n pyrLevelsUsed:" << i << endl;
+//			plotImPyr(newFrame_ref, i, "newFrame_ref");
+////			plotImPyr(newFrame_tar, i, "newFrame_tar");
+////			plotImPyr(depthMap_ref, i, "depthMap_ref");
+//            npts[i] = pixelSelector->makeMaps(newFrame_ref, statusMap, densities[1] * wG[0] * hG[0], 1, true, 2);
+//            cout << "\n npts[i]: " << npts[i] << "\n densities[i]*wG[0]*hG[0]:" << densities[i] * wG[0] * hG[0] << endl;
+//            waitKey(0);
+//
+////            cv::Mat image_ref(hG[i], wG[i], CV_32FC1);
+////            memcpy(image_ref.data, newFrame_ref->img_pyr[i], wG[i] * hG[i] * sizeof(float));
+////            cv::Mat image_tar(hG[i], wG[i], CV_32FC1);
+////            memcpy(image_tar.data, newFrame_tar->img_pyr[i], wG[i] * hG[i] * sizeof(float));
+//        }
+//
+//
+//        float metallic_threshold = 0.8;
+//        float roughness_threshold = 0.3;
+////        float scale_std= 0.6; // LDR
+//        float scale_std= 0.6; // HDR maybe wrong
+////        float scale_std= 0.8; // HDR only for test
+//
+//
+//
+////        show point_counter:720
+////        show dso_point_counter:38878
+////        Image averge:0.360396
+////        Image std:0.521962
+//
+//
+//        int point_counter=0;
+//        int dso_point_counter=0;
+//
+//        for (int u = 0; u< grayImage_ref.rows; u++) // colId, cols: 0 to 480
+//        {
+//            for (int v = 0; v < grayImage_ref.cols; v++) // rowId,  rows: 0 to 640
+//            {
+//                if (statusMap!=NULL && statusMap[u*grayImage_ref.cols+v]!=0 ){
+//                    dso_point_counter+=1;
+//
+//                    // ================================save the selectedPoint mask here=======================
+//
+//                    if ( (image_ref_roughness.at<float>(u,v) < roughness_threshold || image_ref_metallic.at<float>(u,v)>metallic_threshold) && (grayImage_ref.at<double>(u,v)>(dataLoader->mean_val+scale_std*dataLoader->std_dev) )){
+//                        statusMap_NonLambCand.at<uchar>(u,v)= 255;
+//                        statusMap[u*grayImage_ref.cols+v]=255;
+//                        point_counter+=1;
 //                    }
+//
+//
+////                    if ( (image_ref_roughness.at<float>(u,v) < roughness_threshold || image_ref_metallic.at<float>(u,v)>metallic_threshold) && (dataLoader->grayImage_ref_CV8UC1.at<uchar>(u,v)>(dataLoader->mean_val+scale_std*dataLoader->std_dev) )){
+////                        statusMap_NonLambCand.at<uchar>(u,v)= 255;
+////                        statusMap[u*grayImage_ref.cols+v]=255;
+////                        point_counter+=1;
+////                    }
+//
 //                }
 //            }
-
-//            imshow("deltaMapGT_res",deltaMapGT_res);
-//            waitKey(0);
-
-
-            // compare deltaMap_GT with deltaMap:
-//            int counter_true=0, counter_all_pts=0;
-//            for (int u = 0; u < grayImage_ref.rows; u++)// colId, cols: 0 to 480
-//            {
-//                for (int v = 0; v < grayImage_ref.cols; v++)// rowId,  rows: 0 to 640
-//                {
-//                    if (pointOfInterestArea_Non_Lambertian_2358.at<uchar>(u,v)!=255){ continue;}
-//                    counter_all_pts+=1;
-////                    cout<<"check deltaMap_GT vals:"<<deltaMapGT_res.at<float>(u,v)<<"and, deltaMap.at<float>(u,v):"<<deltaMap.at<float>(u,v)<<endl;
-//                    if ((deltaMapGT_res.at<float>(u,v)>=1.0 && deltaMap.at<float>(u,v)>=1.0) || (deltaMapGT_res.at<float>(u,v)<1.0 && deltaMap.at<float>(u,v)<1.0) ){
-//                        counter_true+=1;
-//                    }
-//                    }
-//                }
-//        Mat mat_mean, mat_stddev;
-//        double mean_val, std_dev;
-//        meanStdDev(deltaRatio, mat_mean, mat_stddev);
-//        mean_val= mat_mean.at<double>(0,0);
-//        std_dev = mat_stddev.at<double>(0,0);
-//        std::cerr<<"show counter_all_pts and delta_true_ratio "<< counter_all_pts<<"and num of counter_true:"<<counter_true<<"show ratio:"<<   (float)counter_true/ (float)counter_all_pts<<endl;
-
-
-            std::chrono::steady_clock::time_point t2 = std::chrono::steady_clock::now();
-            std::chrono::duration<double> time_used =std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1);
-            std::cout << "\n Delta map is done ... "<< " and costs time:" << time_used.count() << " seconds." << endl;
-//			Mat deltaMapGT_res= deltaMapGT(grayImage_ref,depth_ref,grayImage_target,depth_target,K.cast<double>(),distanceThres,xi_GT, upper, buttom, deltaMap);
+//        }
+//        // refine the point selector
+////        imshow("selectedPointMask1",selectedPointMask1);
+//        imshow("statusMap_NonLambCand", statusMap_NonLambCand);
 //
-//          Mat showGTdeltaMap=colorMap(deltaMapGT_res, upper, buttom);
-//          Mat showESdeltaMap=colorMap(deltaMap, upper, buttom);
+//        std::cerr<<"\n show point_counter:"<<point_counter<<endl;
+//        std::cerr<<"\n show dso_point_counter:"<<dso_point_counter<<endl;
+//        cout<<"\n Image averge:"<< dataLoader->mean_val<<endl;
+//        cout<<" Image std:"<<dataLoader->std_dev<<endl;
+////        imwrite("pointMask.png", statusMap_NonLambCand);
+////        imwrite("selectedPointMask1.png",selectedPointMask1);
+//        waitKey(0);
 //
-//			imshow("show GT deltaMap", showGTdeltaMap);
-//			imshow("show ES deltaMap", showESdeltaMap);
-//			/// TEMP TEST BEGIN
-//			for (int x = 0; x < deltaMapGT_res.rows; ++x) {
-//				for (int y = 0; y < deltaMapGT_res.cols; ++y) {
-//					if (deltaMapGT_res.at<float>(x, y) == -1) {deltaMap.at<float>(x, y) =1;}
-//				}
+//        }
+//
+//
+//// ===========================ctrlPoint Selector==========================================
+//    ctrlPointSelector  * ctrlPoint_Selector= new ctrlPointSelector(dataLoader->camPose1, controlPointPose_path,grayImage_ref, depth_ref_GT,K, pointOfInterestArea);
+//    envLightLookup  *EnvLightLookup= new envLightLookup(ctrlPoint_Selector->selectedIndex, argc, argv, envMap_Folder,controlPointPose_path);
+//
+//    cout<<"\n The preComputation of EnvMap is ready!"<<endl;
+//    imshow("grayImage_target", grayImage_target);
+//    waitKey(0);
+//	// show the depth image with noise
+//	double min_depth_val, max_depth_val;
+//	cv::minMaxLoc(depth_ref, &min_depth_val, &max_depth_val);
+//	cout << "\n show original depth_ref min, max:\n" << min_depth_val << "," << max_depth_val << endl;
+//
+//	// grayImage_ref
+//    double min_radiance_val, max_radiance_val;
+//    cv::minMaxLoc(grayImage_ref, &min_radiance_val, &max_radiance_val);
+//    cout << "\n show original grayImage_ref min, max:\n" << min_radiance_val << "," << max_radiance_val << endl;
+//
+//
+////	imshow("grayImage_ref",grayImage_ref);
+////	imshow("grayImage_target",grayImage_target);
+////	waitKey(0);
+//
+//	// ----------------------------------------optimization variable: depth --------------------------------------
+//	cout << "\n Show GT rotation:\n" << xi_GT.rotationMatrix() << "\n Show GT translation:\n" << xi_GT.translation()<< endl;
+//	// -------------------------------------------------Movingleast algorithm-----------------------------------------
+//	std::vector<Eigen::Vector3d> pts;
+//	cv::Mat normal_map(depth_ref.rows, depth_ref.cols, CV_32FC3);
+//	//MLS();
+//	//--------------------------------------------------normal_map_GT---------------------------------------------------
+//	for (int u = 0; u < depth_ref.rows; u++) // colId, cols: 0 to 480
+//	{
+//		for (int v = 0; v < depth_ref.cols; v++) // rowId,  rows: 0 to 640
+//		{
+//
+//			Eigen::Vector3f normal_new(normal_map_GT.at<cv::Vec3f>(u, v)[0], normal_map_GT.at<cv::Vec3f>(u, v)[1],normal_map_GT.at<cv::Vec3f>(u, v)[2]);
+//            //			normal_new = (dataLoader->R1.cast<float>()).transpose()* normal_new;
+//			Eigen::Vector3f principal_axis(0, 0, 1);
+//			if (normal_new.dot(principal_axis) > 0) {normal_new = -normal_new;}
+//			normal_map.at<Vec3f>(u, v)[0] = normal_new(0);
+//			normal_map.at<Vec3f>(u, v)[1] = normal_new(1);
+//			normal_map.at<Vec3f>(u, v)[2] = normal_new(2);
+//
+//		}
+//	}
+//
+//    //	//-------------------------------------------------Data perturbation--------------------------------------------------------------------
+//    //	// Add noise to original depth image, depth_ref_NS
+//	Mat inv_depth_ref, depth_ref_gt;
+//	Mat depth_ref_NS;
+//	double roErr;
+//	Eigen::Matrix3d R_GT(xi_GT.rotationMatrix());
+//	Eigen::Matrix3d perturbedRotation = rotation_pertabation(0.0, 0.0, 0.0, R_GT, roErr); // degree
+//
+//	double trErr;
+//	Eigen::Vector3d T_GT(xi_GT.translation());
+//	Eigen::Vector3d perturbedTranslation = translation_pertabation(0.0, 0.0, 0.0, T_GT, trErr); // percentage
+//	double Mean = 0.0, StdDev = 0;
+//	//	float densities[] = {0.03, 0.003, 0.05, 0.15, 0.5, 1}; /// number of optimized depths,  current index is 1
+//
+//    imshow("normal_map",normal_map);
+//    waitKey(0);
+//
+//	PhotometricBAOptions options;
+//    Mat newNormalMap = normal_map;
+////    Mat newNormalMap = normal_map_GT;
+////    double distanceThres = 0.009;
+////	double distanceThres = 0.007;
+//    double distanceThres = 0.0035;
+////    double distanceThres = 0.002;
+//
+//	float upper = 2.0;
+//	float buttom = 0.5;
+//	float up_new = upper;
+//	float butt_new = buttom;
+//	Mat deltaMap(depth_ref.rows, depth_ref.cols, CV_32FC1, Scalar(1)); // storing delta
+//    Mat envMapWorkMask(deltaMap.rows, deltaMap.cols, CV_8UC1, Scalar(0)); //
+//
+//
+//    Mat deltaMap_GT(depth_ref.rows, depth_ref.cols, CV_32FC1, Scalar(1)); // storing delta
+//    Mat deltaRatio(depth_ref.rows, depth_ref.cols, CV_32FC1, Scalar(1)); // storing delta
+//
+//	int lvl_target, lvl_ref;
+//
+//	double depth_upper_bound = 0.5;  // 0.5; 1
+//	double depth_lower_bound = 0.1;  // 0.001
+//
+//	options.optimize_depth = false;
+//	options.useFilterController = false; // control the number of optimized depth
+//	options.optimize_pose = true;
+//	options.use_huber = false;
+//	options.lambertianCase = false;
+//	options.usePixelSelector = false;
+//	dataLoader->options_.remove_outlier_manually = false;
+//	options.huber_parameter = 0.25*4.0 / 255.0;   /// 0.25*4/255 :   or 4/255
+//    bool useImgPyramid = true;
+//	// -----------------------------------------Initialize the pose xi with GT or just use the default value---------------------
+////	Eigen::Vector3d initial_translation;
+////	initial_translation<< -0.2, -0.1, 0;
+//
+//	xi.setRotationMatrix(perturbedRotation);
+//	xi.translation() = perturbedTranslation;
+//
+////	xi.translation() = initial_translation;
+//
+//	Sophus::SO3d Rotation(xi.rotationMatrix());
+//	Eigen::Matrix<double, 3, 1> Translation(xi.translation());
+//
+//    Sophus::SO3d Rotation_GT(xi_GT.rotationMatrix());
+//    Eigen::Matrix<double, 3, 1> Translation_GT(xi_GT.translation());
+//
+//
+//
+//	AddGaussianNoise_Opencv(depth_ref, depth_ref_NS, Mean, StdDev, statusMap);
+//	divide(Scalar(1), depth_ref, depth_ref_gt);
+//	divide(Scalar(1), depth_ref_NS, inv_depth_ref);
+//	Mat inv_depth_tar;
+//	divide(Scalar(1), depth_target, inv_depth_tar);
+//
+//
+//	Mat depth_ref_NS_before = inv_depth_ref.clone();
+//	double min_inv, max_inv;
+//	cv::minMaxLoc(inv_depth_ref, &min_inv, &max_inv);
+//	cout << "\n show original inv_depth_ref min, max:\n" << min_inv << "," << max_inv << endl;
+//	Scalar_<double> depth_Err = depthErr(depth_ref_gt, inv_depth_ref);
+//	double depth_Error = depth_Err.val[0];
+//	cout << "\n Show initial rotation:\n" << Rotation.matrix() << "\n Show initial translation:\n" << Translation<< endl;
+//	cout << "\nShow current rotation perturbation error :" << roErr<< "\n Show current translation perturbation error : " << trErr << "\nShow current depth perturbation error :"<< depth_Error << endl;
+//
+//	double min_gt_special, max_gt_special;
+//	cv::minMaxLoc(inv_depth_ref, &min_gt_special, &max_gt_special);
+//	cout << "\n show inv_depth_ref min, max:\n" << min_gt_special << "," << max_gt_special << endl;
+//	//	Mat inv_depth_ref_for_show = inv_depth_ref * (1.0 / (max_gt_special - min_gt_special)) +(-min_gt_special * (1.0 / (max_gt_special - min_gt_special)));
+//	//	string depth_ref_name = "inv_depth_ref";
+//	//	imshow(depth_ref_name, inv_depth_ref_for_show);
+//
+//
+//
+//
+//	for (int lvl = 1; lvl >= 1; lvl--) {
+//		cout << "\n Show the value of lvl:" << lvl << endl;
+//		Mat IRef, DRef, I, D;
+//		Eigen::Matrix3f Klvl, Klvl_ignore;
+//		lvl_target = lvl;
+//		lvl_ref = lvl;
+//
+//		downscale(grayImage_ref, inv_depth_ref, K, lvl_ref, IRef, DRef, Klvl);
+//		downscale(grayImage_target, depth_target, K, lvl_target, I, D, Klvl_ignore);
+//		double min_gt_special, max_gt_special;
+//		int i = 0;
+//		while (i < 2) {
+//			double max_n_, min_n_;
+//			cv::minMaxLoc(deltaMap, &min_n_, &max_n_);
+//			cout << "->>>>>>>>>>>>>>>>>show max and min of estimated deltaMap:" << max_n_ << "," << min_n_ << endl;
+//            Mat mask = cv::Mat(deltaMap != deltaMap);
+//			deltaMap.setTo(1.0, mask);
+//			if (i == 1) {
+//				cout << "depthErr(depth_ref_gt, inv_depth_ref).val[0]:" << depthErr(depth_ref_gt, inv_depth_ref).val[0]<< endl;
+//				showScaledImage(depth_ref_NS_before, depth_ref_gt, inv_depth_ref);
 //			}
-//			double max_n_1, min_n_1;
-//			cv::minMaxLoc(deltaMapGT_res, &min_n_1, &max_n_1);
-//			cout << "->>>>>>>>>>>>>>>>>show max and min of deltaMapGT_res<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<:" << max_n_1 << "," << min_n_1 << endl;
-			//->>>>>>>>>>>>>>>>>show max and min of deltaMapGT_res<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<:8.7931,0.141176
-//			 deltaMap=deltaMapGT_res.clone();// !!!!!!!!!!!!!!!!!!!!!!!!!!!!test!!!!!!!!!!!!!!!!!!!!!!!!!!!11
-//            /// TEMP TEST END
-//			imwrite("GT_deltaMap.exr", showGTdeltaMap);
-//			imwrite("ES_deltaMap.exr", showESdeltaMap);
-			i += 1;
-
-		}
-		cout << "\nShow current rotation perturbation error :" << roErr
-		     << "\nShow current translation perturbation error : " << trErr
-		     << "\nShow current depth perturbation error :" << depth_Error << endl;
-
-
-
-		waitKey(0);
-	}
-
-	// tidy up
-	delete dataLoader;
-	if (options.usePixelSelector) {
-//		delete pixelSelector;
-//		delete newFrame_ref;
-//		delete newFrame_tar;
-//		delete depthMap_ref;
-		delete[] statusMap;
-		delete[] color_ref;
-		delete[] color_tar;
-		delete[] depthMapArray_ref;
-		delete[] statusMap;
-		delete[] statusMapB;
-	}
+//			cv::minMaxLoc(inv_depth_ref, &min_gt_special, &max_gt_special);
+//			cout << "\n show inv_depth_ref min, max:\n" << min_gt_special << "," << max_gt_special << endl;
+//			Mat inv_depth_ref_for_show = inv_depth_ref * (1.0 / (max_gt_special - min_gt_special)) +(-min_gt_special * (1.0 / (max_gt_special - min_gt_special)));
+//			string depth_ref_name = "inv_depth_ref" + to_string(i);
+////			imshow(depth_ref_name, inv_depth_ref_for_show);
+////			cout<<"show the current depth:"<<inv_depth_ref.at<double>(359,470)<<endl;
+//            // Photometric loss
+//            statusMap_NonLambCand = pointOfInterestArea.clone();
+////            PhotometricBA(IRef, I, options, Klvl, Rotation, Translation, inv_depth_ref, deltaMap, depth_upper_bound,depth_lower_bound, statusMap, statusMapB,statusMap_NonLambCand);
+//
+//            // Result analysis
+//            cout << "\n show depth_ref min, max:\n" << min_gt_special << "," << max_gt_special << endl;
+//            cout << "\n Show optimized rotation:\n" << Rotation.matrix() << "\n Show optimized translation:\n"<< Translation << endl;
+//            cout << "\n Show Rotational error :" << rotationErr(xi_GT.rotationMatrix(), Rotation.matrix())
+//                 << "(degree)." << "\n Show translational error :"
+//                 << 100 * translationErr(xi_GT.translation(), Translation) << "(%) "
+//                 << "\n Show depth error :" << depthErr(depth_ref_gt, inv_depth_ref).val[0]
+//                 << endl;
+//            std::cout << "\n Start calculating delta map ... " << endl;
+//            std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
+//
+//
+//            // use estimated pose
+////            DSONL::updateDelta(dataLoader->camPose1,EnvLightLookup, statusMap,Rotation,Translation,Klvl,image_ref_baseColor,inv_depth_ref,image_ref_metallic ,image_ref_roughness,deltaMap,newNormalMap,up_new, butt_new, pointOfInterestArea_Non_Lambertian_2358);//         DSONL::updateDelta(dataLoader->camPose1,EnvLightLookup, statusMap,Rotation,Translation,Klvl,image_ref_baseColor,inv_depth_ref,image_ref_metallic ,image_ref_roughness,deltaMap,newNormalMap,up_new, butt_new);
+//            // use GT  pose
+////            DSONL::updateDelta(dataLoader->camPose1,EnvLightLookup, statusMap,Rotation_GT,Translation_GT,Klvl,image_ref_baseColor,inv_depth_ref,image_ref_metallic ,image_ref_roughness,deltaMap,newNormalMap,up_new, butt_new, pointOfInterestArea_allPoints_38880, renderedEnvMapPath);
+////            DSONL::updateDelta(dataLoader->camPose1,EnvLightLookup, statusMap,Rotation_GT,Translation_GT,Klvl,image_ref_baseColor,inv_depth_ref,image_ref_metallic ,image_ref_roughness,deltaMap,newNormalMap,up_new, butt_new, pointOfInterestArea_Non_Lambertian_2358, renderedEnvMapPath);
+//
+//            DSONL::updateDelta(dataLoader->camPose1,EnvLightLookup, statusMap,Rotation_GT,Translation_GT,Klvl,image_ref_baseColor,inv_depth_ref,
+//                               image_ref_metallic ,image_ref_roughness,deltaMap,newNormalMap,up_new, butt_new, pointOfInterestArea, renderedEnvMapPath
+//                               ,envMapWorkMask);
+//
+//
+//
+//            // deltaMapGT
+////            Mat deltaMapGT_res= deltaMapGT(grayImage_ref,depth_ref,grayImage_target,depth_target,K.cast<double>(),distanceThres,xi_GT, upper, buttom, deltaMap, statusMap, pointOfInterestArea_allPoints_38880);
+////            Mat deltaMapGT_res= deltaMapGT(grayImage_ref,depth_ref,grayImage_target,depth_target,K.cast<double>(),distanceThres,xi_GT, upper, buttom, deltaMap, statusMap, pointOfInterestArea_Non_Lambertian_2358);
+//            Mat deltaMapGT_res= deltaMapGT(grayImage_ref,depth_ref,grayImage_target,depth_target,K.cast<double>(),distanceThres,xi_GT,
+//                                           upper, buttom, deltaMap, statusMap, envMapWorkMask,
+//                                           controlPointPose_path,
+//                                           dataLoader->camPose1.cast<float>(),
+//                                           newNormalMap
+//                                           );
+//
+//
+////            for (int u = 0; u < grayImage_ref.rows; u++)// colId, cols: 0 to 480
+////            {
+////                for (int v = 0; v < grayImage_ref.cols; v++)// rowId,  rows: 0 to 640
+////                {
+////                        if ( static_cast<int>(pointOfInterestArea_Non_Lambertian_2358.at<uchar>(u, v))==255 ){
+//////                    if (static_cast<int>(pointOfInterestArea_Lambertian_14976.at<uchar>(u, v))==255 ){
+////                        num_points_used+=1;
+////                        pointOfInterestArea.at<uchar>(u,v)= 255;
+////                    }
+////                }
+////            }
+//
+////            imshow("deltaMapGT_res",deltaMapGT_res);
+////            waitKey(0);
+//
+//
+//            // compare deltaMap_GT with deltaMap:
+////            int counter_true=0, counter_all_pts=0;
+////            for (int u = 0; u < grayImage_ref.rows; u++)// colId, cols: 0 to 480
+////            {
+////                for (int v = 0; v < grayImage_ref.cols; v++)// rowId,  rows: 0 to 640
+////                {
+////                    if (pointOfInterestArea_Non_Lambertian_2358.at<uchar>(u,v)!=255){ continue;}
+////                    counter_all_pts+=1;
+//////                    cout<<"check deltaMap_GT vals:"<<deltaMapGT_res.at<float>(u,v)<<"and, deltaMap.at<float>(u,v):"<<deltaMap.at<float>(u,v)<<endl;
+////                    if ((deltaMapGT_res.at<float>(u,v)>=1.0 && deltaMap.at<float>(u,v)>=1.0) || (deltaMapGT_res.at<float>(u,v)<1.0 && deltaMap.at<float>(u,v)<1.0) ){
+////                        counter_true+=1;
+////                    }
+////                    }
+////                }
+////        Mat mat_mean, mat_stddev;
+////        double mean_val, std_dev;
+////        meanStdDev(deltaRatio, mat_mean, mat_stddev);
+////        mean_val= mat_mean.at<double>(0,0);
+////        std_dev = mat_stddev.at<double>(0,0);
+////        std::cerr<<"show counter_all_pts and delta_true_ratio "<< counter_all_pts<<"and num of counter_true:"<<counter_true<<"show ratio:"<<   (float)counter_true/ (float)counter_all_pts<<endl;
+//
+//
+//            std::chrono::steady_clock::time_point t2 = std::chrono::steady_clock::now();
+//            std::chrono::duration<double> time_used =std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1);
+//            std::cout << "\n Delta map is done ... "<< " and costs time:" << time_used.count() << " seconds." << endl;
+////			Mat deltaMapGT_res= deltaMapGT(grayImage_ref,depth_ref,grayImage_target,depth_target,K.cast<double>(),distanceThres,xi_GT, upper, buttom, deltaMap);
+////
+////          Mat showGTdeltaMap=colorMap(deltaMapGT_res, upper, buttom);
+////          Mat showESdeltaMap=colorMap(deltaMap, upper, buttom);
+////
+////			imshow("show GT deltaMap", showGTdeltaMap);
+////			imshow("show ES deltaMap", showESdeltaMap);
+////			/// TEMP TEST BEGIN
+////			for (int x = 0; x < deltaMapGT_res.rows; ++x) {
+////				for (int y = 0; y < deltaMapGT_res.cols; ++y) {
+////					if (deltaMapGT_res.at<float>(x, y) == -1) {deltaMap.at<float>(x, y) =1;}
+////				}
+////			}
+////			double max_n_1, min_n_1;
+////			cv::minMaxLoc(deltaMapGT_res, &min_n_1, &max_n_1);
+////			cout << "->>>>>>>>>>>>>>>>>show max and min of deltaMapGT_res<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<:" << max_n_1 << "," << min_n_1 << endl;
+//			//->>>>>>>>>>>>>>>>>show max and min of deltaMapGT_res<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<:8.7931,0.141176
+////			 deltaMap=deltaMapGT_res.clone();// !!!!!!!!!!!!!!!!!!!!!!!!!!!!test!!!!!!!!!!!!!!!!!!!!!!!!!!!11
+////            /// TEMP TEST END
+////			imwrite("GT_deltaMap.exr", showGTdeltaMap);
+////			imwrite("ES_deltaMap.exr", showESdeltaMap);
+//			i += 1;
+//
+//		}
+//		cout << "\nShow current rotation perturbation error :" << roErr
+//		     << "\nShow current translation perturbation error : " << trErr
+//		     << "\nShow current depth perturbation error :" << depth_Error << endl;
+//
+//
+//
+//		waitKey(0);
+//	}
+//
+//	// tidy up
+//	delete dataLoader;
+//	if (options.usePixelSelector) {
+////		delete pixelSelector;
+////		delete newFrame_ref;
+////		delete newFrame_tar;
+////		delete depthMap_ref;
+//		delete[] statusMap;
+//		delete[] color_ref;
+//		delete[] color_tar;
+//		delete[] depthMapArray_ref;
+//		delete[] statusMap;
+//		delete[] statusMapB;
+//	}
 	return 0;
 }
 
@@ -682,3 +851,130 @@ int main(int argc, char **argv) {
 //
 //    // Load EnvMap into Unordered-map
 //    std::unordered_map<cv::Point3f, int, hash3d<cv::Point3f>, equalTo<cv::Point3f>> envLightMap;
+
+
+
+
+
+
+
+
+
+//void GetFileNames(string path,vector<string>& filenames , vector<string>& filenamesNoPath)
+//{
+//    DIR *pDir;
+//    struct dirent* ptr;
+//    if(!(pDir = opendir(path.c_str()))){
+//        cout<<"Folder doesn't Exist!"<<endl;
+//        return;
+//    }
+//    while((ptr = readdir(pDir))!=0) {
+//        if (strcmp(ptr->d_name, ".") != 0 && strcmp(ptr->d_name, "..") != 0){
+//            filenames.push_back(path + "/" + ptr->d_name);
+//            filenamesNoPath.push_back(ptr->d_name);
+//        }
+//    }
+//    closedir(pDir);
+//}
+
+
+
+
+
+// load env light maps
+//    std::string envMap_Folder="../data/SimulationEnvData/envMap_10To16";
+//    std::string envMap_Folder="/home/lei/Documents/Research/envMapData/envMap_10To16";
+
+//    std::string envMap_Folder="/home/lei/Documents/Research/envMapData/envMapData_Dense01";
+//    string controlPointPose_path= "/home/lei/Documents/Research/envMapData/envMapData_Dense0704_01_control_cam_pose3k.txt";
+
+//    std::string envMap_Folder="/home/lei/Documents/Research/envMapData/ThirtyPointsEnvMap";
+//    string controlPointPose_path= "/home/lei/Documents/Research/envMapData/short0370_02_control_cam_pose.txt";
+
+
+//    std::string envMap_Folder="/home/lei/Documents/Research/envMapData/SeventeenPointsEnvMap";
+//    string controlPointPose_path= "/home/lei/Documents/Research/envMapData/scene0370_02_control_cam_pose.txt";
+
+//    std::string envMap_Folder=    "/home/lei/Documents/Research/envMapData/EnvMap_2358";
+//    string controlPointPose_path= "/home/lei/Documents/Research/envMapData/2frame0370_02_control_cam_pose_2358.txt";
+//    string  renderedEnvMapPath=  "/home/lei/Documents/Research/envMapData/EnvMap_2358";
+
+//    std::string envMap_Folder="/home/lei/Documents/Research/envMapData/EnvMap_764";
+//    string controlPointPose_path= "/home/lei/Documents/Research/envMapData/control_cam_pose_ControlpointCloud_Sparsfied_764.txt";
+//    string  renderedEnvMapPath=   "/home/lei/Documents/Research/envMapData/EnvMap_764";
+
+//    std::string envMap_Folder="/home/lei/Documents/Research/envMapData/EnvMap_91";
+//    string controlPointPose_path= "/home/lei/Documents/Research/envMapData/control_cam_pose_ControlpointCloud_Sparsfied_91.txt";
+//    string  renderedEnvMapPath=   "/home/lei/Documents/Research/envMapData/EnvMap_91";
+
+//imshow("grayImage_ref",grayImage_ref);
+//imshow("grayImage_target",grayImage_target);
+//imshow("depth_ref",depth_ref_inv);
+//imshow("depth_ref_GT",depth_ref_GT);
+//waitKey(0);
+//
+
+
+
+//                Mat depth_ref = imread(depth_ref_path, IMREAD_ANYCOLOR | IMREAD_ANYDEPTH);
+//                Mat depth_reference(depth_ref.rows, depth_ref.cols, CV_64FC1);
+//                for (int j = 0; j < depth_ref.rows; ++j) {
+//                    for (int i = 0; i < depth_ref.cols; ++i) {
+//                        depth_reference.at<double>(j,i)= 1.0/5000.0 * ((double ) depth_ref.at<unsigned short >(j,i));
+////                        cout << "\n show  depth_reference: " << depth_reference.at<double>(j,i)<<endl;
+//                    }
+//                }
+
+
+
+//                Mat depth_target = imread(depth_target_path, IMREAD_ANYCOLOR | IMREAD_ANYDEPTH);
+//                Mat depth_tar(depth_target.rows, depth_target.cols, CV_64FC1);
+//
+//                for (int j = 0; j < depth_target.rows; ++j) {
+//                    for (int i = 0; i < depth_target.cols; ++i) {
+//                        depth_tar.at<double>(j,i)= 1.0/5000.0 * ((double) depth_target.at<unsigned short >(j,i));
+////                        cout << "\n show  depth_target: " << depth_tar.at<float>(j,i)<<endl;
+//                    }
+//                }
+
+
+// check intensity segmentation
+//// iterate through the Img_mask to find the location of the specular highlight
+//Mat inputImage= Image_ref8UC3.clone();
+//Mat inputImage_copy_1= inputImage.clone();
+//Mat inputImage_copy_2= inputImage.clone();
+//Mat inputImage_copy_3= inputImage.clone();
+//
+//
+//for (int i = 0; i < clusterImage.rows; i++) {
+//for (int j = 0; j < clusterImage.cols; j++) {
+//if (clusterImage.at<int>(i, j) == 1) {
+//circle(inputImage_copy_1, Point(j, i), 1, Scalar(255, 0, 0), 1, 8, 0);
+//circle(inputImage, Point(j, i), 1, Scalar(255, 0, 0), 1, 8, 0);
+//}
+//else if (clusterImage.at<int>(i,j)==2){
+//circle(inputImage_copy_2, Point(j, i), 1, Scalar(0, 255, 0), 1, 8, 0);
+//circle(inputImage, Point(j, i), 1, Scalar(0, 255, 0), 1, 8, 0);
+//}else if (clusterImage.at<int>(i,j)==3){
+//circle(inputImage_copy_3, Point(j, i), 1, Scalar(0, 0, 255), 1, 8, 0);
+//circle(inputImage, Point(j, i), 1, Scalar(0, 0, 255), 1, 8, 0);
+//}
+//}
+//}
+//
+//imshow("inputImage_specular_Distribution_1", inputImage_copy_1);
+//imshow("inputImage_specular_Distribution_2", inputImage_copy_2);
+//imshow("inputImage_specular_Distribution_3", inputImage_copy_3);
+//
+//clusterImage.convertTo(clusterImage, CV_8UC1, 255.0);
+//imshow("Img_range",Img_range);
+//imshow("diffuseImage", diffuseImage);
+//imshow("specularImage", specularImage);
+//cv::imshow("Input Image", Image_ref8UC3);
+//cv::imshow("Output Image", outputImage);
+//waitKey(0);
+//
+//
+
+
+
