@@ -306,15 +306,11 @@ namespace DSONL {
 	        Sophus::SO3d& Rotation,
 	        Eigen::Matrix<double, 3, 1>& Translation,
 	        const Eigen::Matrix3f &K,
-	        const Mat &image_baseColor,
 	        const Mat depth_map,
-	        const Mat &image_metallic_,
 	        const Mat &image_roughnes_,
 	        Mat &deltaMap,
 	        Mat &newNormalMap,
-	        float &upper_b,
-	        float &lower_b
-            , Mat pointOfInterest,
+            Mat pointOfInterest,
             string renderedEnvMapPath,
             Mat envMapWorkMask
             ) {
@@ -325,12 +321,6 @@ namespace DSONL {
 		// vec3 normal = normalize(wfn);
 		// vec3 viewDir = normalize(cameraPos - vertPos);
 		std::unordered_map<int, int> inliers_filter, inliers_filter_i;
-
-        //		  inliers_filter.emplace(108, 97 );//cabinet
-        //        inliers_filter.emplace(125, 102);//table
-        //        388 482 1.37622 1.55019 // bad  5mm
-        //        388 482 1.37622 0.416063 //good
-        //        388 482 1.37622 0.760425 // bad 1cm
 
         // 446,356 floor point
         // 360,435  // 446,356
@@ -353,10 +343,6 @@ namespace DSONL {
 //        int num_K = 1;
         int num_K = 6;
         float lift=0.002f; // 2mm
-        Vec2i boundingBoxUpperLeft(83, 76);
-        Vec2i boundingBoxBotRight(240, 320);
-        Vec2i boundingBoxUpperLeft_AoI( 145,180);
-        Vec2i boundingBoxBotRight_AoI(173,242);
 
         // maintain envMaps of current frame here
 
@@ -379,18 +365,18 @@ namespace DSONL {
                 // =====================================use non lambertian point selector================================
 //                                if (statusMap!=NULL && static_cast<int>(statusMap[u * depth_map.cols + v])!= 255){ continue;}
 
-                if (pointOfInterest.at<uchar>(u,v)!=255){ continue;}
+//                cout<<"show current index:"<< u<<","<<v<<"pointOfInterest.at<uchar>(u,v)"<<(int)pointOfInterest.at<uchar>(u,v)<<endl;
+                if ( ((int)pointOfInterest.at<uchar>(u,v))!=255){ continue;}
 
-                // cout<<"show current index:"<< u<<","<<v<<endl;
-                // get image_roughnes!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1
+                // ===================================RENDERING PARAMETERS:====================================
                 float image_roughnes= image_roughnes_.at<float>(u,v);
-                float image_metallic= image_metallic_.at<float>(u,v);
-                //                float image_roughnes= 0.1;
-                //                float image_metallic= 1.0;
+                float image_metallic=1e-3;
+                // float image_roughnes= 0.1;
+                // float image_metallic= 1.0;
 
 				// ===================================PROJECTION====================================
 				Eigen::Vector2f pixelCoord((float) v, (float) u);//  u is the row id , v is col id
-				float iDepth = depth_map.at<double>(u, v);
+				float iDepth = depth_map.at<float>(u, v);
 				Eigen::Vector3f p_3d_no_d((pixelCoord(0) - cx) / fx, (pixelCoord(1) - cy) / fy, (float) 1.0);
 				Eigen::Vector3f p_c1;
 				p_c1 << p_3d_no_d.x() / iDepth, p_3d_no_d.y() / iDepth, p_3d_no_d.z() / iDepth;
@@ -417,7 +403,9 @@ namespace DSONL {
                 // envMapPose_world
 				// ===================================BASE-COLOR=============================================
 //                 Vec3f baseColor(image_baseColor.at<Vec3f>(u, v)[2], image_baseColor.at<Vec3f>(u, v)[1], image_baseColor.at<Vec3f>(u, v)[0]);
-                Vec3f baseColor(std::pow(image_baseColor.at<Vec3f>(u, v)[2], 2.2), std::pow(image_baseColor.at<Vec3f>(u, v)[1], 2.2), std::pow(image_baseColor.at<Vec3f>(u, v)[0], 2.2));
+//                Vec3f baseColor(std::pow(image_baseColor.at<Vec3f>(u, v)[2], 2.2), std::pow(image_baseColor.at<Vec3f>(u, v)[1], 2.2), std::pow(image_baseColor.at<Vec3f>(u, v)[0], 2.2));
+
+                Vec3f baseColor(0.0, 0.0, 0.0);
 
                 // vec3 baseCol = pow(texture(baseColorTexture, texScale*tc).rgb, vec3(2.2)); //~~~
                 //                pow(image_baseColor.at<Vec3f>(u, v)[2], 2.2);
@@ -436,14 +424,15 @@ namespace DSONL {
                 Eigen::Vector3f p_c1_w=Camera1_extrin* p_c1;
 				pcl::PointXYZ searchPoint(p_c1_w.x(), p_c1_w.y(), p_c1_w.z());
 
+//                cout<<"searchPoint:"<<searchPoint.x<<","<<searchPoint.y<<","<<searchPoint.z<<endl;
                 std::vector<int> pointIdxKNNSearch(num_K);
                 std::vector<float> pointKNNSquaredDistance(num_K);
 				Vec3f key4Search;
+
+//                cout<<"show  EnvLightLookup->kdtree size"<<EnvLightLookup->envLightIdxMap.size()<<endl;
+
 				if ( EnvLightLookup->kdtree.nearestKSearch(searchPoint, num_K, pointIdxKNNSearch, pointKNNSquaredDistance) > 0) {
-
-
-//                    std::unordered_map<int, float> consine_Dis;
-
+                    // std::unordered_map<int, float> consine_Dis;
                     float disPoint2Env_min= 10.0f;
                     int targetEnvMapIdx=-1;
                     Vec3f targetEnvMapVal;
@@ -455,9 +444,8 @@ namespace DSONL {
                                            (*(EnvLightLookup->ControlpointCloud))[ pointIdxKNNSearch[i] ].y,
                                            (*(EnvLightLookup->ControlpointCloud))[ pointIdxKNNSearch[i] ].z);
 
-//                        std::cout << "\n------"<<envMap_point.val[0]<< " " << envMap_point.val[1]<< " " << envMap_point.val[2]
-//                                  << " (squared distance: " << pointKNNSquaredDistance[i] << ")" << std::endl;
-
+                        std::cout << "\n------"<<envMap_point.val[0]<< " " << envMap_point.val[1]<< " " << envMap_point.val[2]
+                                  << " (squared distance: " << pointKNNSquaredDistance[i] << ")" << std::endl;
                         // 0.004367 is the squared distance of the closest control point
                         if (pointKNNSquaredDistance[i]>0.004367){
                             continue;
@@ -474,9 +462,7 @@ namespace DSONL {
                         ctrlPointNormal=cv::normalize(ctrlPointNormal);
 
                         // transform normal vector from camera coordinate system to world coordinate system
-//                        Eigen::Vector3f ctrlPointNormal_c(ctrlPointNormal.val[0], ctrlPointNormal.val[1], ctrlPointNormal.val[2]);
-
-
+                        //Eigen::Vector3f ctrlPointNormal_c(ctrlPointNormal.val[0], ctrlPointNormal.val[1], ctrlPointNormal.val[2]);
                         float angle_consine = ctrlPointNormal.dot(N_);
                         cout << "angle_consine: " << angle_consine << endl;
                         if (angle_consine<0.9962){ continue;} // 0.9848 is the cos(10 degree), 0.9962 is the cos(5 degree)
@@ -622,10 +608,11 @@ namespace DSONL {
                 // TODO: use a good tone mapping so that we can get closer to GT delta map like clamp in [0,1.2]
 
 				// right intensity / left intensity
-                if(radiance_beta.val[1]==0 || radiance_beta_prime.val[1]==0){
+                if(radiance_beta.val[1]==0 || radiance_beta_prime.val[1]==0
+                   || radiance_beta.val[0]==0 || radiance_beta_prime.val[0]==0
+                   || radiance_beta.val[2]==0 || radiance_beta_prime.val[2]==0){
                     continue;
                 }
-
 				float delta_r = radiance_beta_prime.val[0] / radiance_beta.val[0];
 				float delta_g = radiance_beta_prime.val[1] / radiance_beta.val[1];
 				float delta_b = radiance_beta_prime.val[2] / radiance_beta.val[2];
@@ -635,8 +622,9 @@ namespace DSONL {
                 if(std::abs(delta_g-1.0f)<1e-3){
                     continue;
                 }
-                deltaMap.at<float>(u, v) = delta_g;
-
+                deltaMap.at<Vec3f>(u, v)[0] = delta_b;
+                deltaMap.at<Vec3f>(u, v)[1] = delta_g;
+                deltaMap.at<Vec3f>(u, v)[2] = delta_r;
 //                cout<<"\n Checking radiance vals:"<< "left Coord: u:"<<u<<", v:"<<v<<"left_radiance:"<< radiance_beta.val[1]
 //                    << "and right_intensity at pixel_x:"<<"pixel_x"<<", pixel_y:"<< "pixel_y"<< "is:"<<  radiance_beta_prime.val[1]
 //                        << "and intensity difference:"<<radiance_beta.val[1]-radiance_beta_prime.val[1]
@@ -648,9 +636,7 @@ namespace DSONL {
 
 
         // save deltaMap
-
         imwrite("deltaMap.png",deltaMap);
-
 		double max_n, min_n;
 		cv::minMaxLoc(deltaMap, &min_n, &max_n);
 		std::cout << "------->show max and min of estimated deltaMap<-----------------:" << max_n << "," << min_n << std::endl;

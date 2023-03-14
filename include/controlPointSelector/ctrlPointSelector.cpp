@@ -32,9 +32,7 @@ namespace DSONL {
 
 
     DSONL::ctrlPointSelector::ctrlPointSelector(Sophus::SE3d Camera1_extrin, string controlPointPose_path, Mat Image,
-                                                Mat depthImage,
-                                                Eigen::Matrix<float, 3, 3> &K
-    , Mat pointOfInterest) {
+                                                Mat depthImage, Eigen::Matrix<float, 3, 3>& K) {
 
         // constants
         kNearest = 1;
@@ -46,7 +44,6 @@ namespace DSONL {
         Vec2i boundingBoxBotRight(240, 320);
 
         pcl::PCDWriter writer;
-
         // check PointCloud
         pcl::PointCloud<pcl::PointXYZ>::Ptr ControlpointCloud(new pcl::PointCloud<pcl::PointXYZ>());
         pcl::PointCloud<pcl::PointXYZ>::Ptr nearestPointCloud(new pcl::PointCloud<pcl::PointXYZ>());
@@ -72,15 +69,12 @@ namespace DSONL {
 
         if (ControlpointCloud->empty()) { std::cerr << "\n Wrong Control-pointCloud!" << endl; }
         kdtree.setInputCloud(ControlpointCloud);
-        imshow("slamImg", Image);
+        imshow("The current Image", Image);
 
         std::unordered_map<int, int> inliers_filter, inliers_filter_i;
-//        inliers_filter.emplace(108, 97 );//cabinet
-//        inliers_filter.emplace(125, 102);//table
-        // new test point in shadow:  108, 108
         inliers_filter.emplace( 112, 130); // 112, 130
 
-        Mat checkingArea(depthImage.rows, depthImage.cols, CV_64FC1, Scalar(0));
+//        Mat checkingArea(depthImage.rows, depthImage.cols, CV_64FC1, Scalar(0));
         for (int u = 0; u < depthImage.rows; u++)// colId, cols: 0 to 480
         {
             for (int v = 0; v < depthImage.cols; v++)// rowId,  rows: 0 to 640
@@ -92,12 +86,9 @@ namespace DSONL {
                 //  use bounding box here
 //                if ( (v<boundingBoxUpperLeft.val[1] || v>boundingBoxBotRight.val[1]) || (u< boundingBoxUpperLeft.val[0] ||  u> boundingBoxBotRight.val[0])){ continue;}
 
-                if (pointOfInterest.at<uchar>(u,v)!=255){ continue;}
-
+//                if (pointOfInterest.at<uchar>(u,v)!=255){ continue;}
                 // marks
-                checkingArea.at<double>(u, v)= Image.at<double>(u, v);
-
-
+//                checkingArea.at<double>(u, v)= (double) Image.at<Vec3b>(u, v).val[0];
                 // projection
                 double iDepth = depthImage.at<double>(u, v);
                 Eigen::Vector2f pixelCoord((float) v, (float) u);//  u is the row id , v is col id
@@ -142,10 +133,9 @@ namespace DSONL {
                         key4Search_.val[0] = (*(ControlpointCloud))[pointIdxKNNSearch[idx]].x;
                         key4Search_.val[1] = (*(ControlpointCloud))[pointIdxKNNSearch[idx]].y;
                         key4Search_.val[2] = (*(ControlpointCloud))[pointIdxKNNSearch[idx]].z;
-//                        cout<<"show key4Search_"<<key4Search_<<endl;
-//                        controlPointIndex->push_back(pointCloud_UnorderedMap[key4Search_]);
-
-//                        cout<<"show pointCloud_UnorderedMap[key4Search_]"<< pointCloud_UnorderedMap[key4Search_]<<endl;
+                        //                        cout<<"show key4Search_"<<key4Search_<<endl;
+                        //                        controlPointIndex->push_back(pointCloud_UnorderedMap[key4Search_]);
+                        //                        cout<<"show pointCloud_UnorderedMap[key4Search_]"<< pointCloud_UnorderedMap[key4Search_]<<endl;
                         selectedIndex_vec.push_back(pointCloud_UnorderedMap[key4Search_]);
                     }
 //                    envLightMap.emplace(key_shaderPoint, *controlPointIndex);
@@ -164,9 +154,6 @@ namespace DSONL {
 //        writer.write("nearestPointCloud.pcd", *nearestPointCloud, false);// do we need the sensor acquisition origin?
 //        writer.write("scenePointCloud.pcd", *scenePointCloud, false);// do we need the sensor acquisition origin?
 
-
-
-
         sort(selectedIndex_vec.begin(), selectedIndex_vec.end());
         selectedIndex_vec.erase(unique(selectedIndex_vec.begin(), selectedIndex_vec.end()), selectedIndex_vec.end());
 
@@ -176,31 +163,19 @@ namespace DSONL {
             cout<<"show selected index:"<< idx<<endl;
         }
 
-//        selectedIndex.emplace(int(44),1);
-//        selectedIndex.emplace(int(105),1);
-
-
-
-
-
-
-
-        // Only one envMap here!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1
-//                selectedIndex.emplace(int(216),1);
-//                selectedIndex.emplace(int(36), 1);
-//                selectedIndex.emplace(int(200),1);
-//                selectedIndex.emplace(int(40),1);
-////                 selectedIndex.emplace(int(63),1);
-//
-//                selectedIndex.emplace(int(13),1);
-
+        //        selectedIndex.emplace(int(44),1);
+        //        selectedIndex.emplace(int(105),1);
+                // Only one envMap here!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1
+        //                selectedIndex.emplace(int(216),1);
+        //                selectedIndex.emplace(int(36), 1);
+        //                selectedIndex.emplace(int(200),1);
+        //                selectedIndex.emplace(int(40),1);
+        //                 selectedIndex.emplace(int(63),1);
+        //                selectedIndex.emplace(int(13),1);
         //        cout<<"show selectedIndex "<< selectedIndex_vec[0]<<endl;
-
-
         cout << "\n show number of selected ctrlPoints size:" << selectedIndex_vec.size() << endl;
-
-        imshow("checkingArea", checkingArea);
-        waitKey(0);
+//        imshow("checkingArea", checkingArea);
+//        waitKey(0);
 
 
     }

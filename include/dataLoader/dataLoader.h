@@ -71,6 +71,8 @@ namespace DSONL {
 		Eigen::Quaterniond q_12;
 		Eigen::Matrix3d R1;
 		Eigen::Matrix3d R2;
+        Eigen::Vector3d t1;
+        Eigen::Vector3d t2;
         Sophus::SE3d camPose1;
 		int rows;
 		int cols;
@@ -85,12 +87,13 @@ namespace DSONL {
 //                                    0, 577.8705, 240,
 //                                    0, 0, 1;
 
+            Eigen::Matrix3f K_tumRGBD;
+            K_tumRGBD << 525.0, 0.0, 319.5,
+                    0.0, 525.0, 239.5,
+                    0.0, 0.0, 1.0;
             camera_intrinsics <<   574.540648625183, 0, 320,
                                     0, 574.540648625183, 240,
                                     0, 0, 1;
-
-
-
 			Eigen::Matrix3d S_x;
 			S_x << 1.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, -1.0;
 
@@ -107,61 +110,48 @@ namespace DSONL {
                 string image_ref_seletor_path;
 
 
-                image_ref_path =            "../data/Exp_specular_floor_forLoss/leftImage/orig_6.pfm.png"; // LDR
-                image_ref_seletor_path =    "../data/Exp_specular_floor_forLoss/leftImage/orig_6.pfm";
-                depth_ref_path =            "../data/Exp_specular_floor_forLoss/leftImage/origdepth_6.png";
+                image_ref_path =            "../data/exp_image0405/rgb/image_04.png"; // LDR
+                depth_ref_path =            "../data/exp_image0405/depth/origdepth_4.png";
+                image_ref_roughness_path =  "../data/exp_image0405/roughness/origroughness_4.pfm";
+                image_normal_GT_path =      "../data/exp_image0405/normal/orignormal_4.dat";
 
-                image_ref_roughness_path =  "../data/Exp_specular_floor_forLoss/leftImage/non_lambertian/origroughness_6.pfm";
-                image_normal_GT_path =      "../data/Exp_specular_floor_forLoss/leftImage/non_lambertian/orignormal_6.dat";
 				Eigen::Matrix3d R1_w_l, R1_w_r;// left-handed and right-handed
 				Eigen::Vector3d t1_w_l;
 
-                t1_w_l << -1.828000000000000069e+00, 2.909999999999999809e-01, 4.580000000000000182e-01;
-                Eigen::Quaternion<double> quaternionR1(  3.607157085028365184e-01, 8.906232514292543589e-01, -1.940714441068365215e-01, 1.975112053407775681e-01);
+                t1_w_l << -2.028000000000000025e+00, 2.909999999999999809e-01, 4.580000000000000182e-01;
+                Eigen::Quaternion<double> quaternionR1( 3.240576711995502568e-01, 8.840463478731088731e-01, -1.607721687495677065e-01, 2.959746446986679658e-01);
 
 				R1 = quaternionR1.toRotationMatrix();
+                t1= t1_w_l;
                 // get extrinsic of camera 1
                 camPose1.setQuaternion(quaternionR1);
                 camPose1.translation()=t1_w_l;
-//                cout<<"show camPose1:"<<camPose1.matrix()<<endl;
-
+                //cout<<"show camPose1:"<<camPose1.matrix()<<endl;
                 Mat image_ref =imread(image_ref_path, IMREAD_ANYCOLOR | IMREAD_ANYDEPTH);// LDR
-                Mat image_ref_seletor= loadPFM(image_ref_seletor_path);
-
-
+//                Mat image_ref_seletor= loadPFM(image_ref_seletor_path);
                 // load and convert depth
                 cv::Mat depth_1 = cv::imread(depth_ref_path, -1);
                 cv::Mat idepth_1_float;
                 depth_1.convertTo(idepth_1_float, CV_32F);
                 idepth_1_float = 5000.0f / idepth_1_float;
-
-
                 Mat roughness_C1= loadPFM(image_ref_roughness_path);
-
-
 				int channelIdx = options_.channelIdx;
 //				extractChannel(image_ref, grayImage_ref, channelIdx);
                 grayImage_ref= image_ref.clone();
-
                 extractChannel(roughness_C1, roughness_C1, channelIdx);
-
-
-                extractChannel(image_ref_seletor, grayImage_selector_ref, channelIdx);
-
 				rows = image_ref.rows;
 				cols = image_ref.cols;
 				setGlobalCalib(cols,rows,camera_intrinsics);
 				// ref image depth
 				Mat channel[3], metallic_ref_render, channel_rough[3], _tar_render;
-
                 image_ref_roughness= roughness_C1;
                 depth_map_ref= idepth_1_float.clone();
-
                 float normalArray[480][640][3]={0.0f};
                 ifstream readIn(image_normal_GT_path, ios::in | ios::binary);
                 readIn.read((char*) &normalArray, sizeof normalArray);
                 cv::Mat normal_A(480,640,CV_32FC3, &normalArray);
                 normal_map_GT = normal_A.clone();
+
 
 				// -------------------------------------------Target image data loader-------------------------
 				string image_target_path;
@@ -169,13 +159,14 @@ namespace DSONL {
 				string depth_target_path;
 
 				if (options_.baseline == 0) {
-                    image_target_path = "../data/Exp_specular_floor_forLoss/rightImage/orig_7.pfm.png";
-                    depth_target_path = "../data/Exp_specular_floor_forLoss/rightImage/origdepth_7.png";
+                    image_target_path = "../data/exp_image0405/rgb/image_05.png";
+                    depth_target_path = "../data/exp_image0405/depth/origdepth_5.png";
 					Eigen::Matrix3d R2_w_l, R1_w_r, R2_w_r;
 					Eigen::Vector3d t2_w_l;
-                    t2_w_l << -1.627999999999999892e+00, 2.909999999999999809e-01, 4.580000000000000182e-01;
-                    Eigen::Quaterniond quaternionR2( 3.607157085028365184e-01, 8.906232514292543589e-01, -1.940714441068365492e-01, 1.975112053407774571e-01);
+                    t2_w_l << -1.927999999999999936e+00, 2.909999999999999809e-01, 4.580000000000000182e-01;
+                    Eigen::Quaterniond quaternionR2( 3.422245493889712886e-01, 8.881539550587902454e-01, -1.783207945754678725e-01, 2.495327716571872079e-01);
 					R2 = quaternionR2.toRotationMatrix();
+                    t2= t2_w_l;
 					R12 = R2.transpose() * R1;
 					t12 = R2.transpose() * (t1_w_l - t2_w_l);
 					q_12 = R12;

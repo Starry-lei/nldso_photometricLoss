@@ -96,15 +96,13 @@ namespace DSONL
             Sophus::SO3d& Rotation,
             Eigen::Matrix<double, 3, 1>& Translation,
             const Eigen::Matrix3f& K,
-            const Mat& image_baseColor,
+//            const Mat& image_baseColor,
             const Mat depth_map,
-            const Mat& image_metallic,
+//            const Mat& image_metallic,
             const Mat& image_roughnes,
             Mat& deltaMap,
             Mat& newNormalMap,
-            float& upper_b,
-            float& lower_b
-            , Mat pointOfInterest,
+            Mat pointOfInterest,
             string  renderedEnvMapPath
             ,Mat envMapWorkMask
         );
