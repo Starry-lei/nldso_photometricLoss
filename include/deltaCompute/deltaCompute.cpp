@@ -209,8 +209,7 @@ namespace DSONL {
 		Vec3f kD = One - kS;
 		kD = kD.mul(One - metallicValue * One);
 		Vec3f specular = specularIBL(f0, roughnessValue, normal, viewDir,
-                                     Camera1_c2w,enterEnv_Rotation_inv
-                                     );
+                                     Camera1_c2w,enterEnv_Rotation_inv);
 
         Specularity =specular;
 		//convert from camera to world
@@ -220,7 +219,7 @@ namespace DSONL {
         diffusity=diffuse;
 
 
-//        diffuse=Vec3f(0.0,0.0,0.0);
+        diffuse=Vec3f(0.0,0.0,0.0);
 		// shading front-facing
         Vec3f color = pow(kD.mul(baseColorValue.mul(diffuse)) + specular, 1.0 / 2.2 * One);
 

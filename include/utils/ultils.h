@@ -849,8 +849,6 @@ namespace DSONL {
 
         // draw envmap points on the envMapWorkMap
         drawEnvMapPoints(envMapPosePath,envMapWorkMap, 1, K_.cast<float>(), cameraExtrinsics);
-
-
         drawEnvMapPoints(envMapPosePath, normal_left, 2, K_.cast<float>(), cameraExtrinsics);
 
 
