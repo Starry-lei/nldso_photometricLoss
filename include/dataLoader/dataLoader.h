@@ -98,6 +98,8 @@ namespace DSONL {
 			S_x << 1.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, -1.0;
 
 
+            bool useHDR= true;
+
 
 			if (options_.isTextured) {
 
@@ -110,7 +112,15 @@ namespace DSONL {
                 string image_ref_seletor_path;
 
 
-                image_ref_path =            "../data/exp_image0405/rgb/image_04.png"; // LDR
+                if (useHDR){
+                    image_ref_path =            "../data/exp_image0405/rgb/orig_4.pfm"; // HDR
+                }else{
+                    //image_ref_path =            "../data/exp_image0405/rgb/image_04.png"; // LDR
+                }
+
+
+
+
                 depth_ref_path =            "../data/exp_image0405/depth/origdepth_4.png";
                 image_ref_roughness_path =  "../data/exp_image0405/roughness/origroughness_4.pfm";
                 image_normal_GT_path =      "../data/exp_image0405/normal/orignormal_4.dat";
@@ -127,7 +137,12 @@ namespace DSONL {
                 camPose1.setQuaternion(quaternionR1);
                 camPose1.translation()=t1_w_l;
                 //cout<<"show camPose1:"<<camPose1.matrix()<<endl;
-                Mat image_ref =imread(image_ref_path, IMREAD_ANYCOLOR | IMREAD_ANYDEPTH);// LDR
+                Mat image_ref;
+                if (useHDR){
+                    image_ref= loadPFM(image_ref_path);// HDR image type is CV_32FC3(21)
+                }else{
+                    image_ref =imread(image_ref_path, IMREAD_ANYCOLOR | IMREAD_ANYDEPTH);// LDR image type is CV_8UC3(16)
+                }
 //                Mat image_ref_seletor= loadPFM(image_ref_seletor_path);
                 // load and convert depth
                 cv::Mat depth_1 = cv::imread(depth_ref_path, -1);
@@ -159,7 +174,14 @@ namespace DSONL {
 				string depth_target_path;
 
 				if (options_.baseline == 0) {
-                    image_target_path = "../data/exp_image0405/rgb/image_05.png";
+
+
+                    if (useHDR){
+                        image_target_path ="../data/exp_image0405/rgb/orig_5.pfm"; // HDR
+                    }else{
+                        image_target_path = "../data/exp_image0405/rgb/image_05.png"; // LDR
+                    }
+
                     depth_target_path = "../data/exp_image0405/depth/origdepth_5.png";
 					Eigen::Matrix3d R2_w_l, R1_w_r, R2_w_r;
 					Eigen::Vector3d t2_w_l;
@@ -183,7 +205,12 @@ namespace DSONL {
 					q_12 = R12;
 				}
 
-                Mat image_target= imread(image_target_path, IMREAD_ANYCOLOR | IMREAD_ANYDEPTH);
+                Mat image_target;
+                if (useHDR){
+                    image_target= loadPFM(image_target_path);// HDR image type is CV_32FC3(21)
+                }else{
+                    image_target =imread(image_target_path, IMREAD_ANYCOLOR | IMREAD_ANYDEPTH);// LDR image type is CV_8UC3(16)
+                }
                 grayImage_target= image_target.clone();
                 // load and convert depth
                 cv::Mat depth_2 = cv::imread(depth_target_path, -1);

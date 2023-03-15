@@ -44,18 +44,31 @@ int main(int argc, char **argv) {
 
 
     // data loading
+    bool usePFM = true;
+    // select a single channel of image
+    int channelIdx = 1;// green channel
+
+
     Mat Image_tar8UC3, Image_ref8UC3,depth_ref_inv, depth_tar_inv;
     Mat normal_map_GT,image_ref_roughness,depth_ref_GT, depth_tar_GT;
+    Mat Image_ref32FC3, Image_tar32FC3;
     Eigen::Matrix3f K_synthetic;
 
     normal_map_GT = dataLoader->normal_map_GT;
-
-
-
-
     image_ref_roughness = dataLoader->image_ref_roughness;
-    Image_ref8UC3 = dataLoader->grayImage_ref;
-    Image_tar8UC3 = dataLoader->grayImage_target;
+
+    if(usePFM){
+        Image_ref32FC3 = dataLoader->grayImage_ref;
+        Image_tar32FC3 = dataLoader->grayImage_target;
+        Image_tar32FC3.convertTo(Image_ref8UC3, CV_8UC3, 255.0);
+        Image_ref32FC3.convertTo(Image_tar8UC3, CV_8UC3, 255.0);
+    }else{
+        Image_ref8UC3 = dataLoader->grayImage_ref;
+        Image_tar8UC3 = dataLoader->grayImage_target;
+    }
+
+
+
 	depth_ref_inv = dataLoader->depth_map_ref;
     depth_tar_inv = dataLoader->depth_map_target;
     K_synthetic = dataLoader->camera_intrinsics;
@@ -87,20 +100,18 @@ int main(int argc, char **argv) {
     Mat clusterImage=specularHighlightRemoval.clusterImage; //  1: specular_diffuse transition, 2: diffuse, 3: specular
 
 
-    // select a single channel of image
-    int channelIdx = 1;// green channel
+
     Mat grayImage_ref,grayImage_ref_pS, grayImage_tar,grayImage_tar_pS, grayImage_ref_green, grayImage_tar_green;
 
-//    extractChannel(Image_ref8UC3, grayImage_ref_green, channelIdx);
-//    cvtColor(Image_ref8UC3, grayImage_ref, CV_BGR2GRAY);
 
-    extractChannel(diffuseImage, grayImage_ref_green, channelIdx);
-    extractChannel(diffuseImage_tar, grayImage_tar_green, channelIdx);
+    // use it for photometric loss
+    extractChannel(Image_ref32FC3, grayImage_ref_green, channelIdx);
+    extractChannel(Image_tar32FC3, grayImage_tar_green, channelIdx);
 
-    cvtColor(diffuseImage, grayImage_ref_pS, CV_BGR2GRAY);
-    cvtColor(diffuseImage_tar, grayImage_tar_pS, CV_BGR2GRAY);
-    cvtColor(Image_ref8UC3, grayImage_ref, CV_BGR2GRAY);
-    cvtColor(Image_tar8UC3, grayImage_tar, CV_BGR2GRAY);
+    cvtColor(diffuseImage, grayImage_ref_pS, CV_RGB2GRAY);
+    cvtColor(diffuseImage_tar, grayImage_tar_pS, CV_RGB2GRAY);
+    cvtColor(Image_ref8UC3, grayImage_ref, CV_RGB2GRAY);
+    cvtColor(Image_tar8UC3, grayImage_tar, CV_RGB2GRAY);
 
     Mat grayImg, mat_mean, mat_stddev;
     double mean_val;
@@ -269,30 +280,27 @@ int main(int argc, char **argv) {
     // setup ceres problem
     size_t num_cameras = 2;
     Sophus::SE3d inputPose(q12_input,t12_input);
-
     bool useGT= false;
     bool useImagePyramid = true;
     bool useDelta = true;
-
     double camera_poses[]={1, 0, 0, 0, 0, 0, 0,1, 0, 0, 0, 0, 0, 0};
     if (useGT){
         double  camera_posesGT[14]= {1, 0, 0, 0, 0, 0, 0,q12_input.w(), q12_input.x(), q12_input.y(), q12_input.z(), t12_input[0], t12_input[1], t12_input[2]};
         std::memcpy(camera_poses, camera_posesGT, 14* sizeof(double));
     }
     // use image pyramid or not
-    float huberPara=40.0f;
+    float huberPara=4.0f/255.0; // 4.0f / 255.0;
     int image_pyramid= 5;
     int lvl_target, lvl_ref;
     std::vector<cv::Point3f> points3D;
     Mat pointOfInterestArea(grayImage_ref.rows, grayImage_ref.cols, CV_8UC1, Scalar(0));
 
     if (useImagePyramid){
-
         Eigen::Matrix3f K=K_synthetic.cast<float>();
         for (int lvl = image_pyramid; lvl >= 1; lvl--) {
             points3D.clear();
             cout << "\n Show the value of lvl:" << lvl << endl;
-            Mat IRef, DRef, I, D;
+            Mat IRef,IRef_8UC1, DRef, I, I_8UC1, D;
             Eigen::Matrix3f Klvl, Klvl_ignore;
             lvl_target = lvl;
             lvl_ref = lvl;
@@ -300,24 +308,31 @@ int main(int argc, char **argv) {
             int  npts_lvl_tar[lvl];
             float* statusMapPoints_ref= new float[wG[lvl-1]*hG[lvl-1]];
             float* statusMapPoints_tar= new float[wG[lvl-1]*hG[lvl-1]];
-            //            downscale(grayImage_ref_green, depth_ref_inv, K, lvl_ref, IRef, DRef, Klvl);
-            //            downscale(grayImage_tar_green, depth_tar_inv, K, lvl_target, I, D, Klvl_ignore);
+            if (usePFM){
+                cout<<"\n show type of grayImage_ref_green:"<<grayImage_ref_green.type()<<endl;
+                cout<<"\n show type of grayImage_tar_green:"<<grayImage_tar_green.type()<<endl;
+                downscale(grayImage_ref_green, depth_ref_inv, K, lvl_ref, IRef, DRef, Klvl);
+                downscale(grayImage_tar_green, depth_tar_inv, K, lvl_target, I, D, Klvl_ignore);
+            }else{
+                downscale(grayImage_ref, depth_ref_inv, K, lvl_ref, IRef, DRef, Klvl);
+                downscale(grayImage_tar, depth_tar_inv, K, lvl_target, I, D, Klvl_ignore);
+            }
 
-
-            downscale(grayImage_ref, depth_ref_inv, K, lvl_ref, IRef, DRef, Klvl);
-            downscale(grayImage_tar, depth_tar_inv, K, lvl_target, I, D, Klvl_ignore);
             // show size of IRef
             cout << "\n Show the size of IRef:" << IRef.size() << endl;
 
             if (usePixelSelector and lvl==1){
+                IRef.convertTo(IRef_8UC1, CV_8UC1,255.0);
+                I.convertTo(I_8UC1, CV_8UC1, 255.0);
+
                 FrameHessian* frame_ref= new FrameHessian();
                 FrameHessian* frame_tar= new FrameHessian();
                 PixelSelector* pixelSelector_lvl= new PixelSelector(wG[lvl-1],hG[lvl-1]);
                 float* color_ref_lvl= new float[wG[lvl-1]*hG[lvl-1]];
                 float* color_tar_lvl= new float[wG[lvl-1]*hG[lvl-1]];
                 for (int row = 0; row < hG[lvl-1]; ++row) {
-                    uchar *pixel_ref_lvl=IRef.ptr<uchar>(row);
-                    uchar *pixel_tar_lvl=I.ptr<uchar>(row);
+                    uchar *pixel_ref_lvl=IRef_8UC1.ptr<uchar>(row);
+                    uchar *pixel_tar_lvl=I_8UC1.ptr<uchar>(row);
                     for (int col = 0; col < wG[lvl-1]; ++col) {
                         color_ref_lvl[row*wG[lvl-1]+col]= (float) pixel_ref_lvl[col];
                         color_tar_lvl[row*wG[lvl-1]+col]= (float) pixel_tar_lvl[col];
@@ -353,10 +368,7 @@ int main(int argc, char **argv) {
                         }
                     }
                 }
-
                 imshow("puredsoSelectedPointMask", dsoSelectedPointMask);
-
-
                 for (int u = 0; u< grayImage_ref.rows; u++) // colId, cols: 0 to 480
                 {
                     for (int v = 0; v < grayImage_ref.cols; v++) // rowId,  rows: 0 to 640
@@ -374,12 +386,14 @@ int main(int argc, char **argv) {
                 imshow("dsoSelectedPointMask", dsoSelectedPointAndISMask);
                 cout << "\n dso_point_counter_merge: " << dso_point_counter_merge << endl;
 //                pbaRelativePose(huberPara, IRef,statusMapPoints_ref,DRef, I,statusMapPoints_tar,Klvl.cast<double>(),camera_poses, points3D);
+
                 // merge the transition field (less roughness)and dso selected points and use non-lambertian correction then optimize the pose , depth again
                 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!try to not use dso pixel selector but use the intensity segmentation method while using the dso selected points, information(lambertian+ corrected non-lambertian) merging
                 if (useDelta){
-                        double distanceThres = 0.0035;
-                    	float upper = 2.0;
-	                    float buttom = 0.5;
+
+                    double distanceThres = 0.0035;
+                    float upper = 2.0;
+                    float buttom = 0.5;
                     imshow("pointOfInterestArea", pointOfInterestArea);
                     //	//--------------------------------------------------normal_map_GT---------------------------------------------------
                     cv::Mat normal_map(grayImage_ref.rows, grayImage_ref.cols, CV_32FC3);
@@ -407,7 +421,7 @@ int main(int argc, char **argv) {
                     Eigen::Matrix<double, 3, 1> Translation_GT(xi_GT.translation());
                     DSONL::updateDelta(dataLoader->camPose1,EnvLightLookup, statusMapPoints_ref,Rotation_GT,Translation_GT,K_synthetic,depth_ref_inv,image_ref_roughness,deltaMap,newNormalMap, pointOfInterestArea, renderedEnvMapPath,envMapWorkMask);
 
-                    Mat deltaMapGT_res= deltaMapGT(Image_ref8UC3,depth_ref_GT,Image_tar8UC3,depth_tar_GT,K.cast<double>(),distanceThres,xi_GT,
+                    Mat deltaMapGT_res= deltaMapGT(grayImage_ref_green,depth_ref_GT,grayImage_tar_green,depth_tar_GT,K.cast<double>(),distanceThres,xi_GT,
                                            upper, buttom, deltaMap, statusMapPoints_ref, envMapWorkMask,controlPointPose_path,
                                            dataLoader->camPose1.cast<float>(),newNormalMap);
                     imshow("deltaMap",deltaMap);
@@ -436,8 +450,6 @@ int main(int argc, char **argv) {
 //                }
 //
 //                imshow("dsoSelectedPointAndISMask", dsoSelectedPointAndISMask);
-
-
                 delete pixelSelector_lvl;
                 delete frame_ref;
                 delete frame_tar;
@@ -446,7 +458,8 @@ int main(int argc, char **argv) {
                 delete[] color_ref_lvl;
                 delete[] color_tar_lvl;
 
-            }else{
+            }
+            else{
 //                pbaRelativePose(huberPara, IRef,DRef, I,Klvl.cast<double>(),camera_poses, points3D);
             }
         }

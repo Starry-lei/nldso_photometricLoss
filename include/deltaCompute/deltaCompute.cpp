@@ -350,8 +350,8 @@ namespace DSONL {
 			{
 
                 //=====================================Inliers Filter=====================================
-                				 if(inliers_filter.count(u)==0){continue;}
-                				 if(inliers_filter[u]!=v ){continue;}
+//                				 if(inliers_filter.count(u)==0){continue;}
+//                				 if(inliers_filter[u]!=v ){continue;}
 
                 //=====================================Area of interest Filter=====================================
 //                                if ( (v<boundingBoxUpperLeft_AoI.val[1] || v>boundingBoxBotRight_AoI.val[1]) || (u< boundingBoxUpperLeft_AoI.val[0] ||  u> boundingBoxBotRight_AoI.val[0])){ continue;}
