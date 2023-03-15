@@ -28,12 +28,20 @@ namespace DSONL {
 
     vector<double> vectorizeImage(Mat &inputMat){
         std::vector<double> image_1_vectorized;
-        for (int r = 0; r < inputMat.rows; r++){
-            for (int c = 0; c < inputMat.cols; c++){
-                image_1_vectorized.push_back(static_cast<double>(inputMat.at<uchar>(r, c)));
+
+        if (inputMat.type()==CV_32F){
+            for (int r = 0; r < inputMat.rows; r++){
+                for (int c = 0; c < inputMat.cols; c++){
+                    image_1_vectorized.push_back(static_cast<double>(inputMat.at<float>(r, c)));
+                }
+            }
+        }else if (inputMat.type()==CV_8U){
+            for (int r = 0; r < inputMat.rows; r++){
+                for (int c = 0; c < inputMat.cols; c++){
+                    image_1_vectorized.push_back(static_cast<double>(inputMat.at<uchar>(r, c)));
+                }
             }
         }
-
         return image_1_vectorized;
 
     }

@@ -90,7 +90,7 @@ namespace DSONL {
                 // marks
 //                checkingArea.at<double>(u, v)= (double) Image.at<Vec3b>(u, v).val[0];
                 // projection
-                double iDepth = depthImage.at<double>(u, v);
+                double iDepth = depthImage.at<float>(u, v);
                 Eigen::Vector2f pixelCoord((float) v, (float) u);//  u is the row id , v is col id
                 Eigen::Vector3f p_3d_no_d((pixelCoord(0) - cx) / fx, (pixelCoord(1) - cy) / fy, (float) 1.0);
                 Eigen::Vector3f p_c1;

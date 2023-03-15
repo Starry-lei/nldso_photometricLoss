@@ -32,13 +32,20 @@ int main(int argc, char **argv) {
 //    string controlPointPose_path= "/home/lei/Documents/Research/envMapData/2frame0370_02_control_cam_pose_150.txt";
 //    string  renderedEnvMapPath=   "/home/lei/Documents/Research/envMapData/EnvMap150_wholeImg";
 
-    std::string envMap_Folder=    "/home/lei/Documents/Research/envMapData/EnvMap_156ctrlPoints";
-    string controlPointPose_path= "/home/lei/Documents/Research/envMapData/2frame0370_02_control_cam_pose156.txt";
-    string  renderedEnvMapPath=   "/home/lei/Documents/Research/envMapData/EnvMap_156ctrlPoints";
+//    std::string envMap_Folder=    "/home/lei/Documents/Research/envMapData/EnvMap_156ctrlPoints";
+//    string controlPointPose_path= "/home/lei/Documents/Research/envMapData/2frame0370_02_control_cam_pose156.txt";
+//    string  renderedEnvMapPath=   "/home/lei/Documents/Research/envMapData/EnvMap_156ctrlPoints";
+
+    std::string envMap_Folder=    "/home/lei/Documents/Research/envMapData/EnvMap_Img04_260";
+    string controlPointPose_path= "/home/lei/Documents/Research/envMapData/2frame0370_02_control_cam_pose_image4.txt";
+    string  renderedEnvMapPath=   "/home/lei/Documents/Research/envMapData/EnvMap_Img04_260";
+
+
+
 
     // data loading
-    Mat Image_tar8UC3, Image_ref8UC3, depth_ref,depth_ref_inv, depth_tar_inv,depth_target;
-    Mat normal_map_GT,image_ref_roughness,depth_ref_GT;
+    Mat Image_tar8UC3, Image_ref8UC3,depth_ref_inv, depth_tar_inv;
+    Mat normal_map_GT,image_ref_roughness,depth_ref_GT, depth_tar_GT;
     Eigen::Matrix3f K_synthetic;
 
     normal_map_GT = dataLoader->normal_map_GT;
@@ -53,6 +60,7 @@ int main(int argc, char **argv) {
     depth_tar_inv = dataLoader->depth_map_target;
     K_synthetic = dataLoader->camera_intrinsics;
     divide(Scalar(1), depth_ref_inv, depth_ref_GT);
+    divide(Scalar(1), depth_tar_inv, depth_tar_GT);
     float roughness_threshold = 0.3;
 
 
@@ -341,6 +349,7 @@ int main(int argc, char **argv) {
                         if ((statusMapPoints_ref!=NULL && statusMapPoints_ref[u*grayImage_ref.cols+v]!=0) ){
                             dso_point_counter+=1;
                             dsoSelectedPointMask.at<uchar>(u,v)= 255;
+                            pointOfInterestArea.at<uchar>(u,v)= 255;
                         }
                     }
                 }
@@ -353,10 +362,8 @@ int main(int argc, char **argv) {
                     for (int v = 0; v < grayImage_ref.cols; v++) // rowId,  rows: 0 to 640
                     {
                         if(image_ref_roughness.at<float>(u,v) < roughness_threshold && clusterImage.at<int>(u, v) == 1){
-                            pointOfInterestArea.at<uchar>(u,v)= 255;
+//                            pointOfInterestArea.at<uchar>(u,v)= 255;
                         }
-
-
                         if (((statusMapPoints_ref!=NULL && statusMapPoints_ref[u*grayImage_ref.cols+v]!=0 )) || (image_ref_roughness.at<float>(u,v) < roughness_threshold && clusterImage.at<int>(u, v) == 1)){
                             dso_point_counter_merge+=1;
                             dsoSelectedPointAndISMask.at<uchar>(u,v)= 255;
@@ -364,15 +371,15 @@ int main(int argc, char **argv) {
                         }
                     }
                 }
-
                 imshow("dsoSelectedPointMask", dsoSelectedPointAndISMask);
                 cout << "\n dso_point_counter_merge: " << dso_point_counter_merge << endl;
-
 //                pbaRelativePose(huberPara, IRef,statusMapPoints_ref,DRef, I,statusMapPoints_tar,Klvl.cast<double>(),camera_poses, points3D);
                 // merge the transition field (less roughness)and dso selected points and use non-lambertian correction then optimize the pose , depth again
                 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!try to not use dso pixel selector but use the intensity segmentation method while using the dso selected points, information(lambertian+ corrected non-lambertian) merging
-
                 if (useDelta){
+                        double distanceThres = 0.0035;
+                    	float upper = 2.0;
+	                    float buttom = 0.5;
                     imshow("pointOfInterestArea", pointOfInterestArea);
                     //	//--------------------------------------------------normal_map_GT---------------------------------------------------
                     cv::Mat normal_map(grayImage_ref.rows, grayImage_ref.cols, CV_32FC3);
@@ -400,6 +407,9 @@ int main(int argc, char **argv) {
                     Eigen::Matrix<double, 3, 1> Translation_GT(xi_GT.translation());
                     DSONL::updateDelta(dataLoader->camPose1,EnvLightLookup, statusMapPoints_ref,Rotation_GT,Translation_GT,K_synthetic,depth_ref_inv,image_ref_roughness,deltaMap,newNormalMap, pointOfInterestArea, renderedEnvMapPath,envMapWorkMask);
 
+                    Mat deltaMapGT_res= deltaMapGT(Image_ref8UC3,depth_ref_GT,Image_tar8UC3,depth_tar_GT,K.cast<double>(),distanceThres,xi_GT,
+                                           upper, buttom, deltaMap, statusMapPoints_ref, envMapWorkMask,controlPointPose_path,
+                                           dataLoader->camPose1.cast<float>(),newNormalMap);
                     imshow("deltaMap",deltaMap);
                     imshow("envMapWorkMask",envMapWorkMask);
                     waitKey(0);

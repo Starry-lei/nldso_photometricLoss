@@ -905,6 +905,16 @@ namespace DSONL {
         //		Mat normalMap_left=getNormals(K_,depth_left);
         //		Mat normalMap_right=getNormals(K_,depth_right);
 
+//        Mat deltda_map_green;
+//        cvtColor(pred_deltaMap, deltda_map_green, CV_BGR2GRAY);
+//        imshow("deltda_map_green", deltda_map_green);
+//        waitKey(0);
+        // check the type of deltda_map_green
+//        cout << "deltda_map_green.type() = " << deltda_map_green.type() << endl;
+
+        extractChannel(Img_left, Img_left, 1);
+        extractChannel(Img_right, Img_right, 1);
+
         Mat envMapWorkMap(pointOfInterest.rows, pointOfInterest.cols, CV_8UC3, Scalar(0,0,0));
         Mat correspInLeft(pointOfInterest.rows, pointOfInterest.cols, CV_8UC1, Scalar(0));
         Mat correspInRight(pointOfInterest.rows, pointOfInterest.cols, CV_8UC1, Scalar(0));
@@ -933,7 +943,7 @@ namespace DSONL {
         for (int x = 0; x < depth_left.rows; ++x) {
             for (int y = 0; y < depth_left.cols; ++y) {
                 // IOA setting
-                double d_r = depth_right.at<double>(x, y);
+                double d_r = depth_right.at<float>(x, y);
                 // Mark: skip depth=15
                 // if (round(d_r) == 15.0f) {continue;}
                 Eigen::Matrix<double, 3, 1> p_3d_no_d_r;
@@ -948,22 +958,22 @@ namespace DSONL {
         kdtree.setInputCloud(cloud_rig);
         double max, min;
         cv::minMaxLoc(Img_left, &min, &max);
-//		cout << "\n show max and min of Img_left:\n"<< max << "," << min << endl;
+		cout << "\n show max and min of Img_left:\n"<< max << "," << min << endl;
         cv::minMaxLoc(Img_right, &min, &max);
-//		cout << "\n show max and min of Img_right:\n"<< max << "," << min << endl;
+		cout << "\n show max and min of Img_right:\n"<< max << "," << min << endl;
         std::unordered_map<int, int> inliers_filter;
         std::unordered_map<int, int> inliers_filter_sixPoints;
         //new image
 
 
-        inliers_filter.emplace(360, 435);
+        inliers_filter.emplace(411, 439);
 
-        inliers_filter_sixPoints.emplace(334, 151);
-        inliers_filter_sixPoints.emplace(294,489);
-        inliers_filter_sixPoints.emplace(177,345);
-        inliers_filter_sixPoints.emplace(104, 323);
-        inliers_filter_sixPoints.emplace(64, 193);
-        inliers_filter_sixPoints.emplace(336,137);
+//        inliers_filter_sixPoints.emplace(334, 151);
+//        inliers_filter_sixPoints.emplace(294,489);
+//        inliers_filter_sixPoints.emplace(177,345);
+//        inliers_filter_sixPoints.emplace(104, 323);
+//        inliers_filter_sixPoints.emplace(64, 193);
+//        inliers_filter_sixPoints.emplace(336,137);
 
 
 
@@ -989,17 +999,17 @@ namespace DSONL {
         for (int x = 0; x < depth_left.rows; ++x) {
             for (int y = 0; y < depth_left.cols; ++y) {
 
-//								if(inliers_filter.count(x)==0){continue;}// ~~~~~~~~~~~~~~Filter~~~~~~~~~~~~~~~~~~~~~~~
-//								if(inliers_filter[x]!=y ){continue;}// ~~~~~~~~~~~~~~Filter~~~~~~~~~~~~~~
+								if(inliers_filter.count(x)==0){continue;}// ~~~~~~~~~~~~~~Filter~~~~~~~~~~~~~~~~~~~~~~~
+								if(inliers_filter[x]!=y ){continue;}// ~~~~~~~~~~~~~~Filter~~~~~~~~~~~~~~
 
 //                    if ( (y<boundingBoxUpperLeft_AoI.val[1] || y>boundingBoxBotRight_AoI.val[1]) || (x< boundingBoxUpperLeft_AoI.val[0] ||  x> boundingBoxBotRight_AoI.val[0])){ continue;}
 //                    if (statusMap!=NULL && static_cast<int>(statusMap[x * depth_left.cols + y])!= 255){ continue;}
 
-                if (pointOfInterest.at<uchar>(x,y)!=255){ continue;}
+                if ( ((int)pointOfInterest.at<uchar>(x,y)) !=255){ continue;}
 
 
                 // calculate 3D point of left camera
-                double d = depth_left.at<double>(x, y);
+                double d = depth_left.at<float>(x, y);
 
 
 
@@ -1015,11 +1025,11 @@ namespace DSONL {
                 cloud->push_back(pcl::PointXYZ(point_Trans.x(), point_Trans.y(), point_Trans.z()));
                 pcl::PointXYZ searchPoint(point_Trans.x(), point_Trans.y(), point_Trans.z());
                 if (kdtree.radiusSearch(searchPoint, radius, pointIdxRadiusSearch, pointRadiusSquaredDistance) > 0) {
-//										for (std::size_t i = 0; i < pointIdxRadiusSearch.size (); ++i)
-//											std::cout << "\n------"  <<   (*cloud_rig)[ pointIdxRadiusSearch[0] ].x
-//											          << " " << (*cloud_rig)[ pointIdxRadiusSearch[0] ].y
-//											          << " " << (*cloud_rig)[ pointIdxRadiusSearch[0] ].z
-//											          << " (squared distance: " << pointRadiusSquaredDistance[0] << ")" << std::endl;
+										for (std::size_t i = 0; i < pointIdxRadiusSearch.size (); ++i)
+											std::cout << "\n------"  <<   (*cloud_rig)[ pointIdxRadiusSearch[0] ].x
+											          << " " << (*cloud_rig)[ pointIdxRadiusSearch[0] ].y
+											          << " " << (*cloud_rig)[ pointIdxRadiusSearch[0] ].z
+											          << " (squared distance: " << pointRadiusSquaredDistance[0] << ")" << std::endl;
                     //
 
 
@@ -1030,16 +1040,13 @@ namespace DSONL {
 //                    cv::circle(Img_left, point_l, 2, cv::Scalar(255), -1);
 
 
-                    float left_intensity = Img_left.at<double>(x, y);
+                    float left_intensity =static_cast<float>(Img_left.at<uchar>(x, y));
                     float pointCorres_x = (*cloud_rig)[pointIdxRadiusSearch[0]].x;
                     float pointCorres_y = (*cloud_rig)[pointIdxRadiusSearch[0]].y;
                     float pointCorres_z = (*cloud_rig)[pointIdxRadiusSearch[0]].z;
                     float pixel_x = (fx * pointCorres_x) / pointCorres_z + cx;
                     float pixel_y = (fy * pointCorres_y) / pointCorres_z + cy;
-                    float right_intensity = Img_right.at<double>(round(pixel_y), round(pixel_x));
-
-
-
+                    float right_intensity = static_cast<float>(Img_right.at<uchar>(round(pixel_y), round(pixel_x)));
 
                     correspInRight.at<uchar>(round(pixel_y),round(pixel_x))=255;
 
@@ -1048,17 +1055,19 @@ namespace DSONL {
                     float delta = right_intensity / left_intensity;
                     //float delta= abs(left_intensity-right_intensity);
 
-//                    cout<<"\n Checking radiance vals:"<< "left Coord: u:"<<x<<", v:"<<y<<"left_intensity:"<< left_intensity
-//                    << "and right_intensity at pixel_x:"<<pixel_x<<", pixel_y:"<< pixel_y<< "is:"<<  right_intensity
-//                            <<"show intensity difference: "<<left_intensity-right_intensity <<"show GT delta: "<<delta <<endl;
+                    cout<<"\n IN deltaMapGT func, checking radiance vals:"<< "left Coord: u:"<<x<<", v:"<<y<<" left_intensity:"<< left_intensity
+                    << ", and right_intensity at row:"<<pixel_y <<", at col:"<< pixel_x<< "is:"<<  right_intensity
+                            <<"show intensity difference: "<<left_intensity-right_intensity <<"show GT delta: "<<delta <<endl;
 
                     float diff_orig = std::abs(left_intensity - right_intensity);
                     minus_original.at<float>(x, y) = diff_orig;
-                    float delta_pred = pred_deltaMap.at<float>(x, y);
+                    float delta_pred_b = pred_deltaMap.at<Vec3f>(x, y)[0];
+                    float delta_pred_g = pred_deltaMap.at<Vec3f>(x, y)[1];
+                    float delta_pred_r = pred_deltaMap.at<Vec3f>(x, y)[2];
 
-                    if (delta_pred==1.0){ continue;}
+                    if (delta_pred_b==1.0 && delta_pred_g ==1.0 && delta_pred_r==1.0){ continue;}
                     float diff_residual = std::abs(right_intensity - left_intensity);
-                    float diff_adj = std::abs(right_intensity - delta_pred * left_intensity);
+                    float diff_adj = std::abs(right_intensity - delta_pred_g * left_intensity);
 
 //                    envMapWorkMap.at<Vec3b>(x,y)[1]=255;
 
