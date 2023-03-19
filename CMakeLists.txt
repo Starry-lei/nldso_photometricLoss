@@ -192,10 +192,13 @@ set(dsonl_SOURCE_FILES
 
         )
 
-add_library(dsonl ${dsonl_SOURCE_FILES})
 
+add_subdirectory(include/matplotplusplus)
+
+add_library(dsonl ${dsonl_SOURCE_FILES})
 add_executable(photometricLoss src/photometricLoss.cpp)
 target_link_libraries(photometricLoss
+        PUBLIC matplot
   Ceres::ceres
   TBB::tbb
   OpenCV

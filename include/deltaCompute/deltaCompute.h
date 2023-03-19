@@ -22,6 +22,12 @@ using namespace cv;
 namespace DSONL
 {
 
+
+
+    Eigen::Vector3f inv_project3D(Eigen::Vector2f uv, float depth, float fx, float fy, float cx, float cy);
+
+
+
         // added by Binghui
         float dot(const Eigen::Vector3f, const Eigen::Vector3f);
 

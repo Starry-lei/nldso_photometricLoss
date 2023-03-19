@@ -4,10 +4,25 @@
 
 #include "deltaCompute.h"
 
-
-
 namespace DSONL {
+    template<typename T>
+    bool checkImageBoundaries(const Eigen::Matrix<T, 2, 1> &pixel, int width, int height) {
+        return (pixel[0] > 1.1 && pixel[0] < width - 2.1 && pixel[1] > 1.1 && pixel[1] < height - 2.1);
+    }
 
+
+    Eigen::Vector3f inv_project3D(Eigen::Vector2f uv, float iDepth, float fx, float fy, float cx, float cy){
+
+        if (checkImageBoundaries(uv, 2.0*cx, 2.0*cy)){
+
+            Eigen::Vector3f p_3d_no_d((uv(0) - cx) / fx, (uv(1) - cy) / fy, (float) 1.0);
+            Eigen::Vector3f p_c1;
+            p_c1 << p_3d_no_d.x() / iDepth, p_3d_no_d.y() / iDepth, p_3d_no_d.z() / iDepth;
+            return p_c1;
+        }else{return Eigen::Vector3f(0,0,0);}
+
+
+    }
 
 
 
@@ -219,7 +234,7 @@ namespace DSONL {
         diffusity=diffuse;
 
 
-//        diffuse=Vec3f(0.0,0.0,0.0);
+        diffuse=Vec3f(0.0,0.0,0.0);
 		// shading front-facing
         Vec3f color = pow(kD.mul(baseColorValue.mul(diffuse)) + specular, 1.0 / 2.2 * One);
 
@@ -320,6 +335,7 @@ namespace DSONL {
 		// ===================================RENDERING PARAMETERS:====================================
 		float fx = K(0, 0), cx = K(0, 2), fy = K(1, 1), cy = K(1, 2);
 		float reflectance = 1.0f;
+//        float reflectance = 0.7f;
 		//      vec3 normal = normalize(wfn);
 		//      vec3 viewDir = normalize(cameraPos - vertPos);
 		std::unordered_map<int, int> inliers_filter, inliers_filter_i;
@@ -331,9 +347,11 @@ namespace DSONL {
 //        388 482 1.37622 0.416063 //good
 //        388 482 1.37622 0.760425 // bad 1cm
 
-// 446,356 floor point
-//        360,435  // 446,356
-        inliers_filter.emplace( 446,356);
+        //        446,356 floor point
+        //        360,435  // 446,356
+        inliers_filter.emplace( 411, 439);
+        // good point 411, 418
+//         inliers_filter.emplace( 411, 418);
 
 
         Mat ctrlPointMask(deltaMap.rows, deltaMap.cols, CV_8UC3, Scalar(0,0,0));
@@ -394,9 +412,17 @@ namespace DSONL {
 				// ===================================PROJECTION====================================
 				Eigen::Vector2f pixelCoord((float) v, (float) u);//  u is the row id , v is col id
 				float iDepth = depth_map.at<double>(u, v);
-				Eigen::Vector3f p_3d_no_d((pixelCoord(0) - cx) / fx, (pixelCoord(1) - cy) / fy, (float) 1.0);
-				Eigen::Vector3f p_c1;
-				p_c1 << p_3d_no_d.x() / iDepth, p_3d_no_d.y() / iDepth, p_3d_no_d.z() / iDepth;
+				Eigen::Vector3f p_c1=inv_project3D(pixelCoord, iDepth, fx, fy, cx, cy);
+
+                // another 4 points
+                Eigen::Vector3f p_c1_r=inv_project3D(pixelCoord+Eigen::Vector2f(1,0), iDepth, fx, fy, cx, cy);
+                Eigen::Vector3f p_c1_l=inv_project3D(pixelCoord+Eigen::Vector2f(-1,0), iDepth, fx, fy, cx, cy);
+                Eigen::Vector3f p_c1_u=inv_project3D(pixelCoord+Eigen::Vector2f(0,1), iDepth, fx, fy, cx, cy);
+                Eigen::Vector3f p_c1_d=inv_project3D(pixelCoord+Eigen::Vector2f(0,-1), iDepth, fx, fy, cx, cy);
+
+
+
+
 
 				// record point cloud
 				//cloud->push_back(pcl::PointXYZ(p_c1.x(), p_c1.y(), p_c1.z()));
@@ -411,11 +437,37 @@ namespace DSONL {
 				normal = normal.normalized();
 
 				// ===================================VIEW-DIRECTION====================================
-				Eigen::Matrix<float, 3, 1> beta, beta_prime;
+				Eigen::Matrix<float, 3, 1> beta, beta_r,beta_l,beta_u, beta_d,beta_prime, beta_prime_r,beta_prime_l,beta_prime_u, beta_prime_d;
 				beta = -p_c1;
+                beta_r = -p_c1_r;
+                beta_l = -p_c1_l;
+                beta_u = -p_c1_u;
+                beta_d = -p_c1_d;
+
+
+
 				beta = beta.normalized();
+                beta_r = beta_r.normalized();
+                beta_l = beta_l.normalized();
+                beta_u = beta_u.normalized();
+                beta_d = beta_d.normalized();
+
+
+
+
 				beta_prime = - Rotation.matrix().transpose().cast<float>() * Translation.cast<float>() - p_c1;
+                beta_prime_r = - Rotation.matrix().transpose().cast<float>() * Translation.cast<float>() - p_c1_r;
+                beta_prime_l = - Rotation.matrix().transpose().cast<float>() * Translation.cast<float>() - p_c1_l;
+                beta_prime_u = - Rotation.matrix().transpose().cast<float>() * Translation.cast<float>() - p_c1_u;
+                beta_prime_d = - Rotation.matrix().transpose().cast<float>() * Translation.cast<float>() - p_c1_d;
+
+
 				beta_prime = beta_prime.normalized();
+                beta_prime_r = beta_prime_r.normalized();
+                beta_prime_l = beta_prime_l.normalized();
+                beta_prime_u = beta_prime_u.normalized();
+                beta_prime_d = beta_prime_d.normalized();
+
 
                 // envMapPose_world
 				// ===================================BASE-COLOR=============================================
@@ -431,7 +483,20 @@ namespace DSONL {
 
                 Vec3f N_(normal(0), normal(1), normal(2));
 				Vec3f View_beta(beta(0), beta(1), beta(2));
+                Vec3f View_beta_r(beta_r(0), beta_r(1), beta_r(2));
+                Vec3f View_beta_l(beta_l(0), beta_l(1), beta_l(2));
+                Vec3f View_beta_u(beta_u(0), beta_u(1), beta_u(2));
+                Vec3f View_beta_d(beta_d(0), beta_d(1), beta_d(2));
+
+
+
+
+
 				Vec3f View_beta_prime(beta_prime(0), beta_prime(1), beta_prime(2));
+                Vec3f View_beta_prime_r(beta_prime_r(0), beta_prime_r(1), beta_prime_r(2));
+                Vec3f View_beta_prime_l(beta_prime_l(0), beta_prime_l(1), beta_prime_l(2));
+                Vec3f View_beta_prime_u(beta_prime_u(0), beta_prime_u(1), beta_prime_u(2));
+                Vec3f View_beta_prime_d(beta_prime_d(0), beta_prime_d(1), beta_prime_d(2));
 
 				// ===================================search for Env Light from control points===================
                 // coordinate system conversion
@@ -598,9 +663,50 @@ namespace DSONL {
                 Vec3f radiance_beta = ibl_Radiance->solveForRadiance(View_beta, N_, image_roughnes, image_metallic,
                                                                      reflectance, baseColor, Camera1_c2w.rotationMatrix(),
                                                                      enterPanoroma.inverse());
+                Vec3f radiance_beta_r = ibl_Radiance->solveForRadiance(View_beta_r, N_, image_roughnes, image_metallic,
+                                                                     reflectance, baseColor, Camera1_c2w.rotationMatrix(),
+                                                                     enterPanoroma.inverse());
+                Vec3f radiance_beta_l = ibl_Radiance->solveForRadiance(View_beta_l, N_, image_roughnes, image_metallic,
+                                                                     reflectance, baseColor, Camera1_c2w.rotationMatrix(),
+                                                                     enterPanoroma.inverse());
+                Vec3f radiance_beta_u = ibl_Radiance->solveForRadiance(View_beta_u, N_, image_roughnes, image_metallic,
+                                                                        reflectance, baseColor, Camera1_c2w.rotationMatrix(),
+                                                                        enterPanoroma.inverse());
+                Vec3f radiance_beta_d = ibl_Radiance->solveForRadiance(View_beta_d, N_, image_roughnes, image_metallic,
+                                                                        reflectance, baseColor, Camera1_c2w.rotationMatrix(),
+                                                                        enterPanoroma.inverse());
+
+                // averge radiance
+//                radiance_beta = (radiance_beta + radiance_beta_r + radiance_beta_l + radiance_beta_u + radiance_beta_d)/5;
+
+
+                cout<<"\n ========>>>>show data vals LEFT:"<<",u:"<<u<<",v:"<<v<< ",ibl_Radiance->Specularity"
+                    <<ibl_Radiance->Specularity<< "ibl_Radiance->diffusity;"<<ibl_Radiance->diffusity <<endl;
                 Vec3f radiance_beta_prime = ibl_Radiance->solveForRadiance(View_beta_prime, N_, image_roughnes, image_metallic,
                                                                            reflectance, baseColor, Camera1_c2w.rotationMatrix(),
                                                                            enterPanoroma.inverse());
+                Vec3f radiance_beta_prime_r = ibl_Radiance->solveForRadiance(View_beta_prime_r, N_, image_roughnes, image_metallic,
+                                                                                reflectance, baseColor, Camera1_c2w.rotationMatrix(),
+                                                                                enterPanoroma.inverse());
+                Vec3f radiance_beta_prime_l = ibl_Radiance->solveForRadiance(View_beta_prime_l, N_, image_roughnes, image_metallic,
+                                                                                reflectance, baseColor, Camera1_c2w.rotationMatrix(),
+                                                                                enterPanoroma.inverse());
+                Vec3f radiance_beta_prime_u = ibl_Radiance->solveForRadiance(View_beta_prime_u, N_, image_roughnes, image_metallic,
+                                                                                reflectance, baseColor, Camera1_c2w.rotationMatrix(),
+                                                                                enterPanoroma.inverse());
+                Vec3f radiance_beta_prime_d = ibl_Radiance->solveForRadiance(View_beta_prime_d, N_, image_roughnes, image_metallic,
+                                                                                reflectance, baseColor, Camera1_c2w.rotationMatrix(),
+                                                                                enterPanoroma.inverse());
+
+                // averge radiance
+//                radiance_beta_prime = (radiance_beta_prime + radiance_beta_prime_r + radiance_beta_prime_l + radiance_beta_prime_u + radiance_beta_prime_d)/5;
+
+
+
+
+
+                cout<<"\n ========>>>>show data vals RIGHT:"<< ",ibl_Radiance->Specularity"
+                    <<ibl_Radiance->Specularity<< "ibl_Radiance->diffusity;"<<ibl_Radiance->diffusity <<endl;
 
 				// ===================================SAVE-RADIANCE===========================================
 				radianceMap_left.at<Vec3f>(u, v) = radiance_beta;
@@ -616,7 +722,7 @@ namespace DSONL {
                 specularityMap.at<Vec3f>(u,v)=ibl_Radiance->Specularity;
                 DiffuseMap.at<Vec3f>(u,v)=ibl_Radiance->diffusity;
 
-                cout<<"\n ========>>>>show data vals :"<< "ibl_Radiance->Specularity"
+                cout<<"\n ========>>>>show data vals :"<<",u:"<<u<<",v:"<<v<< ",ibl_Radiance->Specularity"
                 <<ibl_Radiance->Specularity<< "ibl_Radiance->diffusity;"<<ibl_Radiance->diffusity <<endl;
 
 
@@ -628,10 +734,43 @@ namespace DSONL {
                 if(radiance_beta.val[1]==0 || radiance_beta_prime.val[1]==0){
                     continue;
                 }
-
 				float delta_r = radiance_beta_prime.val[0] / radiance_beta.val[0];
 				float delta_g = radiance_beta_prime.val[1] / radiance_beta.val[1];
 				float delta_b = radiance_beta_prime.val[2] / radiance_beta.val[2];
+
+                if(radiance_beta_r.val[1]==0 || radiance_beta_prime_r.val[1]==0){
+                    continue;
+                }
+                float delta_r_r = radiance_beta_prime_r.val[0] / radiance_beta_r.val[0];
+                float delta_g_r = radiance_beta_prime_r.val[1] / radiance_beta_r.val[1];
+                float delta_b_r = radiance_beta_prime_r.val[2] / radiance_beta_r.val[2];
+                if (radiance_beta_l.val[1]==0 || radiance_beta_prime_l.val[1]==0){
+                    continue;
+                }
+                float delta_r_l = radiance_beta_prime_l.val[0] / radiance_beta_l.val[0];
+                float delta_g_l = radiance_beta_prime_l.val[1] / radiance_beta_l.val[1];
+                float delta_b_l = radiance_beta_prime_l.val[2] / radiance_beta_l.val[2];
+                if (radiance_beta_u.val[1]==0 || radiance_beta_prime_u.val[1]==0){
+                    continue;
+                }
+                float delta_r_u = radiance_beta_prime_u.val[0] / radiance_beta_u.val[0];
+                float delta_g_u = radiance_beta_prime_u.val[1] / radiance_beta_u.val[1];
+                float delta_b_u = radiance_beta_prime_u.val[2] / radiance_beta_u.val[2];
+                if (radiance_beta_d.val[1]==0 || radiance_beta_prime_d.val[1]==0){
+                    continue;
+                }
+                float delta_r_d = radiance_beta_prime_d.val[0] / radiance_beta_d.val[0];
+                float delta_g_d = radiance_beta_prime_d.val[1] / radiance_beta_d.val[1];
+                float delta_b_d = radiance_beta_prime_d.val[2] / radiance_beta_d.val[2];
+
+
+
+                // averge  delta_g
+                delta_g = (delta_g + delta_g_r + delta_g_l + delta_g_u + delta_g_d)/5;
+                delta_r = (delta_r + delta_r_r + delta_r_l + delta_r_u + delta_r_d)/5;
+                delta_b = (delta_b + delta_b_r + delta_b_l + delta_b_u + delta_b_d)/5;
+
+
                 if (std::isnan(delta_g)){
                     continue;
                 }
@@ -640,10 +779,10 @@ namespace DSONL {
                 }
                 deltaMap.at<float>(u, v) = delta_g;
 
-//                cout<<"\n Checking radiance vals:"<< "left Coord: u:"<<u<<", v:"<<v<<"left_radiance:"<< radiance_beta.val[1]
-//                    << "and right_intensity at pixel_x:"<<"pixel_x"<<", pixel_y:"<< "pixel_y"<< "is:"<<  radiance_beta_prime.val[1]
-//                        << "and intensity difference:"<<radiance_beta.val[1]-radiance_beta_prime.val[1]
-//                    <<"  show delta_g: "<<delta_g <<endl;
+                cout<<"\n Checking radiance vals:"<< "left Coord: u:"<<u<<", v:"<<v<<"left_radiance:"<< radiance_beta
+                    << " and right_intensity at pixel_x:"<<" pixel_x"<<", pixel_y:"<< " pixel_y"<< "is:"<<  radiance_beta_prime
+                        << " and intensity difference:"<<radiance_beta-radiance_beta_prime
+                    <<"  show delta_g: "<<delta_g <<endl;
 
                 //deltaMap.at<float>(u, v) = delta_b;
 			}

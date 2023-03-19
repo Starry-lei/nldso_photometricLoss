@@ -80,6 +80,9 @@ namespace DSONL {
 		int rows;
 		int cols;
 
+        Mat image_ref_gray;
+        Mat image_target_gray;
+
         double mean_val;
         double std_dev;
 
@@ -123,27 +126,33 @@ namespace DSONL {
 
 //                image_ref_path =            "../data/SimulationEnvData/leftImage/bgr_10.png"; // LDR
 //                image_ref_path =            "../data/Exp_specular_floor/leftImage/orig_2.pfm"; // HDR
-                image_ref_path =            "../data/Exp_specular_floor_forLoss/leftImage/orig_6.pfm"; // HDR
+//                image_ref_path =            "../data/Exp_specular_floor_forLoss/leftImage/orig_6.pfm"; // HDR
+
+                image_ref_path =            "../data/exp_image0405/rgb/orig_4.pfm"; // HDR
 
 //                image_ref_seletor_path =    "../data/Exp_specular_floor/leftImage/orig_2.pfm";
-                image_ref_seletor_path =    "../data/Exp_specular_floor_forLoss/leftImage/orig_6.pfm";
+                image_ref_seletor_path =    "../data/exp_image0405/rgb/orig_4.pfm";
 
 //                depth_ref_path =            "../data/Exp_specular_floor/leftImage/origdepth_2.png";
-                depth_ref_path =            "../data/Exp_specular_floor_forLoss/leftImage/origdepth_6.png";
+                depth_ref_path =            "../data/exp_image0405/depth/origdepth_4.png";
 
 //                image_ref_baseColor_path =  "../data/SimulationEnvData/leftImage/DSNL/bgrbaseColor_10.pfm";
 //                image_ref_baseColor_path =  "../data/Exp_specular_floor/leftImage/non_lambertian/origbaseColor_2.pfm";
 //                image_ref_metallic_path  =    "../data/Exp_specular_floor/leftImage/non_lambertian/origmetallic_2.pfm";
 //                image_ref_roughness_path =  "../data/Exp_specular_floor/leftImage/non_lambertian/origroughness_2.pfm";
 
-                image_ref_baseColor_path =  "../data/Exp_specular_floor_forLoss/leftImage/non_lambertian/origbaseColor_6.pfm";
-                image_ref_metallic_path  =    "../data/Exp_specular_floor_forLoss/leftImage/non_lambertian/origmetallic_6.pfm";
-                image_ref_roughness_path =  "../data/Exp_specular_floor_forLoss/leftImage/non_lambertian/origroughness_6.pfm";
+//                image_ref_baseColor_path =  "../data/Exp_specular_floor_forLoss/leftImage/non_lambertian/origbaseColor_6.pfm";
+//                image_ref_metallic_path  =    "../data/Exp_specular_floor_forLoss/leftImage/non_lambertian/origmetallic_6.pfm";
+//                image_ref_roughness_path =  "../data/Exp_specular_floor_forLoss/leftImage/non_lambertian/origroughness_6.pfm";
+
+                image_ref_baseColor_path =  "../data/exp_image0405/baseColor/origbaseColor_4.pfm";
+                image_ref_metallic_path  =    "../data/exp_image0405/metallics/origmetallic_4.pfm";
+                image_ref_roughness_path =  "../data/exp_image0405/roughness/origroughness_4.pfm";
 
 
 //                image_normal_GT_path =      "../data/Exp_specular_floor/leftImage/non_lambertian/orignormal_2.dat"; //normals11  normals10 normals9  //data/SimulationEnvData/leftImage/DSNL/normal_10.data
 
-                image_normal_GT_path =      "../data/Exp_specular_floor_forLoss/leftImage/non_lambertian/orignormal_6.dat"; //normals11  normals10 normals9  //data/SimulationEnvData/leftImage/DSNL/normal_10.data
+                image_normal_GT_path =      "../data/exp_image0405/normal/orignormal_4.dat"; //normals11  normals10 normals9  //data/SimulationEnvData/leftImage/DSNL/normal_10.data
 
 //                data/Exp_specular_floor_forLoss/leftImage/non_lambertian/orignormal_6.pfm
 
@@ -157,8 +166,11 @@ namespace DSONL {
 //                t1_w_l << -2.228000000000000203e+00, 2.909999999999999809e-01, 4.580000000000000182e-01;
 //                Eigen::Quaternion<double> quaternionR1(  2.915518455604547698e-01, 8.724267396286820020e-01 ,-1.240161990092776972e-01 ,3.721412201227538019e-01);
 
-                t1_w_l << -1.828000000000000069e+00, 2.909999999999999809e-01, 4.580000000000000182e-01;
-                Eigen::Quaternion<double> quaternionR1(  3.607157085028365184e-01, 8.906232514292543589e-01, -1.940714441068365215e-01, 1.975112053407775681e-01);
+//                t1_w_l << -1.828000000000000069e+00, 2.909999999999999809e-01, 4.580000000000000182e-01;
+//                Eigen::Quaternion<double> quaternionR1(  3.607157085028365184e-01, 8.906232514292543589e-01, -1.940714441068365215e-01, 1.975112053407775681e-01);
+
+                t1_w_l << -2.028000000000000025e+00, 2.909999999999999809e-01, 4.580000000000000182e-01;
+                Eigen::Quaternion<double> quaternionR1( 3.240576711995502568e-01, 8.840463478731088731e-01, -1.607721687495677065e-01, 2.959746446986679658e-01);
 
 
 				R1 = quaternionR1.toRotationMatrix();
@@ -173,6 +185,9 @@ namespace DSONL {
 //                Mat image_ref =imread(image_ref_path, IMREAD_ANYCOLOR | IMREAD_ANYDEPTH);// LDR
 
                 Mat image_ref = loadPFM(image_ref_path);
+
+                cvtColor(image_ref, image_ref_gray, COLOR_RGB2GRAY);
+
 
                 Mat image_ref_seletor= loadPFM(image_ref_seletor_path);
 
@@ -254,8 +269,8 @@ namespace DSONL {
 //
 //					depth_target_path = "../data/Exp_specular_floor/rightImage/origdepth_6.png";
 
-                    image_target_path = "../data/Exp_specular_floor_forLoss/rightImage/orig_7.pfm";
-                    depth_target_path = "../data/Exp_specular_floor_forLoss/rightImage/origdepth_7.png";
+                    image_target_path = "../data/exp_image0405/rgb/orig_5.pfm";
+                    depth_target_path = "../data/exp_image0405/depth/origdepth_5.png";
 
 					Eigen::Matrix3d R2_w_l, R1_w_r, R2_w_r;
 					Eigen::Vector3d t2_w_l;
@@ -265,9 +280,12 @@ namespace DSONL {
 //                    t2_w_l << -1.828000000000000069e+00, 2.909999999999999809e-01, 4.580000000000000182e-01;
 //                    Eigen::Quaterniond quaternionR2( 3.607157085028365184e-01, 8.906232514292543589e-01, -1.940714441068365215e-01, 1.975112053407775681e-01);
 
-                    t2_w_l << -1.627999999999999892e+00, 2.909999999999999809e-01, 4.580000000000000182e-01;
-                    Eigen::Quaterniond quaternionR2( 3.607157085028365184e-01, 8.906232514292543589e-01, -1.940714441068365492e-01, 1.975112053407774571e-01);
+//                    t2_w_l << -1.627999999999999892e+00, 2.909999999999999809e-01, 4.580000000000000182e-01;
+//                    Eigen::Quaterniond quaternionR2( 3.607157085028365184e-01, 8.906232514292543589e-01, -1.940714441068365492e-01, 1.975112053407774571e-01);
+//
 
+                    t2_w_l << -1.927999999999999936e+00, 2.909999999999999809e-01, 4.580000000000000182e-01;
+                    Eigen::Quaterniond quaternionR2( 3.422245493889712886e-01, 8.881539550587902454e-01, -1.783207945754678725e-01, 2.495327716571872079e-01);
 
 					R2 = quaternionR2.toRotationMatrix();
 					R12 = R2.transpose() * R1;
@@ -303,6 +321,8 @@ namespace DSONL {
                         //loadPFM(image_target_path);
 
                 Mat image_target= loadPFM(image_target_path);
+
+                cvtColor(image_target,image_target_gray,CV_RGB2GRAY);
 
 
                 Mat depth_target = imread(depth_target_path, IMREAD_ANYCOLOR | IMREAD_ANYDEPTH);

@@ -62,9 +62,13 @@ int main(int argc, char **argv) {
 //    string controlPointPose_path= "/home/lei/Documents/Research/envMapData/2frame0370_02_control_cam_pose_150.txt";
 //    string  renderedEnvMapPath=   "/home/lei/Documents/Research/envMapData/EnvMap150_wholeImg";
 
-    std::string envMap_Folder="/home/lei/Documents/Research/envMapData/EnvMap_156ctrlPoints";
-    string controlPointPose_path= "/home/lei/Documents/Research/envMapData/2frame0370_02_control_cam_pose156.txt";
-    string  renderedEnvMapPath=   "/home/lei/Documents/Research/envMapData/EnvMap_156ctrlPoints";
+//    std::string envMap_Folder="/home/lei/Documents/Research/envMapData/EnvMap_156ctrlPoints";
+//    string controlPointPose_path= "/home/lei/Documents/Research/envMapData/2frame0370_02_control_cam_pose156.txt";
+//    string  renderedEnvMapPath=   "/home/lei/Documents/Research/envMapData/EnvMap_156ctrlPoints";
+
+    std::string envMap_Folder=    "/home/lei/Documents/Research/envMapData/EnvMap_Img04_260";
+    string controlPointPose_path= "/home/lei/Documents/Research/envMapData/2frame0370_02_control_cam_pose_image4.txt";
+    string  renderedEnvMapPath=   "/home/lei/Documents/Research/envMapData/EnvMap_Img04_260";
 
 
 
@@ -129,10 +133,9 @@ int main(int argc, char **argv) {
 
         }
     }
-    imshow("pointOfInterestArea",pointOfInterestArea);
+    cv::imshow("pointOfInterestArea",pointOfInterestArea);
     cout<<"check channel of pointOfInterestArea_Non_Lambertian_2358:"<<pointOfInterestArea_Non_Lambertian_2358.channels()<<" check num_points_used "<<num_points_used<<endl;
 //    waitKey(0);
-
     // ----------------------------------------optimization variable: R, t--------------------------------------
     Sophus::SE3d xi, xi_GT;
     Eigen::Matrix3d Camera1_c2w= dataLoader->R1;
@@ -145,7 +148,7 @@ int main(int argc, char **argv) {
 //    waitKey(0);
 
     // ====================================== pointSelector========================================
-    bool usePixelSelector= false;
+    bool usePixelSelector= true;
     float densities[] = {0.03,0.003, 0.05,0.15,0.5,1}; /// number of optimized depths,  current index is 1
     PixelSelector* pixelSelector=NULL;
     FrameHessian* newFrame_ref=NULL;
@@ -162,11 +165,11 @@ int main(int argc, char **argv) {
         double min_gray,max_gray;
         Mat grayImage_ref_CV8U;
         Mat grayImage_tar_CV8U;
-        imshow("grayImage_selector_ref",dataLoader->grayImage_selector_ref);
+        cv::imshow("grayImage_selector_ref",dataLoader->grayImage_selector_ref);
         dataLoader->grayImage_selector_ref.convertTo(grayImage_ref_CV8U,CV_8UC1, 255.0);
 //        grayImage_target.convertTo(grayImage_tar_CV8U,CV_8UC1, 255.0);
 
-        imshow("grayImage_ref_CV8U",grayImage_ref_CV8U);
+        cv::imshow("grayImage_ref_CV8U",grayImage_ref_CV8U);
         waitKey(0);
         newFrame_ref= new FrameHessian();
         newFrame_tar= new FrameHessian();
@@ -246,11 +249,11 @@ int main(int argc, char **argv) {
 
                     // ================================save the selectedPoint mask here=======================
 
-                    if ( (image_ref_roughness.at<float>(u,v) < roughness_threshold || image_ref_metallic.at<float>(u,v)>metallic_threshold) && (grayImage_ref.at<double>(u,v)>(dataLoader->mean_val+scale_std*dataLoader->std_dev) )){
+//                    if ( (image_ref_roughness.at<float>(u,v) < roughness_threshold || image_ref_metallic.at<float>(u,v)>metallic_threshold) && (grayImage_ref.at<double>(u,v)>(dataLoader->mean_val+scale_std*dataLoader->std_dev) )){
                         statusMap_NonLambCand.at<uchar>(u,v)= 255;
                         statusMap[u*grayImage_ref.cols+v]=255;
                         point_counter+=1;
-                    }
+//                    }
 
 
 //                    if ( (image_ref_roughness.at<float>(u,v) < roughness_threshold || image_ref_metallic.at<float>(u,v)>metallic_threshold) && (dataLoader->grayImage_ref_CV8UC1.at<uchar>(u,v)>(dataLoader->mean_val+scale_std*dataLoader->std_dev) )){
@@ -264,7 +267,7 @@ int main(int argc, char **argv) {
         }
         // refine the point selector
 //        imshow("selectedPointMask1",selectedPointMask1);
-        imshow("statusMap_NonLambCand", statusMap_NonLambCand);
+        cv::imshow("statusMap_NonLambCand", statusMap_NonLambCand);
 
         std::cerr<<"\n show point_counter:"<<point_counter<<endl;
         std::cerr<<"\n show dso_point_counter:"<<dso_point_counter<<endl;
@@ -276,13 +279,15 @@ int main(int argc, char **argv) {
 
         }
 
+    pointOfInterestArea=statusMap_NonLambCand.clone();
+
 
 // ===========================ctrlPoint Selector==========================================
     ctrlPointSelector  * ctrlPoint_Selector= new ctrlPointSelector(dataLoader->camPose1, controlPointPose_path,grayImage_ref, depth_ref_GT,K, pointOfInterestArea);
     envLightLookup  *EnvLightLookup= new envLightLookup(ctrlPoint_Selector->selectedIndex, argc, argv, envMap_Folder,controlPointPose_path);
 
     cout<<"\n The preComputation of EnvMap is ready!"<<endl;
-    imshow("grayImage_target", grayImage_target);
+    cv::imshow("grayImage_target", grayImage_target);
     waitKey(0);
 	// show the depth image with noise
 	double min_depth_val, max_depth_val;
@@ -336,7 +341,7 @@ int main(int argc, char **argv) {
 	double Mean = 0.0, StdDev = 0;
 	//	float densities[] = {0.03, 0.003, 0.05, 0.15, 0.5, 1}; /// number of optimized depths,  current index is 1
 
-    imshow("normal_map",normal_map);
+    cv::imshow("normal_map",normal_map);
     waitKey(0);
 
 	PhotometricBAOptions options;
@@ -468,18 +473,35 @@ int main(int argc, char **argv) {
                                image_ref_metallic ,image_ref_roughness,deltaMap,newNormalMap,up_new, butt_new, pointOfInterestArea, renderedEnvMapPath
                                ,envMapWorkMask);
 
+//            vector<float> deltaVec;
+//            deltaVec = vectorizeImage(deltaMap)
+//            drawResidualPerPixels(deltaVec, 3.0,"deltaMap", grayImage_ref.cols, grayImage_ref.rows);
+
 
 
             // deltaMapGT
 //            Mat deltaMapGT_res= deltaMapGT(grayImage_ref,depth_ref,grayImage_target,depth_target,K.cast<double>(),distanceThres,xi_GT, upper, buttom, deltaMap, statusMap, pointOfInterestArea_allPoints_38880);
 //            Mat deltaMapGT_res= deltaMapGT(grayImage_ref,depth_ref,grayImage_target,depth_target,K.cast<double>(),distanceThres,xi_GT, upper, buttom, deltaMap, statusMap, pointOfInterestArea_Non_Lambertian_2358);
-            Mat deltaMapGT_res= deltaMapGT(grayImage_ref,depth_ref,grayImage_target,depth_target,K.cast<double>(),distanceThres,xi_GT,
+//            Mat deltaMapGT_res= deltaMapGT(grayImage_ref,depth_ref,grayImage_target,depth_target,K.cast<double>(),distanceThres,xi_GT,
+//                                           upper, buttom, deltaMap, statusMap, envMapWorkMask,
+//                                           controlPointPose_path,
+//                                           dataLoader->camPose1.cast<float>(),
+//                                           newNormalMap
+//                                           );
+
+            Mat deltaMapGT_res= deltaMapGT(dataLoader->image_ref_gray,depth_ref,dataLoader->image_target_gray,depth_target,K.cast<double>(),distanceThres,xi_GT,
                                            upper, buttom, deltaMap, statusMap, envMapWorkMask,
                                            controlPointPose_path,
                                            dataLoader->camPose1.cast<float>(),
                                            newNormalMap
                                            );
 
+            vector<float> deltaVecGT;
+            deltaVecGT = vectorizeImage(deltaMapGT_res);
+            deltaVecGT.erase(std::remove(deltaVecGT.begin(), deltaVecGT.end(), 0), deltaVecGT.end());
+
+            drawResidualDistribution(deltaVecGT, "residualDistri");
+//            drawResidualPerPixels(deltaVecGT, 1.0,"deltaVecGT", grayImage_ref.cols, grayImage_ref.rows);
 
 //            for (int u = 0; u < grayImage_ref.rows; u++)// colId, cols: 0 to 480
 //            {

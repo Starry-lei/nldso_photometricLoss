@@ -9,6 +9,11 @@
 #include <Eigen/StdVector>
 #include <cmath>
 
+#include <matplot/matplot.h>
+
+#include "gnuplot-iostream/gnuplot-iostream.h"
+
+
 
 
 //#include <ceres/ceres.h>
@@ -38,6 +43,9 @@ namespace DSONL {
 
 	using namespace cv;
 	using namespace std;
+    using namespace matplot;
+
+
 	const double DEG_TO_ARC = 0.0174532925199433;
 
     void readUV(string blhTxtName, Mat& coordMask )
@@ -150,7 +158,7 @@ namespace DSONL {
 
 		cout << "\n show Image depth:\n"
 		     << im.depth() << "\n show Image channels :\n " << im.channels() << endl;
-		imshow("Image", im);
+		cv::imshow("Image", im);
 
 		double min_v, max_v;
 		cv::minMaxLoc(im, &min_v, &max_v);
@@ -180,10 +188,10 @@ namespace DSONL {
 	T rotationErr(Eigen::Matrix<T, 3, 3> rotation_gt, Eigen::Matrix<T, 3, 3> rotation_rs) {
 
 
-		T compare1 = max(acos(std::min(std::max(rotation_gt.col(0).dot(rotation_rs.col(0)), -1.0), 1.0)),
+		T compare1 = std::max(acos(std::min(std::max(rotation_gt.col(0).dot(rotation_rs.col(0)), -1.0), 1.0)),
 		                 acos(std::min(std::max(rotation_gt.col(1).dot(rotation_rs.col(1)), -1.0), 1.0)));
 
-		return max(compare1, acos(std::min(std::max(rotation_gt.col(2).dot(rotation_rs.col(2)), -1.0), 1.0))) * 180.0 /
+		return std::max(compare1, acos(std::min(std::max(rotation_gt.col(2).dot(rotation_rs.col(2)), -1.0), 1.0))) * 180.0 /
 		       M_PI;
 	}
 
@@ -405,8 +413,8 @@ namespace DSONL {
 		double max_adj, min_adj;
 		cv::minMaxLoc(minus_adjust, &min_adj, &max_adj);
 
-		double max_real = max(max_adj, max_orig);
-		double min_real = min(min_adj, min_orig);
+		double max_real = std::max(max_adj, max_orig);
+		double min_real = std::min(min_adj, min_orig);
 
 		Mat adj_show(minus_original.rows, minus_original.cols, CV_32FC3, Scalar(0, 0, 0));
 		Mat orig_show(minus_original.rows, minus_original.cols, CV_32FC3, Scalar(0, 0, 0));
@@ -453,8 +461,8 @@ namespace DSONL {
 			}
 		}
 
-		imshow("orig_show", orig_show);
-		imshow("adj_show", adj_show);
+		cv::imshow("orig_show", orig_show);
+		cv::imshow("adj_show", adj_show);
 
 		//          imwrite("orig_show.png",orig_show);
 		//          imwrite("adj_show.png",adj_show);
@@ -534,6 +542,29 @@ namespace DSONL {
 
     }
 
+    vector<float> vectorizeImage(Mat &inputMat){
+        std::vector<float> image_1_vectorized;
+
+        if (inputMat.type()==CV_32F){
+            for (int r = 0; r < inputMat.rows; r++){
+                for (int c = 0; c < inputMat.cols; c++){
+                    image_1_vectorized.push_back(static_cast<float >(inputMat.at<float>(r, c)));
+                }
+            }
+        }else if (inputMat.type()==CV_8U){
+            for (int r = 0; r < inputMat.rows; r++){
+                for (int c = 0; c < inputMat.cols; c++){
+                    image_1_vectorized.push_back(static_cast<float>(inputMat.at<uchar>(r, c)));
+                }
+            }
+        }
+
+
+
+        return image_1_vectorized;
+
+    }
+
 
     void  drawEnvMapPoints(const string envMapPosePath, const Mat EnvLightWorkMap, int canvasId,  Eigen::Matrix3f K,  Sophus::SE3f cameraExtrinsics){
 
@@ -573,13 +604,132 @@ namespace DSONL {
 
         imwrite(ctrlPointUsed + ".png", EnvLightWorkMap);
 
-        imshow(ctrlPointUsed, EnvLightWorkMap);
+        cv::imshow(ctrlPointUsed, EnvLightWorkMap);
 
 
     }
 
 
-	Mat deltaMapGT(Mat &Img_left, Mat &depth_left, Mat &Img_right, Mat &depth_right, const Eigen::Matrix<double, 3, 3> &K_, double &thres,
+    void drawResidualPerPixels(vector<float>& residuals, float step_size, string  title_str,  int rows, int cols){
+
+        // convert the residuals vector to a cv::Mat of the same size as the image of size 307200 * 8
+        cv::Mat residuals_mat = cv::Mat::zeros(rows*cols, 1, CV_32F);
+
+        vector<float> residuals_mat_vector;
+
+//        // convert vector into a matrix
+//        for (int r = 0; r < rows*cols; r++){
+//            float sum_val= 0.0;
+//            for (int c = 0; c < 8; c++){
+//                sum_val += abs(residuals[r*8 + c]);
+//            }
+//            residuals_mat_vector.push_back(sum_val/8.0);
+//        }
+
+        residuals_mat_vector=residuals;
+
+
+        cout<< "residuals_mat_vector.size(): " << residuals_mat_vector.size() << endl;
+
+        // convert vector into an image
+
+        cv::Mat residuals_mat_reshaped = cv::Mat::zeros(rows, cols, CV_32F);
+        //copy vector to mat
+        memcpy(residuals_mat_reshaped.data, residuals.data(), residuals.size()*sizeof(float));
+
+        // output the range of the residuals
+        double min, max;
+        cv::minMaxLoc(residuals_mat_reshaped, &min, &max);
+        std::cout << "min: " << min << std::endl;
+        std::cout << "max: " << max << std::endl;
+
+        // specify the range of residuals_mat_reshaped
+        cv::Mat residuals_mat_normalized;
+//        cv::normalize(residuals_mat_reshaped, residuals_mat_normalized, 0, 1, cv::NORM_MINMAX, CV_32F);
+
+        residuals_mat_normalized= residuals_mat_reshaped.clone();
+
+        auto [X, Y] =meshgrid(iota(0, step_size, 640.0),iota(0, step_size, 480.0));
+
+        auto Z = transform(X, Y, [&residuals_mat_normalized](float x, float y) { return residuals_mat_normalized.at<float>(y,x); });
+
+
+        mesh(X, Y, Z)->hidden_3d(false);
+
+
+
+        title(title_str);
+
+        show();
+
+
+
+    }
+
+    void drawResidualDistribution(vector<float>& residuals, string  title_str){
+
+        // convert the residuals vector to a cv::Mat of the same size as the image of size 307200 * 8
+//        cv::Mat residuals_mat = cv::Mat::zeros(rows*cols, 1, CV_32F);
+
+        vector<float> residuals_mat_vector;
+
+//        // convert vector into a matrix
+//        for (int r = 0; r < rows*cols; r++){
+//            float sum_val= 0.0;
+//            for (int c = 0; c < 8; c++){
+//                sum_val += abs(residuals[r*8 + c]);
+//            }
+//            residuals_mat_vector.push_back(sum_val/8.0);
+//        }
+
+        residuals_mat_vector=residuals;
+
+
+        cout<< "residuals_mat_vector.size(): " << residuals_mat_vector.size() << endl;
+
+        // convert vector into an image
+
+        auto h = hist(residuals);
+
+        std::cout << "Histogram with " << h->num_bins() << " bins" << std::endl;
+        title(title_str);
+        show();
+//
+//        cv::Mat residuals_mat_reshaped = cv::Mat::zeros(rows, cols, CV_32F);
+//        //copy vector to mat
+//        memcpy(residuals_mat_reshaped.data, residuals.data(), residuals.size()*sizeof(float));
+//
+//        // output the range of the residuals
+//        double min, max;
+//        cv::minMaxLoc(residuals_mat_reshaped, &min, &max);
+//        std::cout << "min: " << min << std::endl;
+//        std::cout << "max: " << max << std::endl;
+//
+//        // specify the range of residuals_mat_reshaped
+//        cv::Mat residuals_mat_normalized;
+////        cv::normalize(residuals_mat_reshaped, residuals_mat_normalized, 0, 1, cv::NORM_MINMAX, CV_32F);
+//
+//        residuals_mat_normalized= residuals_mat_reshaped.clone();
+//
+//        auto [X, Y] =meshgrid(iota(0, step_size, 640.0),iota(0, step_size, 480.0));
+//
+//        auto Z = transform(X, Y, [&residuals_mat_normalized](float x, float y) { return residuals_mat_normalized.at<float>(y,x); });
+//
+//
+//        mesh(X, Y, Z)->hidden_3d(false);
+//
+//
+//
+//        title(title_str);
+//
+//        show();
+
+
+
+    }
+
+
+    Mat deltaMapGT(Mat &Img_left, Mat &depth_left, Mat &Img_right, Mat &depth_right, const Eigen::Matrix<double, 3, 3> &K_, double &thres,
 	               const Sophus::SE3d &ExtrinsicPose, float &upper, float &buttom, Mat &pred_deltaMap,
                    float *statusMap, Mat pointOfInterest
                    , string envMapPosePath
@@ -592,6 +742,9 @@ namespace DSONL {
         Mat envMapWorkMap(pointOfInterest.rows, pointOfInterest.cols, CV_8UC3, Scalar(0,0,0));
         Mat correspInLeft(pointOfInterest.rows, pointOfInterest.cols, CV_8UC1, Scalar(0));
         Mat correspInRight(pointOfInterest.rows, pointOfInterest.cols, CV_8UC1, Scalar(0));
+
+        Img_left.convertTo(Img_left, CV_64FC1);
+        Img_right.convertTo(Img_right, CV_64FC1);
 
 
 
@@ -606,7 +759,8 @@ namespace DSONL {
         }
 
 
-		Mat deltaMapGT(depth_left.rows, depth_left.cols, CV_32FC1, Scalar(-1));// default value 1.0
+//		Mat deltaMapGT(depth_left.rows, depth_left.cols, CV_32FC1, Scalar(1));// default value 1.0
+        Mat deltaMapGT(depth_left.rows, depth_left.cols, CV_32FC1, Scalar(0));// default value 1.0
 		                                                                       //		Mat deltaMapGT(depth_left.rows, depth_left.cols, CV_32FC1, Scalar(1)); // default value 1.0
 		double fx = K_(0, 0), cx = K_(0, 2), fy = K_(1, 1), cy = K_(1, 2);
 		pcl::PCDWriter writer;
@@ -640,7 +794,11 @@ namespace DSONL {
 		//new image
 
 
-		inliers_filter.emplace(360, 435);
+		inliers_filter.emplace(411, 439);
+
+        // good point
+//        inliers_filter.emplace(411, 418);
+
 
         inliers_filter_sixPoints.emplace(334, 151);
         inliers_filter_sixPoints.emplace(294,489);
@@ -679,7 +837,7 @@ namespace DSONL {
 //                    if ( (y<boundingBoxUpperLeft_AoI.val[1] || y>boundingBoxBotRight_AoI.val[1]) || (x< boundingBoxUpperLeft_AoI.val[0] ||  x> boundingBoxBotRight_AoI.val[0])){ continue;}
 //                    if (statusMap!=NULL && static_cast<int>(statusMap[x * depth_left.cols + y])!= 255){ continue;}
 
-                if (pointOfInterest.at<uchar>(x,y)!=255){ continue;}
+//                if (pointOfInterest.at<uchar>(x,y)!=255){ continue;}
 
 
                 // calculate 3D point of left camera
@@ -722,19 +880,22 @@ namespace DSONL {
 					float pixel_y = (fy * pointCorres_y) / pointCorres_z + cy;
 					float right_intensity = Img_right.at<double>(round(pixel_y), round(pixel_x));
 
-
-
-
                     correspInRight.at<uchar>(round(pixel_y),round(pixel_x))=255;
 
 
 
-                    float delta = right_intensity / left_intensity;
-					//float delta= abs(left_intensity-right_intensity);
+//                    float delta = right_intensity / left_intensity;
+//					float delta= abs(left_intensity-right_intensity);
+                    float delta= left_intensity-right_intensity;
 
 //                    cout<<"\n Checking radiance vals:"<< "left Coord: u:"<<x<<", v:"<<y<<"left_intensity:"<< left_intensity
 //                    << "and right_intensity at pixel_x:"<<pixel_x<<", pixel_y:"<< pixel_y<< "is:"<<  right_intensity
 //                            <<"show intensity difference: "<<left_intensity-right_intensity <<"show GT delta: "<<delta <<endl;
+
+
+                    cout<<"\n IN deltaMapGT func, checking radiance vals:"<< "left Coord: u:"<<x<<", v:"<<y<<" left_intensity:"<< left_intensity
+                        << ", and right_intensity at row:"<<pixel_y <<", at col:"<< pixel_x<< "is:"<<  right_intensity
+                        <<"show intensity difference: "<<left_intensity-right_intensity <<"show GT delta: "<<delta <<endl;
 
                     float diff_orig = std::abs(left_intensity - right_intensity);
 					minus_original.at<float>(x, y) = diff_orig;
@@ -841,11 +1002,11 @@ namespace DSONL {
 
 
 
-        imshow("Img_left", Img_left);
-        imshow("Img_right", Img_right);
+        cv::imshow("Img_left", Img_left);
+        cv::imshow("Img_right", Img_right);
 		showMinus(minus_original, minus_adjust, minus_mask);
 
-        imshow("envMapWorkMap",envMapWorkMap);
+        cv::imshow("envMapWorkMap",envMapWorkMap);
 
         // draw envmap points on the envMapWorkMap
         drawEnvMapPoints(envMapPosePath,envMapWorkMap, 1, K_.cast<float>(), cameraExtrinsics);
