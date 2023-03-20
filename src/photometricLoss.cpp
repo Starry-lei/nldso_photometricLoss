@@ -99,14 +99,15 @@ int main(int argc, char **argv) {
     Mat Img_range=specularHighlightRemoval.rangeImage;
     Mat clusterImage=specularHighlightRemoval.clusterImage; //  1: specular_diffuse transition, 2: diffuse, 3: specular
 
-
-
-    Mat grayImage_ref,grayImage_ref_pS, grayImage_tar,grayImage_tar_pS, grayImage_ref_green, grayImage_tar_green;
+    Mat grayImage_ref,grayImage_ref_pS, grayImage_tar,grayImage_tar_pS, grayImage_ref_green, grayImage_tar_green, grayImage_ref_32FC1, grayImage_tar_32FC1;
 
 
     // use it for photometric loss
     extractChannel(Image_ref32FC3, grayImage_ref_green, channelIdx);
     extractChannel(Image_tar32FC3, grayImage_tar_green, channelIdx);
+
+    cvtColor(Image_ref32FC3, grayImage_ref_32FC1, CV_RGB2GRAY);
+    cvtColor(Image_tar32FC3, grayImage_tar_32FC1, CV_RGB2GRAY);
 
     cvtColor(diffuseImage, grayImage_ref_pS, CV_RGB2GRAY);
     cvtColor(diffuseImage_tar, grayImage_tar_pS, CV_RGB2GRAY);
@@ -294,6 +295,8 @@ int main(int argc, char **argv) {
     int lvl_target, lvl_ref;
     std::vector<cv::Point3f> points3D;
     Mat pointOfInterestArea(grayImage_ref.rows, grayImage_ref.cols, CV_8UC1, Scalar(0));
+    Mat deltaMap(grayImage_ref.rows, grayImage_ref.cols, CV_32FC3, Scalar(0,0,0)); // storing delta  Scalar(1,1,1) for ratio
+    Mat deltaMapGT_res(grayImage_ref.rows, grayImage_ref.cols, CV_32FC1, Scalar(0));
 
     if (useImagePyramid){
         Eigen::Matrix3f K=K_synthetic.cast<float>();
@@ -311,8 +314,8 @@ int main(int argc, char **argv) {
             if (usePFM){
                 cout<<"\n show type of grayImage_ref_green:"<<grayImage_ref_green.type()<<endl;
                 cout<<"\n show type of grayImage_tar_green:"<<grayImage_tar_green.type()<<endl;
-                downscale(grayImage_ref_green, depth_ref_inv, K, lvl_ref, IRef, DRef, Klvl);
-                downscale(grayImage_tar_green, depth_tar_inv, K, lvl_target, I, D, Klvl_ignore);
+                downscale(grayImage_ref_32FC1, depth_ref_inv, K, lvl_ref, IRef, DRef, Klvl);
+                downscale(grayImage_tar_32FC1, depth_tar_inv, K, lvl_target, I, D, Klvl_ignore);
             }else{
                 downscale(grayImage_ref, depth_ref_inv, K, lvl_ref, IRef, DRef, Klvl);
                 downscale(grayImage_tar, depth_tar_inv, K, lvl_target, I, D, Klvl_ignore);
@@ -379,13 +382,15 @@ int main(int argc, char **argv) {
                         if (((statusMapPoints_ref!=NULL && statusMapPoints_ref[u*grayImage_ref.cols+v]!=0 )) || (image_ref_roughness.at<float>(u,v) < roughness_threshold && clusterImage.at<int>(u, v) == 1)){
                             dso_point_counter_merge+=1;
                             dsoSelectedPointAndISMask.at<uchar>(u,v)= 255;
-                            statusMapPoints_ref[u*grayImage_ref.cols+v]=6;// 6 is not fixed
+//                            statusMapPoints_ref[u*grayImage_ref.cols+v]=6;// 6 is not fixed
                         }
                     }
                 }
                 imshow("dsoSelectedPointMask", dsoSelectedPointAndISMask);
                 cout << "\n dso_point_counter_merge: " << dso_point_counter_merge << endl;
-//                pbaRelativePose(huberPara, IRef,statusMapPoints_ref,DRef, I,statusMapPoints_tar,Klvl.cast<double>(),camera_poses, points3D);
+
+
+                pbaRelativePose(huberPara, IRef,statusMapPoints_ref,DRef, I,statusMapPoints_tar,Klvl.cast<double>(),camera_poses, points3D);
 
                 // merge the transition field (less roughness)and dso selected points and use non-lambertian correction then optimize the pose , depth again
                 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!try to not use dso pixel selector but use the intensity segmentation method while using the dso selected points, information(lambertian+ corrected non-lambertian) merging
@@ -414,21 +419,77 @@ int main(int argc, char **argv) {
                     imshow("normal_map",normal_map);
                     waitKey(0);
                     Mat newNormalMap = normal_map;
-                    Mat deltaMap(grayImage_ref.rows, grayImage_ref.cols, CV_32FC3, Scalar(1,1,1)); // storing delta
+//                    Mat deltaMap(grayImage_ref.rows, grayImage_ref.cols, CV_32FC3, Scalar(1,1,1)); // storing delta
                     Mat envMapWorkMask(deltaMap.rows, deltaMap.cols, CV_8UC1, Scalar(0));
 
                     Sophus::SO3d Rotation_GT(xi_GT.rotationMatrix());
                     Eigen::Matrix<double, 3, 1> Translation_GT(xi_GT.translation());
                     DSONL::updateDelta(dataLoader->camPose1,EnvLightLookup, statusMapPoints_ref,Rotation_GT,Translation_GT,K_synthetic,depth_ref_inv,image_ref_roughness,deltaMap,newNormalMap, pointOfInterestArea, renderedEnvMapPath,envMapWorkMask);
 
-                    Mat deltaMapGT_res= deltaMapGT(grayImage_ref_green,depth_ref_GT,grayImage_tar_green,depth_tar_GT,K.cast<double>(),distanceThres,xi_GT,
-                                           upper, buttom, deltaMap, statusMapPoints_ref, envMapWorkMask,controlPointPose_path,
-                                           dataLoader->camPose1.cast<float>(),newNormalMap);
-                    imshow("deltaMap",deltaMap);
-                    imshow("envMapWorkMask",envMapWorkMask);
-                    waitKey(0);
+                    Mat greenChannel_deltaMap, redChannel_deltaMap, blueChannel_deltaMap;
+                    extractChannel(deltaMap, greenChannel_deltaMap, 1);// !!!!!!!!!!!!!!1!11!!!!only one channel now!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                    extractChannel(deltaMap, blueChannel_deltaMap, 0);
+                    extractChannel(deltaMap, redChannel_deltaMap, 2);
+                    Mat sumChannel= 0.587*greenChannel_deltaMap+0.114*blueChannel_deltaMap+0.299*redChannel_deltaMap;
+
+//                    deltaMapGT_res= deltaMapGT(grayImage_ref_32FC1,depth_ref_GT,grayImage_tar_32FC1,depth_tar_GT,K.cast<double>(),distanceThres,xi_GT,
+//                                           upper, buttom, deltaMap, statusMapPoints_ref, envMapWorkMask,controlPointPose_path,
+//                                           dataLoader->camPose1.cast<float>(),newNormalMap);
+//                    vector<double> deltaMap_gray_distribution_vec;
+//                    deltaMap_gray_distribution_vec= vectorizeImage(deltaMapGT_res);
+//                    deltaMap_gray_distribution_vec.erase(std::remove(deltaMap_gray_distribution_vec.begin(), deltaMap_gray_distribution_vec.end(), 0.0), deltaMap_gray_distribution_vec.end());
+//                    drawResidualDistribution(deltaMap_gray_distribution_vec, "GT pose,RadianceErrorDistributionDSOselected", 480, 640);
+
+
+
+                    vector<double> greenChannel_deltaMap_vec;
+                    greenChannel_deltaMap_vec= vectorizeImage(sumChannel);
+                    greenChannel_deltaMap_vec.erase(std::remove(greenChannel_deltaMap_vec.begin(), greenChannel_deltaMap_vec.end(), 0.0), greenChannel_deltaMap_vec.end());
+                    drawResidualDistribution(greenChannel_deltaMap_vec, "GT pose SpecularityErrorDistributionDSOselectedAndEnvmap", 480, 640);
+
+//                    imshow("deltaMap",deltaMap);
+//                    imshow("envMapWorkMask",envMapWorkMask);
+//                    waitKey(0);
+
+//                    Mat deltaMap_gray_distribution(deltaMap.rows, deltaMap.cols, CV_32FC1, Scalar(0));
+//                    cvtColor(deltaMap, deltaMap_gray_distribution, COLOR_BGR2GRAY);
+                    IRef=IRef-greenChannel_deltaMap;
+                    pbaRelativePose(huberPara, IRef,statusMapPoints_ref,DRef, I,statusMapPoints_tar,Klvl.cast<double>(),camera_poses, points3D);
 
                 }
+
+//                bool checkES_changeOfSpecularity = true;
+//                if (checkES_changeOfSpecularity){
+//                    Mat deltaMap_gray_show(deltaMap.rows, deltaMap.cols, CV_8UC1, Scalar(0));
+//                    Mat deltaMap_gray_distribution(deltaMap.rows, deltaMap.cols, CV_32FC1, Scalar(0));
+//                    deltaMap.convertTo(deltaMap_gray_show, CV_8UC3, 255.0);
+//                    cvtColor(deltaMap, deltaMap_gray_distribution, COLOR_RGB2GRAY);
+//                    vector<double> deltaMap_gray_distribution_vec;
+//                    deltaMap_gray_distribution_vec= vectorizeImage(deltaMap_gray_distribution);
+//                    cv::imshow("deltaMap_specularity_term_gray_show", deltaMap_gray_show);
+//                    waitKey(0);
+//                    deltaMap_gray_distribution_vec.erase(std::remove(deltaMap_gray_distribution_vec.begin(), deltaMap_gray_distribution_vec.end(), 0), deltaMap_gray_distribution_vec.end());
+//                    drawResidualDistribution(deltaMap_gray_distribution_vec, "ESSpecularityErrorDistributionWholeImage", 480, 640);
+//                } else{
+//
+//                Mat deltaMapGT_res_gray_show(deltaMap.rows, deltaMap.cols, CV_8UC1, Scalar(0));
+//                deltaMapGT_res.convertTo(deltaMapGT_res_gray_show, CV_8UC3, 255.0);
+//                cv::imshow("deltaMap_gray_show", deltaMapGT_res_gray_show);
+//                waitKey(0);
+//                vector<double> deltaMap_gray_distribution_vec;
+//                deltaMap_gray_distribution_vec= vectorizeImage(deltaMapGT_res);
+//                deltaMap_gray_distribution_vec.erase(std::remove(deltaMap_gray_distribution_vec.begin(), deltaMap_gray_distribution_vec.end(), 0.0), deltaMap_gray_distribution_vec.end());
+//                drawResidualDistribution(deltaMap_gray_distribution_vec, "GTSpecularityErrorDistributionWholeImage", 480, 640);
+//                }
+
+
+
+
+
+
+
+
+
 //                for (int u = 0; u< grayImage_ref.rows; u++) // colId, cols: 0 to 480
 //                {
 //                    for (int v = 0; v < grayImage_ref.cols; v++) // rowId,  rows: 0 to 640
@@ -460,7 +521,7 @@ int main(int argc, char **argv) {
 
             }
             else{
-//                pbaRelativePose(huberPara, IRef,DRef, I,Klvl.cast<double>(),camera_poses, points3D);
+                pbaRelativePose(huberPara, IRef,DRef, I,Klvl.cast<double>(),camera_poses, points3D);
             }
         }
 
