@@ -9,7 +9,8 @@
 #include <Eigen/StdVector>
 #include <cmath>
 #include <pangolin/pangolin.h>
-
+#include <matplot/matplot.h>
+#include "gnuplot-iostream/gnuplot-iostream.h"
 
 //#include <ceres/ceres.h>
 //#include <ceres/cubic_interpolation.h>
@@ -35,7 +36,7 @@
 
 
 namespace DSONL {
-
+    using namespace matplot;
     using namespace cv;
     using namespace std;
     const double DEG_TO_ARC = 0.0174532925199433;
@@ -460,7 +461,7 @@ namespace DSONL {
 
         cout << "\n show Image depth:\n"
              << im.depth() << "\n show Image channels :\n " << im.channels() << endl;
-        imshow("Image", im);
+        cv::imshow("Image", im);
 
         double min_v, max_v;
         cv::minMaxLoc(im, &min_v, &max_v);
@@ -490,10 +491,10 @@ namespace DSONL {
     T rotationErr(Eigen::Matrix<T, 3, 3> rotation_gt, Eigen::Matrix<T, 3, 3> rotation_rs) {
 
 
-        T compare1 = max(acos(std::min(std::max(rotation_gt.col(0).dot(rotation_rs.col(0)), -1.0), 1.0)),
+        T compare1 = std::max(acos(std::min(std::max(rotation_gt.col(0).dot(rotation_rs.col(0)), -1.0), 1.0)),
                          acos(std::min(std::max(rotation_gt.col(1).dot(rotation_rs.col(1)), -1.0), 1.0)));
 
-        return max(compare1, acos(std::min(std::max(rotation_gt.col(2).dot(rotation_rs.col(2)), -1.0), 1.0))) * 180.0 /
+        return std::max(compare1, acos(std::min(std::max(rotation_gt.col(2).dot(rotation_rs.col(2)), -1.0), 1.0))) * 180.0 /
                M_PI;
     }
 
@@ -596,6 +597,51 @@ namespace DSONL {
 
         level -= 1;
         downscale(image_d, depth_d, K_d, level, image_d, depth_d, K_d);
+    }
+
+    void drawResidualDistribution(vector<double>& residuals, string  title_str, int rows, int cols){
+
+        vector<float> residuals_mat_vector;
+
+        // convert vector into a matrix
+//        for (int r = 0; r < rows*cols; r++){
+//            double sum_val= 0.0;
+//            for (int c = 0; c < 8; c++){
+//                //sum_val += abs(residuals[r*8 + c]);
+//                sum_val += (residuals[r*8 + 0]);
+//            }
+//            //residuals_mat_vector.push_back(sum_val/8.0);
+//            residuals_mat_vector.push_back(sum_val);
+//        }
+        cout<< "residuals.size(): " << residuals.size() << endl;
+        // convert vector into an image
+        auto h = hist(residuals);
+        std::cout << "Histogram with " << h->num_bins() << " bins" << std::endl;
+        title(title_str);
+        show();
+
+//        cv::Mat residuals_mat_reshaped = cv::Mat::zeros(rows, cols, CV_32F);
+//        //copy vector to mat
+//        memcpy(residuals_mat_reshaped.data, residuals.data(), residuals.size()*sizeof(float));
+//
+//        // output the range of the residuals
+//        double min, max;
+//        cv::minMaxLoc(residuals_mat_reshaped, &min, &max);
+//        std::cout << "min: " << min << std::endl;
+//        std::cout << "max: " << max << std::endl;
+//
+//        // specify the range of residuals_mat_reshaped
+//        cv::Mat residuals_mat_normalized;
+////        cv::normalize(residuals_mat_reshaped, residuals_mat_normalized, 0, 1, cv::NORM_MINMAX, CV_32F);
+//        residuals_mat_normalized= residuals_mat_reshaped.clone();
+//        auto [X, Y] =meshgrid(iota(0, step_size, 640.0),iota(0, step_size, 480.0));
+//        auto Z = transform(X, Y, [&residuals_mat_normalized](float x, float y) { return residuals_mat_normalized.at<float>(y,x); });
+//        mesh(X, Y, Z)->hidden_3d(false);
+//        title(title_str);
+//        show();
+
+
+
     }
 
 
@@ -721,8 +767,8 @@ namespace DSONL {
         double max_adj, min_adj;
         cv::minMaxLoc(minus_adjust, &min_adj, &max_adj);
 
-        double max_real = max(max_adj, max_orig);
-        double min_real = min(min_adj, min_orig);
+        double max_real = std::max(max_adj, max_orig);
+        double min_real =std:: min(min_adj, min_orig);
 
         Mat adj_show(minus_original.rows, minus_original.cols, CV_32FC3, Scalar(0, 0, 0));
         Mat orig_show(minus_original.rows, minus_original.cols, CV_32FC3, Scalar(0, 0, 0));
@@ -769,8 +815,8 @@ namespace DSONL {
             }
         }
 
-        imshow("orig_show", orig_show);
-        imshow("adj_show", adj_show);
+        cv::imshow("orig_show", orig_show);
+        cv::imshow("adj_show", adj_show);
 
         //          imwrite("orig_show.png",orig_show);
         //          imwrite("adj_show.png",adj_show);
@@ -889,7 +935,7 @@ namespace DSONL {
 
         imwrite(ctrlPointUsed + ".png", EnvLightWorkMap);
 
-        imshow(ctrlPointUsed, EnvLightWorkMap);
+        cv::imshow(ctrlPointUsed, EnvLightWorkMap);
 
 
     }
@@ -905,8 +951,8 @@ namespace DSONL {
         //		Mat normalMap_left=getNormals(K_,depth_left);
         //		Mat normalMap_right=getNormals(K_,depth_right);
 
-//        Mat deltda_map_green;
-//        cvtColor(pred_deltaMap, deltda_map_green, CV_BGR2GRAY);
+        Mat deltda_map_allchannel;
+        cvtColor(pred_deltaMap, deltda_map_allchannel, CV_RGB2GRAY);
 //        imshow("deltda_map_green", deltda_map_green);
 //        waitKey(0);
         // check the type of deltda_map_green
@@ -999,13 +1045,17 @@ namespace DSONL {
         for (int x = 0; x < depth_left.rows; ++x) {
             for (int y = 0; y < depth_left.cols; ++y) {
 
-								if(inliers_filter.count(x)==0){continue;}// ~~~~~~~~~~~~~~Filter~~~~~~~~~~~~~~~~~~~~~~~
-								if(inliers_filter[x]!=y ){continue;}// ~~~~~~~~~~~~~~Filter~~~~~~~~~~~~~~
+//								if(inliers_filter.count(x)==0){continue;}// ~~~~~~~~~~~~~~Filter~~~~~~~~~~~~~~~~~~~~~~~
+//								if(inliers_filter[x]!=y ){continue;}// ~~~~~~~~~~~~~~Filter~~~~~~~~~~~~~~
 
 //                    if ( (y<boundingBoxUpperLeft_AoI.val[1] || y>boundingBoxBotRight_AoI.val[1]) || (x< boundingBoxUpperLeft_AoI.val[0] ||  x> boundingBoxBotRight_AoI.val[0])){ continue;}
 //                    if (statusMap!=NULL && static_cast<int>(statusMap[x * depth_left.cols + y])!= 255){ continue;}
 
-                if ( ((int)pointOfInterest.at<uchar>(x,y)) !=255){ continue;}
+//                if ( ((int)pointOfInterest.at<uchar>(x,y)) !=255){ continue;}
+
+                if ( (deltaMap.at<Vec3f >(x,y)) !=255){ continue;}
+
+
 
 
                 // calculate 3D point of left camera
@@ -1166,11 +1216,11 @@ namespace DSONL {
 
 
 
-        imshow("Img_left", Img_left);
-        imshow("Img_right", Img_right);
+        cv::imshow("Img_left", Img_left);
+        cv::imshow("Img_right", Img_right);
         showMinus(minus_original, minus_adjust, minus_mask);
 
-        imshow("envMapWorkMap",envMapWorkMap);
+        cv::imshow("envMapWorkMap",envMapWorkMap);
 
         // draw envmap points on the envMapWorkMap
         drawEnvMapPoints(envMapPosePath,envMapWorkMap, 1, K_.cast<float>(), cameraExtrinsics);

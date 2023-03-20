@@ -334,11 +334,11 @@ namespace DSONL {
         Mat radianceMap_leftSave(deltaMap.rows, deltaMap.cols, CV_32FC3, Scalar(0));
         Mat radianceMap_rightSave(deltaMap.rows, deltaMap.cols, CV_32FC3, Scalar(0));
 
-        Mat specularityMap(deltaMap.rows, deltaMap.cols, CV_32FC3, Scalar(0));
+        Mat specularityMap(deltaMap.rows, deltaMap.cols, CV_32FC3, Scalar(0,0,0));
         Mat DiffuseMap(deltaMap.rows, deltaMap.cols, CV_32FC3, Scalar(0));
 
         // K nearest neighbor search
-//        int num_K = 1;
+        // int num_K = 1;
         int num_K = 6;
         float lift=0.002f; // 2mm
 
@@ -350,8 +350,8 @@ namespace DSONL {
 			{
 
                 //=====================================Inliers Filter=====================================
-                				 if(inliers_filter.count(u)==0){continue;}
-                				 if(inliers_filter[u]!=v ){continue;}
+//                				 if(inliers_filter.count(u)==0){continue;}
+//                				 if(inliers_filter[u]!=v ){continue;}
 
                 //=====================================Area of interest Filter=====================================
 //                                if ( (v<boundingBoxUpperLeft_AoI.val[1] || v>boundingBoxBotRight_AoI.val[1]) || (u< boundingBoxUpperLeft_AoI.val[0] ||  u> boundingBoxBotRight_AoI.val[0])){ continue;}
@@ -580,14 +580,21 @@ namespace DSONL {
                 Vec3f radiance_beta = ibl_Radiance->solveForRadiance(View_beta, N_, image_roughnes, image_metallic,
                                                                      reflectance, baseColor, Camera1_c2w.rotationMatrix(),
                                                                      enterPanoroma.inverse());
+
+
+                Vec3f specularity_left= ibl_Radiance->Specularity;
                 cout<<"\n ========>>>>show LEFT data vals :"<< "ibl_Radiance->Specularity\n"
                     <<ibl_Radiance->Specularity<< "ibl_Radiance->diffusity\n"<<ibl_Radiance->diffusity <<endl;
                 specularityMap.at<Vec3f>(u,v)=ibl_Radiance->Specularity;
                 DiffuseMap.at<Vec3f>(u,v)=ibl_Radiance->diffusity;
+
                 Vec3f radiance_beta_prime = ibl_Radiance->solveForRadiance(View_beta_prime, N_, image_roughnes, image_metallic,
                                                                            reflectance, baseColor, Camera1_c2w.rotationMatrix(),enterPanoroma.inverse());
                 cout<<"\n ========>>>>show RIGHT data vals :"<< "ibl_Radiance->Specularity\n"
                 <<ibl_Radiance->Specularity<< "ibl_Radiance->diffusity\n"<<ibl_Radiance->diffusity <<endl;
+                Vec3f specularity_right= ibl_Radiance->Specularity;
+
+                specularityMap.at<Vec3f>(u,v)=specularity_right-specularity_left;
 
 				// ===================================SAVE-RADIANCE===========================================
 				radianceMap_left.at<Vec3f>(u, v) = radiance_beta;
@@ -608,8 +615,12 @@ namespace DSONL {
 				float delta_b = radiance_beta_prime.val[0] / radiance_beta.val[0];
 				float delta_g = radiance_beta_prime.val[1] / radiance_beta.val[1];
 				float delta_r = radiance_beta_prime.val[2] / radiance_beta.val[2];
+
+//                float delta_b = radiance_beta_prime.val[0] - radiance_beta.val[0];
+//                float delta_g = radiance_beta_prime.val[1] - radiance_beta.val[1];
+//                float delta_r = radiance_beta_prime.val[2] - radiance_beta.val[2];
                 if (std::isnan(delta_g)){continue;}
-                if(std::abs(delta_g-1.0f)<1e-3){continue;}
+//                if(std::abs(delta_g-1.0f)<1e-3){continue;}
                 deltaMap.at<Vec3f>(u, v)[0] = delta_b;
                 deltaMap.at<Vec3f>(u, v)[1] = delta_g;
                 deltaMap.at<Vec3f>(u, v)[2] = delta_r;
@@ -619,6 +630,8 @@ namespace DSONL {
 			}
 		}
 
+
+//        deltaMap=specularityMap.clone();
 
         // save deltaMap
         imwrite("deltaMap.png",deltaMap);

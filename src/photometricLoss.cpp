@@ -128,7 +128,7 @@ int main(int argc, char **argv) {
     bool preusePixelSelector= false;
     if (preusePixelSelector){
         double min_gray,max_gray;
-        imshow("grayImage_ref",grayImage_ref_pS);
+        cv::imshow("grayImage_ref",grayImage_ref_pS);
         newFrame_ref= new FrameHessian();
         newFrame_tar= new FrameHessian();
         pixelSelector= new PixelSelector(wG[0],hG[0]);
@@ -220,17 +220,17 @@ int main(int argc, char **argv) {
                 }
             }
         }
-        imshow("inputImage_specular_Distribution_1", inputImage_copy_1);
-        imshow("inputImage_specular_Distribution_2", inputImage_copy_2);
-        imshow("inputImage_specular_Distribution_3", inputImage_copy_3);
+        cv::imshow("inputImage_specular_Distribution_1", inputImage_copy_1);
+        cv::imshow("inputImage_specular_Distribution_2", inputImage_copy_2);
+        cv::imshow("inputImage_specular_Distribution_3", inputImage_copy_3);
         clusterImage.convertTo(clusterImage, CV_8UC1, 255.0);
         //        imshow("Img_range",Img_range);
         //        imshow("diffuseImage", diffuseImage);
         //        imshow("specularImage", specularImage);
         //        imshow("Input Image", Image_ref8UC3);
         //        imshow("Output Image", diffuseImage);
-        imshow("Specular_Diffuse_TransitionField", transitionField);
-        imshow("DSO_selectedPointMask", selectedPointMask1);
+        cv::imshow("Specular_Diffuse_TransitionField", transitionField);
+        cv::imshow("DSO_selectedPointMask", selectedPointMask1);
         std::cerr<<"\n show point_counter:"<<point_counter<<endl;
         std::cerr<<"\n show dso_point_counter:"<<dso_point_counter<<endl;
         cout<<"\n Image averge:"<< mean_val<<endl;
@@ -285,7 +285,7 @@ int main(int argc, char **argv) {
     int lvl_target, lvl_ref;
     std::vector<cv::Point3f> points3D;
     Mat pointOfInterestArea(grayImage_ref.rows, grayImage_ref.cols, CV_8UC1, Scalar(0));
-
+    Mat deltaMap(grayImage_ref.rows, grayImage_ref.cols, CV_32FC3, Scalar(0,0,0)); // storing delta  Scalar(1,1,1) for ratio
     if (useImagePyramid){
 
         Eigen::Matrix3f K=K_synthetic.cast<float>();
@@ -308,8 +308,8 @@ int main(int argc, char **argv) {
             downscale(grayImage_tar, depth_tar_inv, K, lvl_target, I, D, Klvl_ignore);
             // show size of IRef
             cout << "\n Show the size of IRef:" << IRef.size() << endl;
-
             if (usePixelSelector and lvl==1){
+
                 FrameHessian* frame_ref= new FrameHessian();
                 FrameHessian* frame_tar= new FrameHessian();
                 PixelSelector* pixelSelector_lvl= new PixelSelector(wG[lvl-1],hG[lvl-1]);
@@ -323,7 +323,6 @@ int main(int argc, char **argv) {
                         color_tar_lvl[row*wG[lvl-1]+col]= (float) pixel_tar_lvl[col];
                     }
                 }
-
                 frame_ref->makeImages(color_ref_lvl);
                 frame_tar->makeImages(color_tar_lvl);
                 pixelSelector_lvl->currentPotential= 3;
@@ -354,7 +353,7 @@ int main(int argc, char **argv) {
                     }
                 }
 
-                imshow("puredsoSelectedPointMask", dsoSelectedPointMask);
+                cv::imshow("puredsoSelectedPointMask", dsoSelectedPointMask);
 
 
                 for (int u = 0; u< grayImage_ref.rows; u++) // colId, cols: 0 to 480
@@ -367,20 +366,21 @@ int main(int argc, char **argv) {
                         if (((statusMapPoints_ref!=NULL && statusMapPoints_ref[u*grayImage_ref.cols+v]!=0 )) || (image_ref_roughness.at<float>(u,v) < roughness_threshold && clusterImage.at<int>(u, v) == 1)){
                             dso_point_counter_merge+=1;
                             dsoSelectedPointAndISMask.at<uchar>(u,v)= 255;
-                            statusMapPoints_ref[u*grayImage_ref.cols+v]=6;// 6 is not fixed
+//                            statusMapPoints_ref[u*grayImage_ref.cols+v]=6;// 6 is not fixed
                         }
                     }
                 }
-                imshow("dsoSelectedPointMask", dsoSelectedPointAndISMask);
+                cv::imshow("dsoSelectedPointMask", dsoSelectedPointAndISMask);
                 cout << "\n dso_point_counter_merge: " << dso_point_counter_merge << endl;
-//                pbaRelativePose(huberPara, IRef,statusMapPoints_ref,DRef, I,statusMapPoints_tar,Klvl.cast<double>(),camera_poses, points3D);
+                pbaRelativePose(huberPara, IRef,statusMapPoints_ref,DRef, I,statusMapPoints_tar,Klvl.cast<double>(),camera_poses, points3D);
+                // test the delta for area around the specular area
                 // merge the transition field (less roughness)and dso selected points and use non-lambertian correction then optimize the pose , depth again
                 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!try to not use dso pixel selector but use the intensity segmentation method while using the dso selected points, information(lambertian+ corrected non-lambertian) merging
                 if (useDelta){
                         double distanceThres = 0.0035;
                     	float upper = 2.0;
 	                    float buttom = 0.5;
-                    imshow("pointOfInterestArea", pointOfInterestArea);
+                    cv::imshow("pointOfInterestArea", pointOfInterestArea);
                     //	//--------------------------------------------------normal_map_GT---------------------------------------------------
                     cv::Mat normal_map(grayImage_ref.rows, grayImage_ref.cols, CV_32FC3);
                     for (int u = 0; u < grayImage_ref.rows; u++) // colId, cols: 0 to 480
@@ -397,24 +397,39 @@ int main(int argc, char **argv) {
 
                         }
                     }
-                    imshow("normal_map",normal_map);
+                    cv::imshow("normal_map",normal_map);
                     waitKey(0);
                     Mat newNormalMap = normal_map;
-                    Mat deltaMap(grayImage_ref.rows, grayImage_ref.cols, CV_32FC3, Scalar(1,1,1)); // storing delta
                     Mat envMapWorkMask(deltaMap.rows, deltaMap.cols, CV_8UC1, Scalar(0));
 
                     Sophus::SO3d Rotation_GT(xi_GT.rotationMatrix());
                     Eigen::Matrix<double, 3, 1> Translation_GT(xi_GT.translation());
                     DSONL::updateDelta(dataLoader->camPose1,EnvLightLookup, statusMapPoints_ref,Rotation_GT,Translation_GT,K_synthetic,depth_ref_inv,image_ref_roughness,deltaMap,newNormalMap, pointOfInterestArea, renderedEnvMapPath,envMapWorkMask);
-
+//
                     Mat deltaMapGT_res= deltaMapGT(Image_ref8UC3,depth_ref_GT,Image_tar8UC3,depth_tar_GT,K.cast<double>(),distanceThres,xi_GT,
                                            upper, buttom, deltaMap, statusMapPoints_ref, envMapWorkMask,controlPointPose_path,
                                            dataLoader->camPose1.cast<float>(),newNormalMap);
-                    imshow("deltaMap",deltaMap);
-                    imshow("envMapWorkMask",envMapWorkMask);
-                    waitKey(0);
-
+//                    imshow("deltaMap",deltaMap);
+//                    imshow("envMapWorkMask",envMapWorkMask);
+//                    waitKey(0);
                 }
+
+                // convert deltaMap to gray image
+                Mat deltaMap_gray_show(deltaMap.rows, deltaMap.cols, CV_8UC1, Scalar(0));
+                Mat deltaMap_gray_distribution(deltaMap.rows, deltaMap.cols, CV_32FC1, Scalar(0));
+                deltaMap.convertTo(deltaMap_gray_show, CV_8UC3, 255.0);
+                cvtColor(deltaMap, deltaMap_gray_distribution, COLOR_RGB2GRAY);
+                vector<double> deltaMap_gray_distribution_vec;
+                deltaMap_gray_distribution_vec= vectorizeImage(deltaMap_gray_distribution);
+                cv::imshow("deltaMap_gray_show", deltaMap_gray_show);
+                waitKey(0);
+                deltaMap_gray_distribution_vec.erase(std::remove(deltaMap_gray_distribution_vec.begin(), deltaMap_gray_distribution_vec.end(), 0), deltaMap_gray_distribution_vec.end());
+                drawResidualDistribution(deltaMap_gray_distribution_vec, "ESSpecularityErrorDistributionWholeImage", 480, 640);
+
+
+
+
+
 //                for (int u = 0; u< grayImage_ref.rows; u++) // colId, cols: 0 to 480
 //                {
 //                    for (int v = 0; v < grayImage_ref.cols; v++) // rowId,  rows: 0 to 640
@@ -447,7 +462,26 @@ int main(int argc, char **argv) {
                 delete[] color_tar_lvl;
 
             }else{
-//                pbaRelativePose(huberPara, IRef,DRef, I,Klvl.cast<double>(),camera_poses, points3D);
+                pbaRelativePose(huberPara, IRef,DRef, I,Klvl.cast<double>(),camera_poses, points3D);
+
+                // result analysis
+                Sophus::SE3d pose_2 = Sophus::SE3d(Eigen::Quaterniond(camera_poses[7], camera_poses[8], camera_poses[9], camera_poses[10]),
+                                                   Eigen::Vector3d(camera_poses[11], camera_poses[12], camera_poses[13]));
+
+                std::cout << pose_2.matrix() << std::endl;
+                cout << "\n Show optimized rotation:\n" << pose_2.rotationMatrix()<< std::endl;
+                Eigen::Vector3d ea = pose_2.rotationMatrix().eulerAngles(0, 1, 2);
+                cout << "to Euler angles(XYZ):" << endl;
+                cout << ea*180/M_PI << endl << endl;
+                cout<<"\n Show optimized translation:\n"<< pose_2.translation() << endl;
+
+
+                cout << "\n Show Rotational error :" << rotationErr(xi_GT.rotationMatrix(),  pose_2.rotationMatrix())
+                     << "(degree)." << "\n Show translational error :"
+                     << 100 * translationErr(xi_GT.translation(), pose_2.translation()) << "(%) "
+                     << "\n Show depth error :" << "depthErr(depth_ref_gt, inv_depth_ref).val[0]"
+                     << endl;
+
             }
         }
 
@@ -460,7 +494,7 @@ int main(int argc, char **argv) {
 
 
 
-    // result analysis
+//  result analysis
     Sophus::SE3d pose_2 = Sophus::SE3d(Eigen::Quaterniond(camera_poses[7], camera_poses[8], camera_poses[9], camera_poses[10]),
                                        Eigen::Vector3d(camera_poses[11], camera_poses[12], camera_poses[13]));
 

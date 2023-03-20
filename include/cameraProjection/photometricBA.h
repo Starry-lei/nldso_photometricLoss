@@ -18,12 +18,15 @@
 #include <thread>
 #include "pba_cost_functor.h"
 
+
+
 #include "utils/ultils.h"
 
 namespace DSONL {
 
 	using namespace cv;
 	using namespace std;
+    using namespace matplot;
 
 
     vector<double> vectorizeImage(Mat &inputMat){
@@ -57,6 +60,7 @@ namespace DSONL {
         float cy =K(1,2);
 
         ceres::LossFunction* loss_function = new ceres::HuberLoss(huberPara);
+//        ceres::LossFunction* loss_function = NULL;
         std::vector<double> image_1_vectorized;
         std::vector<double> image_2_vectorized;
         // vectorize images
@@ -147,6 +151,7 @@ namespace DSONL {
         problem.Evaluate(ceres::Problem::EvaluateOptions(), &cost, &residuals, NULL, NULL);
         std::cout<<"\n Initial cost:"<<cost<<endl;
         std::cout << "\n Residuals size: " << residuals.size() << std::endl;
+//        drawResidualDistribution(residuals,"residualsDistri",  image_1.rows,image_1.cols);
 
 //    drawResidualPerPixels(residuals, 5.0,"residuals", image_1.cols, image_1.rows);
 
@@ -288,6 +293,7 @@ namespace DSONL {
 
 
     }
+
 
 
 

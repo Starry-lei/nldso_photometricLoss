@@ -194,9 +194,11 @@ set(dsonl_SOURCE_FILES
         )
 
 add_library(dsonl ${dsonl_SOURCE_FILES})
+add_subdirectory(include/matplotplusplus)
 
 add_executable(photometricLoss src/photometricLoss.cpp src/SpecularHighlightRemoval/SpecularHighlightRemoval.cpp)
 target_link_libraries(photometricLoss
+  PUBLIC matplot
   Ceres::ceres
   pangolin
   fmt::fmt
