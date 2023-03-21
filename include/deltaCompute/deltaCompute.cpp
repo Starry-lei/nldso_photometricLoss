@@ -96,8 +96,7 @@ namespace DSONL {
 	}
 
 	Vec3f IBL_Radiance::specularIBL(Vec3f F0, float roughness, Vec3f N, Vec3f V, const Eigen::Matrix3d Camera1_c2w,
-                                    Sophus::SO3f enterEnv_Rotatio_inv
-                                    ) {
+                                    Sophus::SO3f enterEnv_Rotatio_inv) {
 
 		float NoV = clamp(_dot(N, V), 0.0, 1.0);
 
@@ -334,18 +333,11 @@ namespace DSONL {
 // 446,356 floor point
 //        360,435  // 446,356
         inliers_filter.emplace( 446,356);
-
-
         Mat ctrlPointMask(deltaMap.rows, deltaMap.cols, CV_8UC3, Scalar(0,0,0));
-
 		Mat radianceMap_left(deltaMap.rows, deltaMap.cols, CV_32FC3, Scalar(0));
-
-
         Mat radianceMap_right(deltaMap.rows, deltaMap.cols, CV_32FC3, Scalar(0));
-
         Mat radianceMap_leftSave(deltaMap.rows, deltaMap.cols, CV_32FC3, Scalar(0));
         Mat radianceMap_rightSave(deltaMap.rows, deltaMap.cols, CV_32FC3, Scalar(0));
-
         Mat specularityMap(deltaMap.rows, deltaMap.cols, CV_32FC3, Scalar(0));
         Mat DiffuseMap(deltaMap.rows, deltaMap.cols, CV_32FC3, Scalar(0));
 
@@ -598,6 +590,11 @@ namespace DSONL {
                 Vec3f radiance_beta = ibl_Radiance->solveForRadiance(View_beta, N_, image_roughnes, image_metallic,
                                                                      reflectance, baseColor, Camera1_c2w.rotationMatrix(),
                                                                      enterPanoroma.inverse());
+
+                specularityMap.at<Vec3f>(u,v)=ibl_Radiance->Specularity;
+                DiffuseMap.at<Vec3f>(u,v)=ibl_Radiance->diffusity;
+
+
                 Vec3f radiance_beta_prime = ibl_Radiance->solveForRadiance(View_beta_prime, N_, image_roughnes, image_metallic,
                                                                            reflectance, baseColor, Camera1_c2w.rotationMatrix(),
                                                                            enterPanoroma.inverse());
@@ -613,8 +610,8 @@ namespace DSONL {
                 radianceMap_rightSave.at<Vec3f>(u, v) = ibl_Radiance->ACESFilm( radiance_beta_prime);
 
 
-                specularityMap.at<Vec3f>(u,v)=ibl_Radiance->Specularity;
-                DiffuseMap.at<Vec3f>(u,v)=ibl_Radiance->diffusity;
+//                specularityMap.at<Vec3f>(u,v)=ibl_Radiance->Specularity;
+//                DiffuseMap.at<Vec3f>(u,v)=ibl_Radiance->diffusity;
 
                 cout<<"\n ========>>>>show data vals :"<< "ibl_Radiance->Specularity"
                 <<ibl_Radiance->Specularity<< "ibl_Radiance->diffusity;"<<ibl_Radiance->diffusity <<endl;
