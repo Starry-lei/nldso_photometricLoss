@@ -209,23 +209,18 @@ namespace DSONL {
 		Vec3f kD = One - kS;
 		kD = kD.mul(One - metallicValue * One);
 		Vec3f specular = specularIBL(f0, roughnessValue, normal, viewDir,Camera1_c2w,enterEnv_Rotation_inv);
-
+//        Vec3f specular = specularIBL(F, roughnessValue, normal, viewDir,Camera1_c2w,enterEnv_Rotation_inv);// !!!!!
         Specularity = specular;
 		//convert from camera to world
 		Eigen::Vector3d normal_c(normal.val[0], normal.val[1], normal.val[2]);
 		Vec3f normal_w((Camera1_c2w * normal_c).x(), (Camera1_c2w * normal_c).y(), (Camera1_c2w * normal_c).z());
 		Vec3f diffuse = diffuseIBL(normal_w);
         diffusity=diffuse;
-
-
         // only focus on specular property
         diffuse=Vec3f(0.0,0.0,0.0);
-
-        cout<<"Checking kD:"<<kD<<endl;
+//        cout<<"Checking kD:"<<kD<<endl;
 		// shading front-facing
         Vec3f color = pow(kD.mul(baseColorValue.mul(diffuse)) + specular, 1.0 / 2.2 * One);
-
-
 
 //        cout<<"\n Checking vals:"<<"kD: "<<kD <<","<<"baseColorValue: "<< baseColorValue<< ","<<"diffuse: "<<diffuse<<","<<"specular: "<<specular<<endl;
 //        cout<<"Checking color:"<<color<<endl;
@@ -233,10 +228,7 @@ namespace DSONL {
 		//      Vec3f color=diffuse;
 
 
-
-
-
-//		// shading back-facing????????????????????????????????
+//		// shading back-facing
 //		if (viewDir.dot(normal) < -0.1) {
 //			//discard;
 //			color = 0.1 * baseColorValue.mul(diffuse);
@@ -298,6 +290,11 @@ namespace DSONL {
        return vec1.dot(vec2);
     }
 
+    template<typename T>
+    bool checkImageBoundaries(const Eigen::Matrix<T, 2, 1> &pixel, int width, int height) {
+        return (pixel[0] > 1.1 && pixel[0] < width - 2.1 && pixel[1] > 1.1 && pixel[1] < height - 2.1);
+    }
+
 
 	void updateDelta(
             Sophus::SE3d& Camera1_c2w,
@@ -312,16 +309,19 @@ namespace DSONL {
 	        Mat &newNormalMap,
             Mat pointOfInterest,
             string renderedEnvMapPath,
-            Mat envMapWorkMask
-            ) {
+            Mat envMapWorkMask,
+            Mat& specularityMap_1,
+            Mat& specularityMap_2
+    ) {
 
 		// ===================================RENDERING PARAMETERS:====================================
 		float fx = K(0, 0), cx = K(0, 2), fy = K(1, 1), cy = K(1, 2);
         float reflectance = 1.0f;
-		// vec3 normal = normalize(wfn);
+        std::unordered_map<cv::Point2i, float, hash2d<cv::Point2i>, equalTo2D<cv::Point2i>> pixelDepthMap;
+
+        // vec3 normal = normalize(wfn);
 		// vec3 viewDir = normalize(cameraPos - vertPos);
 		std::unordered_map<int, int> inliers_filter, inliers_filter_i;
-
         // 446,356 floor point
         // 360,435  // 446,356
         inliers_filter.emplace(411, 439);
@@ -383,6 +383,29 @@ namespace DSONL {
 				Eigen::Vector3f p_c1;
 				p_c1 << p_3d_no_d.x() / iDepth, p_3d_no_d.y() / iDepth, p_3d_no_d.z() / iDepth;
 
+
+
+                Eigen::Matrix<float, 3, 1> p1 = Rotation.cast<float>() * p_c1 + Translation.cast<float>();
+                Eigen::Matrix<float, 3, 1>  point_K;
+                point_K = K * p1;
+                int pixel_col_right= std::round(point_K.x() / point_K.z());
+                int pixel_row_right =std::round(point_K.y() / point_K.z());
+
+                Eigen::Matrix<int, 2, 1> pt2d(pixel_col_right,pixel_row_right );
+                cv::Point2i pixel_coor (pixel_row_right, pixel_col_right);
+                // for boundary problem
+                if (!checkImageBoundaries(pt2d, depth_map.cols, depth_map.rows)){continue;}
+                // for occlusion problem
+                if (pixelDepthMap.count(pixel_coor)!=0 ){
+                    if( point_K.z()<pixelDepthMap[pixel_coor]){
+                        pixelDepthMap.insert(make_pair(pixel_coor,point_K.z()));
+                    } else{
+                        continue;
+                    }
+                }
+                pixelDepthMap.insert(make_pair(pixel_coor,point_K.z()));
+
+
 				// record point cloud
 				// cloud->push_back(pcl::PointXYZ(p_c1.x(), p_c1.y(), p_c1.z()));
 				// calculate normal for each point Transformation_wc
@@ -414,8 +437,6 @@ namespace DSONL {
                 //                pow(image_baseColor.at<Vec3f>(u, v)[1], 2.2);
                 //                pow(image_baseColor.at<Vec3f>(u, v)[0], 2.2);
 
-
-
                 Vec3f N_(normal(0), normal(1), normal(2));
 				Vec3f View_beta(beta(0), beta(1), beta(2));
 				Vec3f View_beta_prime(beta_prime(0), beta_prime(1), beta_prime(2));
@@ -430,7 +451,6 @@ namespace DSONL {
                 std::vector<int> pointIdxKNNSearch(num_K);
                 std::vector<float> pointKNNSquaredDistance(num_K);
 				Vec3f key4Search;
-
 //                cout<<"show  EnvLightLookup->kdtree size"<<EnvLightLookup->envLightIdxMap.size()<<endl;
 
 				if ( EnvLightLookup->kdtree.nearestKSearch(searchPoint, num_K, pointIdxKNNSearch, pointKNNSquaredDistance) > 0) {
@@ -449,9 +469,7 @@ namespace DSONL {
 //                        std::cout << "\n------"<<envMap_point.val[0]<< " " << envMap_point.val[1]<< " " << envMap_point.val[2]
 //                                  << " (squared distance: " << pointKNNSquaredDistance[i] << ")" << std::endl;
                         // 0.004367 is the squared distance of the closest control point
-                        if (pointKNNSquaredDistance[i]>0.004367){
-                            continue;
-                        }
+                        if (pointKNNSquaredDistance[i]>0.004367){continue;}
 
 
                         // calculate control point normal
@@ -526,7 +544,6 @@ namespace DSONL {
 //                cout<<"\n Show current shader point:\n"<<p_c1_w<<"\n show nearst envMap point coordinate:\n"<<key4Search<<endl;
 //                cout<<"\n show count of envLightMap"<<  EnvLightLookup->envLightIdxMap.count(key4Search)<<endl;
 //                cout<<"show EnvLight size:"<< EnvLightLookup->envLightIdxMap.size()<<endl;
-//
                 // if no envMap point is found, skip this point
                 if (key4Search.dot(key4Search)==0){ continue;}
 
@@ -570,8 +587,6 @@ namespace DSONL {
                 brdfSampler_ = & (EnvLightLookup->brdfSampler[0]);
 				diffuseSampler = & (envLightMap_cur[ctrlIndex].EnvmapSampler[1]);
 
-
-
 				// ===================================RADIANCE-COMPUTATION====================================
 				IBL_Radiance *ibl_Radiance = new IBL_Radiance;
 //				Vec3f radiance_beta = ibl_Radiance->ACESFilm(ibl_Radiance->solveForRadiance(View_beta, N_, image_roughnes, image_metallic, reflectance, baseColor, Camera1_c2w.rotationMatrix()));
@@ -583,16 +598,19 @@ namespace DSONL {
                 Vec3f radiance_beta = ibl_Radiance->solveForRadiance(View_beta, N_, image_roughnes, image_metallic,
                                                                      reflectance, baseColor, Camera1_c2w.rotationMatrix(),
                                                                      enterPanoroma.inverse());
-//                cout<<"\n ========>>>>show LEFT data vals :"<< "ibl_Radiance->Specularity\n"
-//                    <<ibl_Radiance->Specularity<< "ibl_Radiance->diffusity\n"<<ibl_Radiance->diffusity <<endl;
+                cout<<"\n ========>>>>show LEFT data vals :"<< "ibl_Radiance->Specularity\n"
+                    <<ibl_Radiance->Specularity<< "ibl_Radiance->diffusity\n"<<ibl_Radiance->diffusity <<endl;
                 specularityMap.at<Vec3f>(u,v)=ibl_Radiance->Specularity;
                 DiffuseMap.at<Vec3f>(u,v)=ibl_Radiance->diffusity;
                 Vec3f radiance_beta_prime = ibl_Radiance->solveForRadiance(View_beta_prime, N_, image_roughnes, image_metallic,
                                                                            reflectance, baseColor, Camera1_c2w.rotationMatrix(),enterPanoroma.inverse());
-//                cout<<"\n ========>>>>show RIGHT data vals :"<< "ibl_Radiance->Specularity\n"
-//                <<ibl_Radiance->Specularity<< "ibl_Radiance->diffusity\n"<<ibl_Radiance->diffusity <<endl;
+                cout<<"\n ========>>>>show RIGHT data vals :"<< "ibl_Radiance->Specularity\n"
+                <<ibl_Radiance->Specularity<< "ibl_Radiance->diffusity\n"<<ibl_Radiance->diffusity <<endl;
 
-                specularityMap_right.at<Vec3f>(u,v)=ibl_Radiance->Specularity;
+                // calculate the correspondent pixel coordinate of right specular image
+
+
+                specularityMap_right.at<Vec3f>(pixel_row_right,pixel_col_right)=ibl_Radiance->Specularity;
 
 				// ===================================SAVE-RADIANCE===========================================
 				radianceMap_left.at<Vec3f>(u, v) = radiance_beta;
@@ -614,16 +632,19 @@ namespace DSONL {
 //				float delta_g = radiance_beta_prime.val[1] / radiance_beta.val[1];
 //				float delta_r = radiance_beta_prime.val[2] / radiance_beta.val[2];
 
-                float delta_b = radiance_beta_prime.val[0] - radiance_beta.val[0];
-                float delta_g = radiance_beta_prime.val[1] - radiance_beta.val[1];
-                float delta_r = radiance_beta_prime.val[2] - radiance_beta.val[2];
+//                float delta_b = abs(radiance_beta_prime.val[0] - radiance_beta.val[0]);
+//                float delta_g = abs(radiance_beta_prime.val[1] - radiance_beta.val[1]);
+//                float delta_r = abs(radiance_beta_prime.val[2] - radiance_beta.val[2]);
+
+                float delta_b = (radiance_beta_prime.val[0] - radiance_beta.val[0]);
+                float delta_g = (radiance_beta_prime.val[1] - radiance_beta.val[1]);
+                float delta_r = (radiance_beta_prime.val[2] - radiance_beta.val[2]);
 
 
 
                 if (std::isnan(delta_g)){continue;}
-//                if (abs(delta_g)>0.025f){continue;}
-
-//                if(std::abs(delta_g-1.0f)<1e-3){continue;}
+                //if (abs(delta_g)>0.025f){continue;}
+                //                if(std::abs(delta_g-1.0f)<1e-3){continue;}
                 deltaMap.at<Vec3f>(u, v)[0] = delta_b;
                 deltaMap.at<Vec3f>(u, v)[1] = delta_g;
                 deltaMap.at<Vec3f>(u, v)[2] = delta_r;
@@ -654,6 +675,8 @@ namespace DSONL {
 
 
 
+        specularityMap_1=specularityMap.clone();
+        specularityMap_2=specularityMap_right.clone();
 
 		double max_n_radiance, min_n_radiance;
 		cv::minMaxLoc(radianceMap_left, &min_n_radiance, &max_n_radiance);

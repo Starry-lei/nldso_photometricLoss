@@ -103,6 +103,12 @@ cv::Mat SpecularHighlightRemoval::run(cv::Mat image)
 #else
 	
 	for(int pixel = 0; pixel < image.rows * image.cols; pixel++) {
+
+        // continue when the pixel is zero
+        if (static_cast<int >(image.ptr<unsigned char>()[pixel * 3 + 2])==0 &&
+                static_cast<int >(image.ptr<unsigned char>()[pixel * 3 + 1])==0 &&
+                        static_cast<int >(image.ptr<unsigned char>()[pixel * 3 + 0])==0){continue;}
+
 		int red = image.ptr<unsigned char>()[pixel * 3 + 2];
 		int green = image.ptr<unsigned char>()[pixel * 3 + 1];
 		int blue = image.ptr<unsigned char>()[pixel * 3 + 0];
@@ -114,6 +120,13 @@ cv::Mat SpecularHighlightRemoval::run(cv::Mat image)
 	minimumMean = cv::mean(minimumImage);
 	
 	for(int pixel = 0; pixel < image.rows * image.cols; pixel++) {
+
+        // continue when the pixel is zero
+        if (static_cast<int>(image.ptr<unsigned char>()[pixel * 3 + 2])==0 &&
+            static_cast<int>(image.ptr<unsigned char>()[pixel * 3 + 1])==0 &&
+            static_cast<int>(image.ptr<unsigned char>()[pixel * 3 + 0])==0){continue;}
+
+
 		maskImage.ptr<unsigned char>()[pixel] = (minimumImage.ptr<unsigned char>()[pixel] > minimumMean(0)) ? 1 : 0;
 		if(maskImage.ptr<unsigned char>()[pixel] == 1) {
 			float redChromaticity = (int)image.ptr<unsigned char>()[pixel * 3 + 2] - (int)minimumImage.ptr<unsigned char>()[pixel] + (float)minimumMean(0);
@@ -125,12 +138,17 @@ cv::Mat SpecularHighlightRemoval::run(cv::Mat image)
 			blueChromaticity /= sum;
 			minimumChromaticityImage.ptr<float>()[pixel] = std::min(redChromaticity, std::min(greenChromaticity, blueChromaticity));
 			maximumChromaticityImage.ptr<float>()[pixel] = std::max(redChromaticity, std::max(greenChromaticity, blueChromaticity));
-		} 
+		}
 	}
 
 	cv::minMaxLoc(minimumChromaticityImage, &minimumValue, &maximumMinimumValue, &minimumLocation, &maximumMinimumLocation, maskImage);
 	cv::minMaxLoc(maximumChromaticityImage, 0, &maximumValue, 0, &maximumLocation, maskImage);
 	for(int pixel = 0; pixel < image.rows * image.cols; pixel++) {
+
+        // continue when the pixel is zero
+        if (minimumChromaticityImage.ptr<float>()[pixel]==0.0){continue;}
+
+
 		if(maskImage.ptr<unsigned char>()[pixel] == 1) {
 			float minimumChromaticity = minimumChromaticityImage.ptr<float>()[pixel];
 			float maximumChromaticity = maximumChromaticityImage.ptr<float>()[pixel];
@@ -154,6 +172,9 @@ cv::Mat SpecularHighlightRemoval::run(cv::Mat image)
 		minCenters[cluster - 1] = 0;
 		maxCenters[cluster - 1] = 0;
 		for(int pixel = 0; pixel < image.rows * image.cols; pixel++) {
+
+            if (minimumChromaticityImage.ptr<float>()[pixel]==0.0){ continue;}
+
 			if(clusterImage.ptr<int>()[pixel] == cluster) {
 				minCenters[cluster - 1] += minimumChromaticityImage.ptr<float>()[pixel];
 				maxCenters[cluster - 1] += maximumChromaticityImage.ptr<float>()[pixel];
@@ -165,6 +186,9 @@ cv::Mat SpecularHighlightRemoval::run(cv::Mat image)
 	}
 			
 	for(int pixel = 0; pixel < image.rows * image.cols; pixel++) {
+
+        if (minimumChromaticityImage.ptr<float>()[pixel]==0.0){ continue;}
+
 		if(maskImage.ptr<unsigned char>()[pixel] == 1) {
 			float minimumChromaticity = minimumChromaticityImage.ptr<float>()[pixel];
 			float maximumChromaticity = maximumChromaticityImage.ptr<float>()[pixel];
@@ -198,13 +222,16 @@ cv::Mat SpecularHighlightRemoval::run(cv::Mat image)
 			
 			float sumValue = 0;
 			for(int pixel = 0; pixel < image.rows * image.cols; pixel++) {
+
+                if ((float)(int)maximumImage.ptr<unsigned char>()[pixel]==0.0){ continue;}
+
+
 				if(clusterImage.ptr<int>()[pixel] == cluster && rangeImage.ptr<unsigned char>()[pixel] > minimumMean(0)) {
 					ratio[index] = (float)(int)maximumImage.ptr<unsigned char>()[pixel] / ((float)(int)rangeImage.ptr<unsigned char>()[pixel] + 1e-10);
 					sumValue += ratio[index];
 					index++;
 				}
 			}
-			
 			estimatedRatio = sumValue/(float)index;
 			for(int iteration = 0; iteration < alpha; iteration++) {
 					
@@ -224,14 +251,17 @@ cv::Mat SpecularHighlightRemoval::run(cv::Mat image)
 				
 		}
 
-		for(int pixel = 0; pixel < image.rows * image.cols; pixel++) 
-			if(clusterImage.ptr<int>()[pixel] == cluster) 
+		for(int pixel = 0; pixel < image.rows * image.cols; pixel++)
+        {
+			if(clusterImage.ptr<int>()[pixel] == cluster)
 				ratioImage.ptr<float>()[pixel] = estimatedRatio;
+        }
 
 	}
 
 	specularImage.setTo(0);
 	for(int pixel = 0; pixel < image.rows * image.cols; pixel++) {
+
 		if(maskImage.ptr<unsigned char>()[pixel] == 1) {
 			int value = round((int)maximumImage.ptr<unsigned char>()[pixel] - (float)ratioImage.ptr<float>()[pixel] * (int)rangeImage.ptr<unsigned char>()[pixel]);
 			for(int ch = 0; ch < 3; ch++) {

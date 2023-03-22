@@ -678,6 +678,92 @@ namespace DSONL {
         return (pixel[0] > 1.1 && pixel[0] < width - 2.1 && pixel[1] > 1.1 && pixel[1] < height - 2.1);
     }
 
+    template<typename T>
+    void kmeans(vector<T> &sample, int k)
+    {
+        int len = sample.size();
+        vector<T> meanValue(k, 0);
+
+        //初始化均值,取待分类的前k个，作为初始化值
+        for (int i = 0; i < k; ++i)
+            meanValue[i] = sample[i];
+
+        while (1)
+        {
+            vector<vector<T> > C(k, vector<T>(len, 0));  //用于存储类别，//定义了k个vector<int>(k, 0)向量；vector<int>(len, 0)定义了len个整型元素的向量，且给出每个元素的初值为0
+            vector<T> numC(k, 0);//定义了k个整型元素的向量,且给出每个元素的初值为0
+
+            //计算每个样本与各个均值的距离
+            for (int i = 0; i < len; ++i)
+            {
+                T minDis = abs(sample[i] - meanValue[0]);//与第一个类别的差值
+                int minDisIndex = 0;
+
+                //更新最小差值，以及index
+                for (int j = 1; j < k; ++j)
+                {
+                    T dis = abs(sample[i] - meanValue[j]);
+                    if (dis < minDis)
+                    {
+                        minDis = dis;
+                        minDisIndex = j;
+                    }
+                }
+
+                //每个样本属于哪个类：C[minDistInex]：当前类，C[minDisIndex][numC[minDisIndex]]当前类的元素
+                C[minDisIndex][numC[minDisIndex]] = sample[i];
+                numC[minDisIndex]++;
+            }
+
+            //均值更新
+            int ifBreak = 0;
+            for (int i = 0; i < k; ++i)
+            {
+                T Sum = 0;
+                for (int j = 0; j < numC[i]; ++j)
+                {
+                    Sum += C[i][j];
+                }
+                T lastMeanValue = meanValue[i];
+
+                //当前类所有元素求均值，更新均值
+                meanValue[i] = Sum / numC[i];
+
+                //如果更新后均值未改变，说明当前类已更新完毕、未再变动
+                if (lastMeanValue == meanValue[i])  ifBreak++;
+            }
+            //判断均值是否被更新
+            if (ifBreak == k)
+            {
+                T maxNum = 0;
+                int maxNumIndex = 0;
+                for (int i = 0; i < k; ++i)
+                {
+                    if (numC[i] > maxNum)
+                    {
+                        maxNum = numC[i];
+                        maxNumIndex = i;
+                    }
+                }
+                cout << meanValue[maxNumIndex] << endl;
+
+                for (int m = 0; m < k; m++)
+                {
+                    cout << m << ":\t";
+                    for (int n = 0; n < numC[m]; n++)
+                    {
+                        cout << C[m][n] << "\t";
+                    }
+                    cout << endl;
+                }
+
+                //cout << " Break" << endl;
+                break;
+            }
+
+        }
+    }
+
 
     bool project(double uj, double vj, double iDepth, int width, int height,
                  Eigen::Matrix<double, 2, 1> &pt2d, Sophus::SO3d &Rotation,
@@ -851,6 +937,54 @@ namespace DSONL {
         }
 
     }
+
+    void drawResidualPerPixels(vector<float>& residuals, float step_size, string  title_str,  int rows, int cols){
+
+        // convert the residuals vector to a cv::Mat of the same size as the image of size 307200 * 8
+        cv::Mat residuals_mat = cv::Mat::zeros(rows*cols, 1, CV_32F);
+
+        vector<float> residuals_mat_vector;
+
+        // convert vector into a matrix
+//        for (int r = 0; r < rows*cols; r++){
+//            float sum_val= 0.0;
+//            for (int c = 0; c < 8; c++){
+//                sum_val += abs(residuals[r*8 + c]);
+//            }
+//            residuals_mat_vector.push_back(sum_val/8.0);
+//        }
+        cout<< "residuals.size(): " << residuals.size() << endl;
+        // convert vector into an image
+        cv::Mat residuals_mat_reshaped = cv::Mat::zeros(rows, cols, CV_32F);
+        //copy vector to mat
+        memcpy(residuals_mat_reshaped.data, residuals.data(), residuals_mat_vector.size()*sizeof(float));
+        // output the range of the residuals
+        double min, max;
+        cv::minMaxLoc(residuals_mat_reshaped, &min, &max);
+        std::cout << "min: " << min << std::endl;
+        std::cout << "max: " << max << std::endl;
+
+        // specify the range of residuals_mat_reshaped
+        cv::Mat residuals_mat_normalized;
+        cv::normalize(residuals_mat_reshaped, residuals_mat_normalized, 0, 1, cv::NORM_MINMAX, CV_32F);
+
+//        auto [X, Y] = matplot::meshgrid(std::iota(0, step_size, 640.0),std::iota(0, step_size, 480.0));
+
+//        auto Z = transform(X, Y, [&residuals_mat_normalized](float x, float y) { return residuals_mat_normalized.at<float>(y,x); });
+//
+//
+//        mesh(X, Y, Z)->hidden_3d(false);
+
+
+
+        matplot::title(title_str);
+
+        matplot::show();
+
+
+
+    }
+
 
     void drawResidualDistribution(vector<double>& residuals, string  title_str, int rows, int cols){
 

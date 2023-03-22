@@ -22,7 +22,9 @@ using namespace cv;
 namespace DSONL
 {
 
-        // added by Binghui
+        template<typename T>
+        bool checkImageBoundaries(const Eigen::Matrix<T, 2, 1> &pixel, int width, int height) ;
+
         float dot(const Eigen::Vector3f, const Eigen::Vector3f);
 
         float mod(const float, const float);
@@ -103,8 +105,10 @@ namespace DSONL
             Mat& deltaMap,
             Mat& newNormalMap,
             Mat pointOfInterest,
-            string  renderedEnvMapPath
-            ,Mat envMapWorkMask
+            string  renderedEnvMapPath,
+            Mat envMapWorkMask,
+            Mat& specularityMap_1,
+            Mat& specularityMap_2
         );
 
 

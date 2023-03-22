@@ -69,7 +69,7 @@ namespace DSONL {
 
         if (ControlpointCloud->empty()) { std::cerr << "\n Wrong Control-pointCloud!" << endl; }
         kdtree.setInputCloud(ControlpointCloud);
-        imshow("The current Image", Image);
+//        imshow("The current Image", Image);
 
         std::unordered_map<int, int> inliers_filter, inliers_filter_i;
         inliers_filter.emplace( 112, 130); // 112, 130

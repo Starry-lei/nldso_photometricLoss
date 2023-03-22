@@ -118,9 +118,6 @@ namespace DSONL {
                     //image_ref_path =            "../data/exp_image0405/rgb/image_04.png"; // LDR
                 }
 
-
-
-
                 depth_ref_path =            "../data/exp_image0405/depth/origdepth_4.png";
                 image_ref_roughness_path =  "../data/exp_image0405/roughness/origroughness_4.pfm";
                 image_normal_GT_path =      "../data/exp_image0405/normal/orignormal_4.dat";

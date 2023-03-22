@@ -91,8 +91,6 @@ namespace DSONL {
                 // use DSO pixel selector
                  if (statusMapPoints_ref!=NULL && statusMapPoints_ref[r*image_1.cols+c]==0 ){ continue;}
 
-
-
                     std::vector<double> patch(PATTERN_SIZE, 0.0);
                 for (size_t i = 0; i < PATTERN_SIZE; i++){
                     int du = PATTERN_OFFSETS[i][0];

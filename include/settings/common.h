@@ -40,6 +40,27 @@ namespace DSONL{
     };
 
     template <class T>
+    struct hash2d
+    {
+        size_t operator()(const T &key) const
+        {
+            size_t hash = 137 *key.x + 149 *key.y;
+            return hash;
+        }
+    };
+
+    template <class T>
+    struct equalTo2D
+    {
+        bool operator()(const T &key1, const T &key2) const
+        {
+
+            bool res= key1.x == key2.x && key1.y == key2.y;
+            return res ;
+        }
+    };
+
+    template <class T>
     struct equalTo
     {
         bool operator()(const T &key1, const T &key2) const
