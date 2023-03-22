@@ -765,6 +765,44 @@ namespace DSONL {
     }
 
 
+    void  drawClusters(Mat clusterImage_sparse, Mat dsoSelectedPointMask_C3 , string name){
+
+
+        // refine the point selector
+        Mat inputImage= dsoSelectedPointMask_C3.clone();
+        Mat inputImage_copy_1= inputImage.clone();
+        Mat inputImage_copy_2= inputImage.clone();
+        Mat inputImage_copy_3= inputImage.clone();
+
+        for (int i = 0; i < dsoSelectedPointMask_C3.rows; i++) {
+            for (int j = 0; j < dsoSelectedPointMask_C3.cols; j++)
+            {
+                if (clusterImage_sparse.at<int>(i, j) == 1 )
+                {
+                    circle(inputImage_copy_1, Point(j, i), 1, Scalar(255, 0, 0), 1, 8, 0);
+                    circle(inputImage, Point(j, i), 1, Scalar(255, 0, 0), 1, 8, 0);
+                }
+                else if (clusterImage_sparse.at<int>(i,j)==2){
+                    circle(inputImage_copy_2, Point(j, i), 1, Scalar(0, 255, 0), 1, 8, 0);
+                    circle(inputImage, Point(j, i), 1, Scalar(0, 255, 0), 1, 8, 0);
+                }else if (clusterImage_sparse.at<int>(i,j)==3){
+                    circle(inputImage_copy_3, Point(j, i), 1, Scalar(0, 0, 255), 1, 8, 0);
+                    circle(inputImage, Point(j, i), 1, Scalar(0, 0, 255), 1, 8, 0);
+                }
+            }
+        }
+        string  inputImage_name = name + "_inputImage.png";
+        imshow(inputImage_name,inputImage);
+        string inputImage_copy_1_name = name + "_inputImage_copy_1.png";
+        imshow(inputImage_copy_1_name, inputImage_copy_1);
+        string inputImage_copy_2_name = name + "_inputImage_copy_2.png";
+        imshow(inputImage_copy_2_name, inputImage_copy_2);
+        string inputImage_copy_3_name = name + "_inputImage_copy_3.png";
+        imshow(inputImage_copy_3_name, inputImage_copy_3);
+
+    }
+
+
     bool project(double uj, double vj, double iDepth, int width, int height,
                  Eigen::Matrix<double, 2, 1> &pt2d, Sophus::SO3d &Rotation,
                  Eigen::Vector3d &Translation) {
@@ -989,46 +1027,12 @@ namespace DSONL {
     void drawResidualDistribution(vector<double>& residuals, string  title_str, int rows, int cols){
 
         vector<float> residuals_mat_vector;
-
-        // convert vector into a matrix
-//        for (int r = 0; r < rows*cols; r++){
-//            double sum_val= 0.0;
-//            for (int c = 0; c < 8; c++){
-//                //sum_val += abs(residuals[r*8 + c]);
-//                sum_val += (residuals[r*8 + 0]);
-//            }
-//            //residuals_mat_vector.push_back(sum_val/8.0);
-//            residuals_mat_vector.push_back(sum_val);
-//        }
         cout<< "residuals.size(): " << residuals.size() << endl;
         // convert vector into an image
         auto h = matplot::hist(residuals);
         std::cout << "Histogram with " << h->num_bins() << " bins" << std::endl;
         matplot::title(title_str);
         matplot::show();
-
-//        cv::Mat residuals_mat_reshaped = cv::Mat::zeros(rows, cols, CV_32F);
-//        //copy vector to mat
-//        memcpy(residuals_mat_reshaped.data, residuals.data(), residuals.size()*sizeof(float));
-//
-//        // output the range of the residuals
-//        double min, max;
-//        cv::minMaxLoc(residuals_mat_reshaped, &min, &max);
-//        std::cout << "min: " << min << std::endl;
-//        std::cout << "max: " << max << std::endl;
-//
-//        // specify the range of residuals_mat_reshaped
-//        cv::Mat residuals_mat_normalized;
-////        cv::normalize(residuals_mat_reshaped, residuals_mat_normalized, 0, 1, cv::NORM_MINMAX, CV_32F);
-//        residuals_mat_normalized= residuals_mat_reshaped.clone();
-//        auto [X, Y] =meshgrid(iota(0, step_size, 640.0),iota(0, step_size, 480.0));
-//        auto Z = transform(X, Y, [&residuals_mat_normalized](float x, float y) { return residuals_mat_normalized.at<float>(y,x); });
-//        mesh(X, Y, Z)->hidden_3d(false);
-//        title(title_str);
-//        show();
-
-
-
     }
 
     void  drawEnvMapPoints(const string envMapPosePath, const Mat EnvLightWorkMap, int canvasId,  Eigen::Matrix3f K,  Sophus::SE3f cameraExtrinsics){
@@ -1074,6 +1078,149 @@ namespace DSONL {
 
     }
 
+    Mat intensityCorrespondenceChangeGT(Mat &Img_left, Mat &depth_left, Mat &Img_right, Mat &depth_right, const Eigen::Matrix<double, 3, 3> &K_,double &thres,
+                   const Sophus::SE3d &ExtrinsicPose,Mat pointOfInterest) {
+
+        Mat correspInLeft(pointOfInterest.rows, pointOfInterest.cols, CV_8UC1, Scalar(0));
+        Mat correspInRight(pointOfInterest.rows, pointOfInterest.cols, CV_8UC1, Scalar(0));
+
+
+
+
+
+        Mat deltaMapGT(depth_left.rows, depth_left.cols, CV_32FC1, Scalar(0));// default value 1.0
+        float radius = thres;
+        //		Mat deltaMapGT(depth_left.rows, depth_left.cols, CV_32FC1, Scalar(1)); // default value 1.0
+        double fx = K_(0, 0), cx = K_(0, 2), fy = K_(1, 1), cy = K_(1, 2);
+        pcl::PCDWriter writer;
+        pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
+        pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_rig(new pcl::PointCloud<pcl::PointXYZ>);
+        for (int x = 0; x < depth_left.rows; ++x) {
+            for (int y = 0; y < depth_left.cols; ++y) {
+                // IOA setting
+                double d_r = depth_right.at<float>(x, y);
+                // Mark: skip depth=15
+                // if (round(d_r) == 15.0f) {continue;}
+                Eigen::Matrix<double, 3, 1> p_3d_no_d_r;
+                p_3d_no_d_r << (y - cx) / fx, (x - cy) / fy, 1.0;
+                Eigen::Matrix<double, 3, 1> p_c2 = d_r * p_3d_no_d_r;
+
+                cloud_rig->push_back(pcl::PointXYZ(p_c2.x(), p_c2.y(), p_c2.z()));
+            }
+        }
+        pcl::KdTreeFLANN<pcl::PointXYZ> kdtree;
+        kdtree.setInputCloud(cloud_rig);
+        double max, min;
+        cv::minMaxLoc(Img_left, &min, &max);
+        cout << "\n show max and min of Img_left:\n"<< max << "," << min << endl;
+        cv::minMaxLoc(Img_right, &min, &max);
+        cout << "\n show max and min of Img_right:\n"<< max << "," << min << endl;
+        std::unordered_map<int, int> inliers_filter;
+        std::unordered_map<int, int> inliers_filter_sixPoints;
+        //new image
+        inliers_filter.emplace(411, 439);
+        std::vector<int> pointIdxRadiusSearch;
+        std::vector<float> pointRadiusSquaredDistance;
+        Vec2i boundingBoxUpperLeft_AoI(145,180);
+        Vec2i boundingBoxBotRight_AoI(173,242);
+        imshow("pointOfInterestArea",pointOfInterest)   ;
+
+        for (int x = 0; x < depth_left.rows; ++x) {
+            for (int y = 0; y < depth_left.cols; ++y) {
+
+//								if(inliers_filter.count(x)==0){continue;}// ~~~~~~~~~~~~~~Filter~~~~~~~~~~~~~~~~~~~~~~~
+//								if(inliers_filter[x]!=y ){continue;}// ~~~~~~~~~~~~~~Filter~~~~~~~~~~~~~~
+
+//                    if ( (y<boundingBoxUpperLeft_AoI.val[1] || y>boundingBoxBotRight_AoI.val[1]) || (x< boundingBoxUpperLeft_AoI.val[0] ||  x> boundingBoxBotRight_AoI.val[0])){ continue;}
+//                    if (statusMap!=NULL && static_cast<int>(statusMap[x * depth_left.cols + y])!= 255){ continue;}
+
+                if ( ((int)pointOfInterest.at<uchar>(x,y)) !=255){ continue;}
+
+                // calculate 3D point of left camera
+                double d = depth_left.at<float>(x, y);
+
+                Eigen::Matrix<double, 3, 1> p_3d_no_d;
+                p_3d_no_d << (y - cx) / fx, (x - cy) / fy, 1.0;
+                Eigen::Matrix<double, 3, 1> p_c1 = d * p_3d_no_d;
+                Eigen::Vector3d point_Trans = ExtrinsicPose.rotationMatrix() * p_c1 + ExtrinsicPose.translation();
+                cloud->push_back(pcl::PointXYZ(point_Trans.x(), point_Trans.y(), point_Trans.z()));
+                pcl::PointXYZ searchPoint(point_Trans.x(), point_Trans.y(), point_Trans.z());
+                if (kdtree.radiusSearch(searchPoint, radius, pointIdxRadiusSearch, pointRadiusSquaredDistance) > 0) {
+//                    for (std::size_t i = 0; i < pointIdxRadiusSearch.size (); ++i)
+//                        std::cout << "\n------"  <<   (*cloud_rig)[ pointIdxRadiusSearch[0] ].x
+//                                  << " " << (*cloud_rig)[ pointIdxRadiusSearch[0] ].y
+//                                  << " " << (*cloud_rig)[ pointIdxRadiusSearch[0] ].z
+//                                  << " (squared distance: " << pointRadiusSquaredDistance[0] << ")" << std::endl;
+
+                    correspInLeft.at<uchar>(x,y)=255;
+
+
+                    float left_intensity;
+                    if (Img_left.type() == CV_8UC1)
+                        left_intensity =static_cast<float>(Img_left.at<uchar>(x, y));
+                    else if (Img_left.type() == CV_32FC1)
+                        left_intensity =static_cast<float>(Img_left.at<float>(x, y));
+
+//                    float left_intensity =static_cast<float>(Img_left.at<float>(x, y));
+
+
+
+                    float pointCorres_x = (*cloud_rig)[pointIdxRadiusSearch[0]].x;
+                    float pointCorres_y = (*cloud_rig)[pointIdxRadiusSearch[0]].y;
+                    float pointCorres_z = (*cloud_rig)[pointIdxRadiusSearch[0]].z;
+                    float pixel_x = (fx * pointCorres_x) / pointCorres_z + cx;
+                    float pixel_y = (fy * pointCorres_y) / pointCorres_z + cy;
+
+
+                    float right_intensity;
+                    if (Img_right.type() == CV_8UC1) {
+                        right_intensity = static_cast<float>(Img_right.at<uchar>(round(pixel_y), round(pixel_x)));
+                    } else if (Img_right.type() == CV_32FC1) {
+                        right_intensity = static_cast<float>(Img_right.at<float>(round(pixel_y), round(pixel_x)));
+                    }
+//                    float right_intensity = static_cast<float>(Img_right.at<float>(round(pixel_y), round(pixel_x)));
+
+                    correspInRight.at<uchar>(round(pixel_y),round(pixel_x))=255;
+
+
+
+//                    float delta = right_intensity / left_intensity;
+                    float delta= right_intensity-left_intensity;
+
+//                    cout<<"\n IN deltaMapGT func, checking radiance vals:"<< "left Coord: u:"<<x<<", v:"<<y<<" left_intensity:"<< left_intensity
+//                        << ", and right_intensity at row:"<<pixel_y <<", at col:"<< pixel_x<< "is:"<<  right_intensity
+//                        <<"show intensity difference: "<<left_intensity-right_intensity <<"show GT delta: "<<delta <<endl;
+//
+                    float diff_residual = std::abs(right_intensity - left_intensity);
+                    deltaMapGT.at<float>(x, y) = delta;
+                }
+            }
+        }
+        // draw the circle one left and right image
+        for (int x = 0; x < depth_left.rows; ++x) {
+            for (int y = 0; y < depth_left.cols; ++y) {
+                if (correspInLeft.at<uchar>(x,y)==255){
+                    circle(Img_left, cv::Point2d(y,x), 1, Scalar(255), 1, 8, 0);
+                }
+                if (correspInRight.at<uchar>(x,y)==255){
+                    circle(Img_right, cv::Point2d(y,x),1, Scalar(255), 1, 8, 0);
+                }
+            }
+        }
+        imshow("Img_left", Img_left);
+        imshow("Img_right", Img_right);
+        waitKey(0);
+//		 writer.write("PointCloud_Transformed_06.pcd",*cloud, false);// do we need the sensor acquisition origin?
+//		 writer.write("PointCloud_right_HD_06.pcd",*cloud_rig, false);// do we need the sensor acquisition origin?
+        double max_n, min_n;
+        cv::minMaxLoc(deltaMapGT, &min_n, &max_n);
+        //deltaMapGT=deltaMapGT*(1.0/(upper-buttom))+(-buttom*(1.0/(upper-buttom)));
+        cout << "\n show max and min of deltaMapGT:<---------------"<< max_n << "," << min_n << endl;
+        return deltaMapGT;
+    }
+
+
+
 
     Mat deltaMapGT(Mat &Img_left, Mat &depth_left, Mat &Img_right, Mat &depth_right, const Eigen::Matrix<double, 3, 3> &K_, double &thres,
                    const Sophus::SE3d &ExtrinsicPose, float &upper, float &buttom, Mat &pred_deltaMap,
@@ -1103,9 +1250,7 @@ namespace DSONL {
             }
         }
 
-
         Mat deltaMapGT(depth_left.rows, depth_left.cols, CV_32FC1, Scalar(0));// default value 1.0
-
         //		Mat deltaMapGT(depth_left.rows, depth_left.cols, CV_32FC1, Scalar(1)); // default value 1.0
         double fx = K_(0, 0), cx = K_(0, 2), fy = K_(1, 1), cy = K_(1, 2);
         pcl::PCDWriter writer;
@@ -1199,18 +1344,27 @@ namespace DSONL {
 
                     correspInLeft.at<uchar>(x,y)=255;
 
+                    float left_intensity;
+                    if (Img_left.type() == CV_8UC1)
+                         left_intensity =static_cast<float>(Img_left.at<uchar>(x, y));
+                    else if (Img_left.type() == CV_32FC1)
+                         left_intensity =static_cast<float>(Img_left.at<float>(x, y));
 
-//                    cv::Point2i point_l(y,x); // rowIdx,colIdx
-//                    cv::circle(Img_left, point_l, 2, cv::Scalar(255), -1);
 
-
-                    float left_intensity =static_cast<float>(Img_left.at<float>(x, y));
+//                  float left_intensity =static_cast<float>(Img_left.at<float>(x, y));
                     float pointCorres_x = (*cloud_rig)[pointIdxRadiusSearch[0]].x;
                     float pointCorres_y = (*cloud_rig)[pointIdxRadiusSearch[0]].y;
                     float pointCorres_z = (*cloud_rig)[pointIdxRadiusSearch[0]].z;
                     float pixel_x = (fx * pointCorres_x) / pointCorres_z + cx;
                     float pixel_y = (fy * pointCorres_y) / pointCorres_z + cy;
-                    float right_intensity = static_cast<float>(Img_right.at<float>(round(pixel_y), round(pixel_x)));
+
+                    float right_intensity;
+                    if (Img_right.type() == CV_8UC1) {
+                         right_intensity = static_cast<float>(Img_right.at<uchar>(round(pixel_y), round(pixel_x)));
+                    } else if (Img_right.type() == CV_32FC1) {
+                         right_intensity = static_cast<float>(Img_right.at<float>(round(pixel_y), round(pixel_x)));
+                    }
+//                    float right_intensity = static_cast<float>(Img_right.at<float>(round(pixel_y), round(pixel_x)));
 
                     correspInRight.at<uchar>(round(pixel_y),round(pixel_x))=255;
 

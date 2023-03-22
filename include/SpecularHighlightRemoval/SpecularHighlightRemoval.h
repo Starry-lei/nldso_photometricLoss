@@ -18,7 +18,7 @@ public:
 	~SpecularHighlightRemoval();
 	
 	void initialize(int imageRows, int imageCols);
-	cv::Mat run(cv::Mat image);
+	cv::Mat run(cv::Mat image,cv::Mat sparsity_mask);
 	
 	int getNumberOfIterations() { return alpha; }
 	float getThreshold() { return beta; }

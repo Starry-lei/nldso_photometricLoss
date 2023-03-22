@@ -98,7 +98,7 @@ namespace DSONL {
 			S_x << 1.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, -1.0;
 
 
-            bool useHDR= true;
+            bool useHDR= false;
 
 
 			if (options_.isTextured) {
@@ -115,7 +115,7 @@ namespace DSONL {
                 if (useHDR){
                     image_ref_path =            "../data/exp_image0405/rgb/orig_4.pfm"; // HDR
                 }else{
-                    //image_ref_path =            "../data/exp_image0405/rgb/image_04.png"; // LDR
+                    image_ref_path =            "../data/exp_image0405/rgb/image_04.png"; // LDR
                 }
 
                 depth_ref_path =            "../data/exp_image0405/depth/origdepth_4.png";
