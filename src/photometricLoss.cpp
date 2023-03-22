@@ -77,7 +77,7 @@ int main(int argc, char **argv) {
     std_dev = mat_stddev.at<double>(0,0);
 
     // ====================================== pointSelector========================================
-    bool usePixelSelector= false;
+    bool usePixelSelector= true;
     float densities[] = {1,0.5,0.15,0.05,0.03}; // 不同层取得点密度
 //    float densities[] = {0.03,0.003, 0.05,0.15,0.5,1}; /// number of optimized depths,  current index is 1
     PixelSelector* pixelSelector=NULL;
@@ -339,6 +339,9 @@ int main(int argc, char **argv) {
                 Mat sparsityMaskRef(grayImage_ref.rows,  grayImage_ref.cols, CV_32FC1, Scalar(0));
                 Mat sparsityMaskTar(grayImage_ref.rows,  grayImage_ref.cols, CV_32FC1, Scalar(0));
 
+                Mat semiDenseRef(grayImage_ref.rows,  grayImage_ref.cols, CV_8UC1, Scalar(0));
+                Mat semiDenseTar(grayImage_ref.rows,  grayImage_ref.cols, CV_8UC1, Scalar(0));
+
 
                 int point_counter=0;
                 int dso_point_counter=0;
@@ -348,6 +351,7 @@ int main(int argc, char **argv) {
                     for (int v = 0; v < grayImage_ref.cols; v++) // rowId,  rows: 0 to 640
                     {
                         if ((statusMapPoints_ref!=NULL && statusMapPoints_ref[u*grayImage_ref.cols+v]!=0) ){
+                            semiDenseRef.at<uchar>(u,v)= IRef.at<uchar>(u, v);
                             dso_point_counter+=1;
                             dsoSelectedPointMask.at<uchar>(u,v)= 255;
                             sparsityMaskRef.at<float>(u,v)= 1;
@@ -359,9 +363,21 @@ int main(int argc, char **argv) {
                                 dsoSelectedPixels.at<float>(u,v)= IRef.at<uchar>(u,v);
                             }
                         }
+
+                        if((statusMapPoints_tar!=NULL && statusMapPoints_tar[u*grayImage_ref.cols+v]!=0) ){
+                            semiDenseTar.at<uchar>(u,v)= I.at<uchar>(u, v);
+
+                        }
+
+
                     }
                 }
-                imshow("puredsoSelectedPointMask", dsoSelectedPointMask);
+                imshow("semiDenseRef", semiDenseRef);
+                imshow("semiDenseTar", semiDenseTar);
+                waitKey(0);
+
+
+
                 for (int u = 0; u< grayImage_ref.rows; u++) // colId, cols: 0 to 480
                 {
                     for (int v = 0; v < grayImage_ref.cols; v++) // rowId,  rows: 0 to 640
@@ -373,16 +389,9 @@ int main(int argc, char **argv) {
                         }
                     }
                 }
-                imshow("dsoSelectedPointMask", dsoSelectedPointAndISMask);
-                cout << "\n dso_point_counter_merge: " << dso_point_counter_merge << endl;
-
-
-
-
-
+//                imshow("dsoSelectedPointMask", dsoSelectedPointAndISMask);
+//                cout << "\n dso_point_counter_merge: " << dso_point_counter_merge << endl;
                 pbaRelativePose(huberPara, IRef,statusMapPoints_ref,DRef, I,statusMapPoints_tar,Klvl.cast<double>(),camera_poses, points3D);
-
-
 
 
 //                int counter_outlier=0;
@@ -447,7 +456,7 @@ int main(int argc, char **argv) {
 //                pbaRelativePose(huberPara, I,statusMapPoints_ref,DRef, tar_temp,statusMapPoints_tar,Klvl.cast<double>(),camera_poses, points3D);
 
                 deltaMapGT_res=intensityCorrespondenceChangeGT(IRef,depth_ref_GT,I, depth_tar_GT, K_synthetic.cast<double>(),
-                                                               distanceThres,xi_GT, pointOfInterestArea );
+                                                               distanceThres,xi_GT, pointOfInterestArea);
 
 //
 //                deltaMapGT_res=intensityCorrespondenceChangeGT(IRef,depth_ref_GT,I, depth_tar_GT, K_synthetic.cast<double>(),
