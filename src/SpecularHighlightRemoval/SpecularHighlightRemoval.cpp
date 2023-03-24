@@ -227,8 +227,6 @@ cv::Mat SpecularHighlightRemoval::run(cv::Mat image, cv::Mat sparsity_mask)
 			for(int pixel = 0; pixel < image.rows * image.cols; pixel++) {
                 // continue when the pixel is zero
                 if (sparsity_mask.ptr<float>()[pixel]==0.0f){continue;}
-
-
 				if(clusterImage.ptr<int>()[pixel] == cluster && rangeImage.ptr<unsigned char>()[pixel] > minimumMean(0)) {
 					ratio[index] = (float)(int)maximumImage.ptr<unsigned char>()[pixel] / ((float)(int)rangeImage.ptr<unsigned char>()[pixel] + 1e-10);
 					index++;
@@ -244,8 +242,6 @@ cv::Mat SpecularHighlightRemoval::run(cv::Mat image, cv::Mat sparsity_mask)
 
                 // continue when the pixel is zero
                 if (sparsity_mask.ptr<float>()[pixel]==0.0f){continue;}
-
-
 				if(clusterImage.ptr<int>()[pixel] == cluster && rangeImage.ptr<unsigned char>()[pixel] > minimumMean(0)) {
 					ratio[index] = (float)(int)maximumImage.ptr<unsigned char>()[pixel] / ((float)(int)rangeImage.ptr<unsigned char>()[pixel] + 1e-10);
 					sumValue += ratio[index];
@@ -273,11 +269,8 @@ cv::Mat SpecularHighlightRemoval::run(cv::Mat image, cv::Mat sparsity_mask)
 
 		for(int pixel = 0; pixel < image.rows * image.cols; pixel++)
         {
-
             // continue when the pixel is zero
             if (sparsity_mask.ptr<float>()[pixel]==0.0f){continue;}
-
-
 			if(clusterImage.ptr<int>()[pixel] == cluster)
 				ratioImage.ptr<float>()[pixel] = estimatedRatio;
         }

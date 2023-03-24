@@ -336,8 +336,8 @@ int main(int argc, char **argv) {
                 Mat dsoSelectedPixels(grayImage_ref.rows,  grayImage_ref.cols, CV_32FC1, Scalar(0));
 
                 Mat dsoSelectedPointMask_tar(grayImage_ref.rows,  grayImage_ref.cols, CV_8UC1, Scalar(0));
-                Mat sparsityMaskRef(grayImage_ref.rows,  grayImage_ref.cols, CV_32FC1, Scalar(0));
-                Mat sparsityMaskTar(grayImage_ref.rows,  grayImage_ref.cols, CV_32FC1, Scalar(0));
+                Mat sparsityMaskRef=cv::Mat::zeros(grayImage_ref.rows, grayImage_ref.cols, CV_32FC1);
+                Mat sparsityMaskTar=cv::Mat::zeros(grayImage_ref.rows, grayImage_ref.cols, CV_32FC1);
 
                 Mat semiDenseRef(grayImage_ref.rows,  grayImage_ref.cols, CV_8UC1, Scalar(0));
                 Mat semiDenseTar(grayImage_ref.rows,  grayImage_ref.cols, CV_8UC1, Scalar(0));
@@ -354,7 +354,7 @@ int main(int argc, char **argv) {
                             semiDenseRef.at<uchar>(u,v)= IRef.at<uchar>(u, v);
                             dso_point_counter+=1;
                             dsoSelectedPointMask.at<uchar>(u,v)= 255;
-                            sparsityMaskRef.at<float>(u,v)= 1;
+                            sparsityMaskRef.at<float>(u,v)= 1.0;
                             dsoSelectedPointMask_C3.at<cv::Vec3b>(u,v)=Image_ref8UC3.at<cv::Vec3b>(u,v);
                             pointOfInterestArea.at<uchar>(u,v)= 255;
                             if (usePFM){
@@ -394,55 +394,58 @@ int main(int argc, char **argv) {
                 pbaRelativePose(huberPara, IRef,statusMapPoints_ref,DRef, I,statusMapPoints_tar,Klvl.cast<double>(),camera_poses, points3D);
 
 
-//                int counter_outlier=0;
-//                for (int u = 0; u < IRef.rows; u++)// colId, cols: 0 to 480
-//                {
-//                    for (int v = 0; v < IRef.cols; v++)// rowId,  rows: 0 to 640
-//                    {
-//                        // print out the value of the pixel
-//                        if (((int)pointOfInterestArea.at<uchar>(u,v)) ==255){
-//                                 Sophus::SE3d pose_temp = Sophus::SE3d(Eigen::Quaterniond(camera_poses[7], camera_poses[8], camera_poses[9], camera_poses[10]),
-//                                                                  Eigen::Vector3d(camera_poses[11], camera_poses[12], camera_poses[13]));
-//                            Eigen::Matrix<float, 3, 3> KRKi = K_synthetic * pose_temp.rotationMatrix().cast<float>() * K_synthetic.inverse();
-//                            Eigen::Matrix<float, 3, 1> Kt = K_synthetic * pose_temp.translation().cast<float>();
-//                            Eigen::Vector2d pixelCoord((double) v, (double) u);
-//                            Eigen::Matrix<float, 2, 1> pt2d;
-//                            if (!project((float) v, (float) u, (float) DRef.at<float>(u, v), (int) IRef.cols, (int) IRef.rows, KRKi, Kt, pt2d)) {
-//                                counter_outlier+=1;continue; }
-//                            sparsityMaskTar.at<float>(round(pt2d[1]),round(pt2d[0]))= 1;
-//                            dsoSelectedPointMask_tar_C3.at<cv::Vec3b>(round(pt2d[1]),
-//                                                                      round(pt2d[0]))=Image_tar8UC3.at<cv::Vec3b>(round(pt2d[1]),
-//                                                                                                       round(pt2d[0]));
-//
-////                                IRef.at<float>(u,v)=IRef.at<float>(u,v)+greenChannel_deltaMap.at<float>(u,v);
-////                                IRef.at<float>(u,v)= 1/greenChannel_deltaMap.at<float>(u,v) * IRef.at<float>(u,v);
-//                        }
-//                    }
-//                }
-//
-//                imshow("dsoSelectedPointMask_ref_C3",dsoSelectedPointMask_C3);
-//                imshow("dsoSelectedPointMask_tar_C3",dsoSelectedPointMask_tar_C3);
-//
+                int counter_outlier=0;
+                for (int u = 0; u < IRef.rows; u++)// colId, cols: 0 to 480
+                {
+                    for (int v = 0; v < IRef.cols; v++)// rowId,  rows: 0 to 640
+                    {
+                        // print out the value of the pixel
+                        if (((int)pointOfInterestArea.at<uchar>(u,v)) ==255){
+                                 Sophus::SE3d pose_temp = Sophus::SE3d(Eigen::Quaterniond(camera_poses[7], camera_poses[8], camera_poses[9], camera_poses[10]),
+                                                                  Eigen::Vector3d(camera_poses[11], camera_poses[12], camera_poses[13]));
+                            Eigen::Matrix<float, 3, 3> KRKi = K_synthetic * pose_temp.rotationMatrix().cast<float>() * K_synthetic.inverse();
+                            Eigen::Matrix<float, 3, 1> Kt = K_synthetic * pose_temp.translation().cast<float>();
+                            Eigen::Vector2d pixelCoord((double) v, (double) u);
+                            Eigen::Matrix<float, 2, 1> pt2d;
+                            if (!project((float) v, (float) u, (float) DRef.at<float>(u, v), (int) IRef.cols, (int) IRef.rows, KRKi, Kt, pt2d)) {
+                                counter_outlier+=1;continue; }
+                            sparsityMaskTar.at<float>(round(pt2d[1]),round(pt2d[0]))= 1.0;
+                            dsoSelectedPointMask_tar_C3.at<cv::Vec3b>(round(pt2d[1]),
+                                                                      round(pt2d[0]))=Image_tar8UC3.at<cv::Vec3b>(round(pt2d[1]),
+                                                                                                       round(pt2d[0]));
+
+//                                IRef.at<float>(u,v)=IRef.at<float>(u,v)+greenChannel_deltaMap.at<float>(u,v);
+//                                IRef.at<float>(u,v)= 1/greenChannel_deltaMap.at<float>(u,v) * IRef.at<float>(u,v);
+                        }
+                    }
+                }
+
+                imshow("dsoSelectedPointMask_ref_C3",dsoSelectedPointMask_C3);
+                imshow("dsoSelectedPointMask_tar_C3",dsoSelectedPointMask_tar_C3);
+
+                imshow("sparsityMaskRef",sparsityMaskRef);
+                imshow("sparsityMaskTar",sparsityMaskTar);
+
+
 //                // do to photometric correction here
+                SpecularHighlightRemoval sparse_specularRemoval_ref;
+                SpecularHighlightRemoval sparse_specularRemoval_tar;
+                sparse_specularRemoval_ref.initialize(Image_ref8UC3.rows, Image_ref8UC3.cols);
+                sparse_specularRemoval_tar.initialize(Image_tar8UC3.rows, Image_tar8UC3.cols);
+
+                Mat diffuseImage_ref_sparse = sparse_specularRemoval_ref.run(dsoSelectedPointMask_C3,sparsityMaskRef);
+                Mat specularImage_ref_sparse = sparse_specularRemoval_ref.specularImage;
+                Mat diffuseImage_tar_sparse = sparse_specularRemoval_tar.run(dsoSelectedPointMask_tar_C3,sparsityMaskTar);
+                Mat specularImage_tar_sparse = sparse_specularRemoval_tar.specularImage;
+                Mat tar_temp= Image_tar8UC3-specularImage_tar_sparse;
+                cvtColor(tar_temp, tar_temp, CV_RGB2GRAY);
 //
-//                SpecularHighlightRemoval sparse_specularRemoval_ref;
-//                SpecularHighlightRemoval sparse_specularRemoval_tar;
-//                sparse_specularRemoval_ref.initialize(Image_ref8UC3.rows, Image_ref8UC3.cols);
-//                sparse_specularRemoval_tar.initialize(Image_tar8UC3.rows, Image_tar8UC3.cols);
 //
-//                Mat diffuseImage_ref_sparse = sparse_specularRemoval_ref.run(dsoSelectedPointMask_C3,sparsityMaskRef);
-//                Mat specularImage_ref_sparse = sparse_specularRemoval_ref.specularImage;
-//                Mat diffuseImage_tar_sparse = sparse_specularRemoval_tar.run(dsoSelectedPointMask_tar_C3,sparsityMaskTar);
-//                Mat specularImage_tar_sparse = sparse_specularRemoval_tar.specularImage;
-//                Mat tar_temp= Image_tar8UC3-specularImage_tar_sparse;
-//                cvtColor(tar_temp, tar_temp, CV_RGB2GRAY);
-//
-//
-//                Mat clusterImage_sparse = sparse_specularRemoval_ref.clusterImage;
-//                Mat clusterImage_tar_sparse = sparse_specularRemoval_tar.clusterImage;
-//
-//                drawClusters(clusterImage_sparse, Image_ref8UC3, "ref");
-//                drawClusters(clusterImage_tar_sparse, Image_tar8UC3, "tar");
+                Mat clusterImage_sparse = sparse_specularRemoval_ref.clusterImage;
+                Mat clusterImage_tar_sparse = sparse_specularRemoval_tar.clusterImage;
+
+                drawClusters(clusterImage_sparse, Image_ref8UC3, "ref");
+                drawClusters(clusterImage_tar_sparse, Image_tar8UC3, "tar");
 //                cvtColor(diffuseImage_ref_sparse, diffuseImage_ref_sparse, CV_RGB2GRAY);
 //                cvtColor(diffuseImage_tar_sparse, diffuseImage_tar_sparse, CV_RGB2GRAY);
 //
@@ -451,7 +454,7 @@ int main(int argc, char **argv) {
 //                imshow("diffuseImage_ref_sparse",diffuseImage_ref_sparse);
 //                imshow("specularImage_tar_sparse",specularImage_tar_sparse);
 //                imshow("specularImage_ref_sparse",specularImage_ref_sparse);
-//                waitKey(0);
+                waitKey(0);
 //
 //                pbaRelativePose(huberPara, I,statusMapPoints_ref,DRef, tar_temp,statusMapPoints_tar,Klvl.cast<double>(),camera_poses, points3D);
 
