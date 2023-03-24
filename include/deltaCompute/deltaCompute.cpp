@@ -598,14 +598,15 @@ namespace DSONL {
                 Vec3f radiance_beta = ibl_Radiance->solveForRadiance(View_beta, N_, image_roughnes, image_metallic,
                                                                      reflectance, baseColor, Camera1_c2w.rotationMatrix(),
                                                                      enterPanoroma.inverse());
-                cout<<"\n ========>>>>show LEFT data vals :"<< "ibl_Radiance->Specularity\n"
-                    <<ibl_Radiance->Specularity<< "ibl_Radiance->diffusity\n"<<ibl_Radiance->diffusity <<endl;
+//                cout<<"\n ========>>>>show LEFT data vals :"<< "ibl_Radiance->Specularity\n"
+//                    <<ibl_Radiance->Specularity<< "ibl_Radiance->diffusity\n"<<ibl_Radiance->diffusity <<endl;
+
                 specularityMap.at<Vec3f>(u,v)=ibl_Radiance->Specularity;
                 DiffuseMap.at<Vec3f>(u,v)=ibl_Radiance->diffusity;
                 Vec3f radiance_beta_prime = ibl_Radiance->solveForRadiance(View_beta_prime, N_, image_roughnes, image_metallic,
                                                                            reflectance, baseColor, Camera1_c2w.rotationMatrix(),enterPanoroma.inverse());
-                cout<<"\n ========>>>>show RIGHT data vals :"<< "ibl_Radiance->Specularity\n"
-                <<ibl_Radiance->Specularity<< "ibl_Radiance->diffusity\n"<<ibl_Radiance->diffusity <<endl;
+//                cout<<"\n ========>>>>show RIGHT data vals :"<< "ibl_Radiance->Specularity\n"
+//                <<ibl_Radiance->Specularity<< "ibl_Radiance->diffusity\n"<<ibl_Radiance->diffusity <<endl;
 
                 // calculate the correspondent pixel coordinate of right specular image
 
@@ -686,7 +687,7 @@ namespace DSONL {
 		imshow("radianceMap_left", radianceMap_left);
         imshow("specularityMap_left", specularityMap*255.0);
         imshow("specularityMap_right", specularityMap_right*255.0);
-        imshow("DiffuseMap", DiffuseMap);
+
 
 //
 //        for (int u = 0; u < depth_map.rows; u++)// colId, cols: 0 to 480
