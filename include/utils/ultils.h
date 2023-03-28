@@ -1230,6 +1230,21 @@ namespace DSONL {
 
 
 
+    void saveArray(vector<double>& DistributionMap){
+
+        ofstream delta_comp;
+        delta_comp.open ("DistributionArray.txt");
+        // iterate through the vector and print the values
+        for (int i = 0; i < DistributionMap.size(); i++)
+        {
+//            cout << DistributionMap[i] << " ";
+
+            delta_comp <<DistributionMap[i]<<"\n";
+        }
+
+        delta_comp.close();
+
+    }
 
     Mat deltaMapGT(Mat &Img_left, Mat &depth_left, Mat &Img_right, Mat &depth_right, const Eigen::Matrix<double, 3, 3> &K_, double &thres,
                    const Sophus::SE3d &ExtrinsicPose, float &upper, float &buttom, Mat &pred_deltaMap,

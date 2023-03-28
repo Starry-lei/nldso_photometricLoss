@@ -46,6 +46,8 @@ namespace DSONL {
 
     }
 
+
+
     void pbaRelativePose(float huberPara, Mat &image_left,float* statusMapPoints_ref,Mat &idepth_1_float, Mat &image_right, float* statusMapPoints_tar, const Eigen::Matrix3d &K, double* camera_poses, std::vector<cv::Point3f>& points3D){
         // construct image patches
         ceres::Problem problem;
@@ -92,18 +94,22 @@ namespace DSONL {
                  if (statusMapPoints_ref!=NULL && statusMapPoints_ref[r*image_1.cols+c]==0 ){ continue;}
 
                     std::vector<double> patch(PATTERN_SIZE, 0.0);
+                    std::vector<double> patch_weigts(PATTERN_SIZE, 1.0);
+
                 for (size_t i = 0; i < PATTERN_SIZE; i++){
                     int du = PATTERN_OFFSETS[i][0];
                     int dv = PATTERN_OFFSETS[i][1];
                     float u_new = c + du;
                     float v_new = r + dv;
                     compute_interpolation->Evaluate(v_new, u_new, &patch[i]);
+
+
                 }
                 depth_array[r*idepth_1_float.cols + c] = idepth_1_float.at<float>(r, c);
 
                 float x_norm = (c - cx) / fx;
                 float y_norm = (r - cy) / fy;
-                ceres::CostFunction* cost_fun = PhotometricBundleAdjustment::Create(image_2_vectorized,
+                ceres::CostFunction* cost_fun = PhotometricBundleAdjustment_vanilla::Create(image_2_vectorized,
                                                                                     image_2.cols, image_2.rows,
                                                                                     patch, x_norm, y_norm,
                                                                                     fx, fy, cx, cy);
@@ -138,7 +144,7 @@ namespace DSONL {
 //    problem.SetParameterBlockConstant(&(camera_poses[0]));
 
 
-// output the residuals
+// output the residuals distribution
 
         vector<double> residuals;
         double cost;
@@ -146,7 +152,16 @@ namespace DSONL {
         std::cout<<"\n Initial cost:"<<cost<<endl;
         std::cout << "\n Residuals size: " << residuals.size() << std::endl;
 
-//    drawResidualPerPixels(residuals, 5.0,"residuals", image_1.cols, image_1.rows);
+        if (image_left.cols==640){
+            drawResidualDistribution(residuals,"residualsDistri_withoutCorrection", image_1.rows,image_1.cols);
+        }
+
+
+
+
+
+
+
 
 
 
@@ -154,6 +169,150 @@ namespace DSONL {
 
         options.linear_solver_type = ceres::DENSE_SCHUR;
 //    options.linear_solver_type = ceres::SPARSE_SCHUR;
+        options.minimizer_progress_to_stdout = true;
+        options.max_num_iterations = 100;
+        options.num_threads = std::thread::hardware_concurrency();
+
+        ceres::Solver::Summary summary;
+        ceres::Solve(options, &problem, &summary);
+        std::cout << summary.BriefReport() << std::endl;
+
+
+
+
+    }
+
+    void pbaRelativePose(float huberPara, Mat& W_specularity,  Mat &image_left,float* statusMapPoints_ref,Mat &idepth_1_float, Mat &image_right, float* statusMapPoints_tar, const Eigen::Matrix3d &K, double* camera_poses, std::vector<cv::Point3f>& points3D){
+        // construct image patches
+        ceres::Problem problem;
+
+        // intrinsics  // 574.540648625183
+        float fx = K(0,0);
+        float fy = K(1,1);
+        float cx =K(0,2);
+        float cy =K(1,2);
+
+        ceres::LossFunction* loss_function = new ceres::HuberLoss(huberPara);
+        std::vector<double> image_1_vectorized;
+        std::vector<double> image_1_weight_vectorized;
+        std::vector<double> image_2_vectorized;
+        // vectorize images
+        image_1_vectorized=vectorizeImage(image_left);
+        image_1_weight_vectorized=vectorizeImage(W_specularity);
+
+        image_2_vectorized=vectorizeImage(image_right);
+
+        Mat image_1 = image_left.clone();
+        Mat image_2 = image_right.clone();
+
+        size_t num_points = image_1.rows * image_1.cols;
+        double depth_array[num_points];
+
+        std::unique_ptr<ceres::Grid2D<double, 1>> image_grid;
+        std::unique_ptr<ceres::Grid2D<double, 1>> image_weight_grid;
+
+        std::unique_ptr<ceres::BiCubicInterpolator<ceres::Grid2D<double, 1> > > compute_interpolation;
+        std::unique_ptr<ceres::BiCubicInterpolator<ceres::Grid2D<double, 1> > > compute_weight_interpolation;
+
+        image_grid.reset(new ceres::Grid2D<double, 1>(&image_1_vectorized[0], 0, image_1.rows, 0, image_1.cols));
+        image_weight_grid.reset(new ceres::Grid2D<double, 1>(&image_1_weight_vectorized[0], 0, image_1.rows, 0, image_1.cols));
+        compute_interpolation.reset(new ceres::BiCubicInterpolator<ceres::Grid2D<double, 1> >(*image_grid));
+        compute_weight_interpolation.reset(new ceres::BiCubicInterpolator<ceres::Grid2D<double,1> >(*image_weight_grid));
+
+//    std::vector<cv::Point3f> points3D;
+
+        std::unordered_map<int, int> inliers_filter;
+        inliers_filter.emplace(250,250);
+
+
+        for (int r = 0; r < image_1.rows; r++){
+            for (int c = 0; c < image_1.cols; c++){
+
+//                 if (inliers_filter.count(r) == 0) { continue; }// ~~~~~~~~~~~~~~Filter~~~~~~~~~~~~~~~~~~~~~~~
+//                 if (inliers_filter[r] != c) { continue; }      // ~~~~~~~~~~~~~~Filter~~~~~~~~~~~~~~~~~~~~~~~
+
+                // use DSO pixel selector
+//                if (statusMapPoints_ref!=NULL && statusMapPoints_ref[r*image_1.cols+c]==0 ){ continue;}
+                if (W_specularity.at<float>(r,c)==0.0f){continue;}
+
+
+
+                std::vector<double> patch(PATTERN_SIZE, 0.0);
+                std::vector<double> patch_weight(PATTERN_SIZE, 1.0);
+                for (size_t i = 0; i < PATTERN_SIZE; i++){
+                    int du = PATTERN_OFFSETS[i][0];
+                    int dv = PATTERN_OFFSETS[i][1];
+                    float u_new = c + du;
+                    float v_new = r + dv;
+                    compute_interpolation->Evaluate(v_new, u_new, &patch[i]);
+                    // mark here
+//                    compute_weight_interpolation->Evaluate(v_new, u_new, &patch_weight[i]);
+
+                    if(u_new > 1.1 && u_new < image_1.cols - 2.1 && v_new > 1.1 && v_new < image_1.rows - 2.1){
+                        patch_weight[i]=W_specularity.at<float>(r, c);
+                        cout<<"show patch_weight[i]:"<<patch_weight[i]<<endl;
+                    }
+                }
+                depth_array[r*idepth_1_float.cols + c] = idepth_1_float.at<float>(r, c);
+
+                float x_norm = (c - cx) / fx;
+                float y_norm = (r - cy) / fy;
+                ceres::CostFunction* cost_fun = PhotometricBundleAdjustment::Create(image_2_vectorized,
+                                                                                    image_2.cols, image_2.rows,
+                                                                                    patch, patch_weight, x_norm, y_norm,
+                                                                                    fx, fy, cx, cy);
+                problem.AddResidualBlock(cost_fun, loss_function, &(camera_poses[7]), &(depth_array[r*idepth_1_float.cols + c]));
+                // optimize depth
+                problem.SetParameterBlockConstant(&(depth_array[r*idepth_1_float.cols + c]));
+
+
+
+//            ceres::CostFunction* cost_fun_orig = PhotometricBundleAdjustment::Create(image_1_vectorized,
+//                                                                                image_1.cols, image_1.rows,
+//                                                                                patch, x_norm, y_norm,
+//                                                                                fx, fy, cx, cy);
+//            problem.AddResidualBlock(cost_fun_orig, loss_function, &(camera_poses[0]), &(depth_array[r*idepth_1_float.cols + c]));
+
+
+                //problem.SetParameterBlockConstant(&(depth_array[r*idepth_1_float.cols + c]));
+                points3D.push_back(cv::Point3f(x_norm / idepth_1_float.at<float>(r, c), y_norm / idepth_1_float.at<float>(r, c), 1.0 / idepth_1_float.at<float>(r, c)));
+            }
+        }
+
+        ceres::LocalParameterization* camera_parameterization = new ceres::ProductParameterization(new ceres::QuaternionParameterization(),
+                                                                                                   new ceres::IdentityParameterization(3));
+//    for (size_t i = 0; i < num_cameras; i++) {
+//        problem.SetParameterization(&(camera_poses[7*i]), camera_parameterization);
+//    }
+
+        problem.SetParameterization(&(camera_poses[7]), camera_parameterization);
+        problem.SetParameterBlockVariable(&(camera_poses[7]));
+
+
+        // problem.SetParameterBlockConstant(&(camera_poses[0]));
+        // output the residuals
+
+        vector<double> residuals;
+        double cost;
+        problem.Evaluate(ceres::Problem::EvaluateOptions(), &cost, &residuals, NULL, NULL);
+        std::cout<<"\n Initial cost:"<<cost<<endl;
+        std::cout << "\n Residuals size: " << residuals.size() << std::endl;
+
+
+        if (image_left.cols==640){
+            drawResidualDistribution(residuals,"residualsDistri_withCorrection", image_1.rows,image_1.cols);
+        }
+
+
+
+
+
+
+
+        //    drawResidualPerPixels(residuals, 5.0,"residuals", image_1.cols, image_1.rows);
+        ceres::Solver::Options options;
+        options.linear_solver_type = ceres::DENSE_SCHUR;
+        //    options.linear_solver_type = ceres::SPARSE_SCHUR;
         options.minimizer_progress_to_stdout = true;
         options.max_num_iterations = 100;
         options.num_threads = std::thread::hardware_concurrency();
@@ -209,8 +368,6 @@ namespace DSONL {
 
 //                 if (inliers_filter.count(r) == 0) { continue; }// ~~~~~~~~~~~~~~Filter~~~~~~~~~~~~~~~~~~~~~~~
 //                 if (inliers_filter[r] != c) { continue; }      // ~~~~~~~~~~~~~~Filter~~~~~~~~~~~~~~~~~~~~~~~
-
-
                 std::vector<double> patch(PATTERN_SIZE, 0.0);
                 for (size_t i = 0; i < PATTERN_SIZE; i++){
                     int du = PATTERN_OFFSETS[i][0];
@@ -223,7 +380,7 @@ namespace DSONL {
 
                 float x_norm = (c - cx) / fx;
                 float y_norm = (r - cy) / fy;
-                ceres::CostFunction* cost_fun = PhotometricBundleAdjustment::Create(image_2_vectorized,
+                ceres::CostFunction* cost_fun = PhotometricBundleAdjustment_vanilla::Create(image_2_vectorized,
                                                                                     image_2.cols, image_2.rows,
                                                                                     patch, x_norm, y_norm,
                                                                                     fx, fy, cx, cy);

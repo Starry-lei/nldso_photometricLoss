@@ -633,13 +633,13 @@ namespace DSONL {
 //				float delta_g = radiance_beta_prime.val[1] / radiance_beta.val[1];
 //				float delta_r = radiance_beta_prime.val[2] / radiance_beta.val[2];
 
-//                float delta_b = abs(radiance_beta_prime.val[0] - radiance_beta.val[0]);
-//                float delta_g = abs(radiance_beta_prime.val[1] - radiance_beta.val[1]);
-//                float delta_r = abs(radiance_beta_prime.val[2] - radiance_beta.val[2]);
+                float delta_b = abs(radiance_beta_prime.val[0] - radiance_beta.val[0]);
+                float delta_g = abs(radiance_beta_prime.val[1] - radiance_beta.val[1]);
+                float delta_r = abs(radiance_beta_prime.val[2] - radiance_beta.val[2]);
 
-                float delta_b = (radiance_beta_prime.val[0] - radiance_beta.val[0]);
-                float delta_g = (radiance_beta_prime.val[1] - radiance_beta.val[1]);
-                float delta_r = (radiance_beta_prime.val[2] - radiance_beta.val[2]);
+//                float delta_b = (radiance_beta_prime.val[0] - radiance_beta.val[0]);
+//                float delta_g = (radiance_beta_prime.val[1] - radiance_beta.val[1]);
+//                float delta_r = (radiance_beta_prime.val[2] - radiance_beta.val[2]);
 
 
 
