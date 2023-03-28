@@ -66,7 +66,10 @@ int main(int argc, char **argv) {
 //    std::string envMap_Folder="/media/lei/Data/toiletScene/envmap_formatted";
 //    string controlPointPose_path="/home/lei/Documents/Research/envMapData/scene0086_00_control_cam_pose.txt";
 
-    std::string envMap_Folder="/media/lei/Data/LivingRoom_scene/leitest4/test2_300/2frame0370_02/envMapformatted";
+//    std::string envMap_Folder="/media/lei/Data/LivingRoom_scene/leitest4/test2_300/2frame0370_02/envMapformatted";
+//    string controlPointPose_path="/home/lei/Documents/Research/envMapData/2frame0370_02_control_cam_pose_image4.txt";
+
+    std::string envMap_Folder="/media/lei/Data/LivingRoom_scene/morelight/formattedEnvmap";
     string controlPointPose_path="/home/lei/Documents/Research/envMapData/2frame0370_02_control_cam_pose_image4.txt";
 
 
