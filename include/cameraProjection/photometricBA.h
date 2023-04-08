@@ -233,7 +233,7 @@ namespace DSONL {
 
                 // use DSO pixel selector
 //                if (statusMapPoints_ref!=NULL && statusMapPoints_ref[r*image_1.cols+c]==0 ){ continue;}
-                if (W_specularity.at<float>(r,c)==0.0f){continue;}
+                if (W_specularity.at<float>(r,c)==0.0f ){continue;}// for enlarge the performance gap
 
 
 
@@ -250,7 +250,7 @@ namespace DSONL {
 
                     if(u_new > 1.1 && u_new < image_1.cols - 2.1 && v_new > 1.1 && v_new < image_1.rows - 2.1){
                         patch_weight[i]=W_specularity.at<float>(r, c);
-                        cout<<"show patch_weight[i]:"<<patch_weight[i]<<endl;
+//                        cout<<"show patch_weight[i]:"<<patch_weight[i]<<endl;
                     }
                 }
                 depth_array[r*idepth_1_float.cols + c] = idepth_1_float.at<float>(r, c);

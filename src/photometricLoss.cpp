@@ -37,9 +37,18 @@ int main(int argc, char **argv) {
 //    string controlPointPose_path= "/home/lei/Documents/Research/envMapData/2frame0370_02_control_cam_pose156.txt";
 //    string  renderedEnvMapPath=   "/home/lei/Documents/Research/envMapData/EnvMap_156ctrlPoints";
 
-    std::string envMap_Folder=    "/home/lei/Documents/Research/envMapData/EnvMap_Img04_260";
+//    std::string envMap_Folder=    "/home/lei/Documents/Research/envMapData/EnvMap_Img04_260";
+//    string controlPointPose_path= "/home/lei/Documents/Research/envMapData/2frame0370_02_control_cam_pose_image4.txt";
+//    string  renderedEnvMapPath=   "/home/lei/Documents/Research/envMapData/EnvMap_Img04_260";
+//
+
+
+    std::string envMap_Folder=    "/home/lei/Documents/Research/envMapData/EnvMap_Img04_moreSpecular_260";
     string controlPointPose_path= "/home/lei/Documents/Research/envMapData/2frame0370_02_control_cam_pose_image4.txt";
-    string  renderedEnvMapPath=   "/home/lei/Documents/Research/envMapData/EnvMap_Img04_260";
+    string  renderedEnvMapPath=   "/home/lei/Documents/Research/envMapData/EnvMap_Img04_moreSpecular_260";
+
+
+
 
 
 
@@ -415,7 +424,7 @@ int main(int argc, char **argv) {
                         IRef_before.ptr<float>()[pixel] = IRef.ptr<float>()[pixel];
                         if(clusterImage_specular.ptr<int>()[pixel]!=3){continue;}
                         float x = IRef.ptr<float>()[pixel];
-                        float y = x*(exp(-6.0*x)> 0.25f ? exp(-6.0*x) : 0.25f);
+                        float y = x*(exp(-8.0*x)> 0.25f ? exp(-8.0*x) : 0.25f);
                         IRef.ptr<float>()[pixel] = y;
                         IRef_after.ptr<float>()[pixel] = IRef.ptr<float>()[pixel];
                     }
@@ -568,7 +577,8 @@ int main(int argc, char **argv) {
                         // continue when the pixel is zero
                         if (specularityChange.ptr<float>()[pixel]==0.0f){continue;}
                         float x =specularityChange.ptr<float>()[pixel];
-                        float y = exp(-10.3*x);
+//                        float y = exp(-10.3*x);
+                        float y = exp(-15*x);
 //                        float y = 1.0;
                         W_values.ptr<float>()[pixel] = y;
                         W_specularity.ptr<float>()[pixel] = y;

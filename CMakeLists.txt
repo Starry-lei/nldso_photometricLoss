@@ -179,7 +179,6 @@ set(dsonl_SOURCE_FILES
 
 #  include/wrapperHeader.h
 
-
         include/envLightPreProcessing/envLightPreProcessing.cpp
         include/preFilter/preFilterUtils.h
         include/preFilter/preFilter.cpp
