@@ -42,9 +42,32 @@ namespace DSONL {
     using namespace std;
     const double DEG_TO_ARC = 0.0174532925199433;
 
-    void showPointCloud(const Sophus::SE3d inputPoseGT,const Sophus::SE3d inputPose,const Sophus::SE3d pose1,const Sophus::SE3d pose2,const Sophus::SE3d pose, const std::vector<cv::Point3f> points3D,
+
+// 根据像素坐标获取像素值
+    void GetPixelValue(const cv::Mat& img, float x, float y, float& r, float& g, float& b)
+    {
+        // 如果像素坐标不在图像内，返回黑色
+        if (x < 0 || y < 0 || x >= img.cols || y >= img.rows) {
+            r = 0;
+            g = 0;
+            b = 0;
+            return;
+        }
+
+        // 获取像素值
+        uchar* data = &img.data[int(y) * img.step + int(x) * img.channels()];
+        r = float(data[2]) / 255.0f;
+        g = float(data[1]) / 255.0f;
+        b = float(data[0]) / 255.0f;
+    }
+
+
+    void showPointCloud( Mat& image_ref, Mat& image_tar,  const Sophus::SE3d inputPoseGT,const Sophus::SE3d inputPose,const Sophus::SE3d pose1,const Sophus::SE3d pose2,const Sophus::SE3d pose, const std::vector<cv::Point3f> points3D, // const std::vector<cv::Point3f> points3D
                         const float fx, const float fy, const float cx, const float cy) {
         Sophus::SE3d worldFrame = Sophus::SE3d(Eigen::Matrix3d::Identity(), Eigen::Vector3d(0,0,0));
+
+        Eigen::Matrix3f K1;
+        K1 << fx, 0, cx, 0, fy, cy, 0, 0, 1;
 
         pangolin::CreateWindowAndBind("Point Cloud Viewer", 1024, 768);
         glEnable(GL_DEPTH_TEST);
@@ -59,19 +82,56 @@ namespace DSONL {
         pangolin::View &d_cam = pangolin::CreateDisplay()
                 .SetBounds(0.0, 1.0, pangolin::Attach::Pix(175), 1.0, -1024.0f / 768.0f)
                 .SetHandler(new pangolin::Handler3D(s_cam));
-
+        cout <<"\n ==================================show size of points 3D:=================================="<<points3D.size()<<endl;
         while (pangolin::ShouldQuit() == false) {
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
             d_cam.Activate(s_cam);
-            glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+//            glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+            glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
 
             glPointSize(2);
             glBegin(GL_POINTS);
 
+
+
             for (auto &p: points3D) {
-                glColor3f(0.0, 0.0, 0.0);
+
+                // 投影到target相机坐标系中 using pose
+                Eigen::Vector3f p_eigen(p.x, p.y, p.z);
+
+
+                Eigen::Vector3f p_transfromed = pose.rotationMatrix().cast<float>() * p_eigen + pose.translation().cast<float>();
+                p_eigen=p_transfromed;
+
+
+
+                Eigen::Vector3f pc1 = K1 * p_eigen;
+                cv::Vec3f pc1_cv(pc1[0], pc1[1], pc1[2]);
+                float u1 = pc1_cv[0] / pc1_cv[2];
+                float v1 = pc1_cv[1] / pc1_cv[2];
+                float r1, g1, b1;
+//                GetPixelValue(image_ref, u1, v1, r1, g1, b1);
+
+
+
+                GetPixelValue(image_tar, u1, v1, r1, g1, b1);
+
+
+
+
+
+
+
+
+
+                glColor3f(r1, g1, b1);
                 glVertex3d(p.x, p.y, p.z);
             }
+
+//            for (auto &p: points3D) {
+//                glColor3f(0.0, 0.0, 0.0);
+//                glVertex3d(p.x, p.y, p.z);
+//            }
 
             glEnd();
 
@@ -83,15 +143,15 @@ namespace DSONL {
             // axis x
             glColor3f ( 0.8f,0.f,0.f );
             glVertex3f( 0,0, 0 );
-            glVertex3f( 1,0, 0 );
+            glVertex3f( 0.1,0, 0 );
             // axis y
             glColor3f( 0.f,0.8f,0.f);
             glVertex3f( 0,0, 0 );
-            glVertex3f( 0,1,0 );
+            glVertex3f( 0,0.1,0 );
             // axis z
             glColor3f( 0.2f,0.2f,1.f);
             glVertex3f( 0,0, 0 );
-            glVertex3f( 0,0,1);
+            glVertex3f( 0,0,0.1);
 
             glEnd();
 
@@ -112,15 +172,15 @@ namespace DSONL {
                 // axis x
                 glColor3f ( 0.8f,0.f,0.f );
                 glVertex3f( 0,0, 0 );
-                glVertex3f( 1,0, 0 );
+                glVertex3f( 0.1,0, 0 );
                 // axis y
                 glColor3f( 0.f,0.8f,0.f);
                 glVertex3f( 0,0, 0 );
-                glVertex3f( 0,1,0 );
+                glVertex3f( 0,0.1,0 );
                 // axis z
                 glColor3f( 0.2f,0.2f,1.f);
                 glVertex3f( 0,0, 0 );
-                glVertex3f( 0,0,1);
+                glVertex3f( 0,0,0.1);
 
                 glEnd();
 
@@ -159,15 +219,15 @@ namespace DSONL {
                 // axis x
                 glColor3f ( 0.8f,0.f,0.f );
                 glVertex3f( 0,0, 0 );
-                glVertex3f( 1,0, 0 );
+                glVertex3f( 0.1,0, 0 );
                 // axis y
                 glColor3f( 0.f,0.8f,0.f);
                 glVertex3f( 0,0, 0 );
-                glVertex3f( 0,1,0 );
+                glVertex3f( 0,0.1,0 );
                 // axis z
                 glColor3f( 0.2f,0.2f,1.f);
                 glVertex3f( 0,0, 0 );
-                glVertex3f( 0,0,1);
+                glVertex3f( 0,0,0.1);
 
                 glEnd();
 
@@ -206,15 +266,15 @@ namespace DSONL {
                 // axis x
                 glColor3f ( 0.8f,0.f,0.f );
                 glVertex3f( 0,0, 0 );
-                glVertex3f( 1,0, 0 );
+                glVertex3f( 0.1,0, 0 );
                 // axis y
                 glColor3f( 0.f,0.8f,0.f);
                 glVertex3f( 0,0, 0 );
-                glVertex3f( 0,1,0 );
+                glVertex3f( 0,0.1,0 );
                 // axis z
                 glColor3f( 0.2f,0.2f,1.f);
                 glVertex3f( 0,0, 0 );
-                glVertex3f( 0,0,1);
+                glVertex3f( 0,0,0.1);
 
                 glEnd();
 
@@ -253,15 +313,15 @@ namespace DSONL {
                 // axis x
                 glColor3f ( 0.8f,0.f,0.f );
                 glVertex3f( 0,0, 0 );
-                glVertex3f( 1,0, 0 );
+                glVertex3f( 0.1,0, 0 );
                 // axis y
                 glColor3f( 0.f,0.8f,0.f);
                 glVertex3f( 0,0, 0 );
-                glVertex3f( 0,1,0 );
+                glVertex3f( 0,0.1,0 );
                 // axis z
                 glColor3f( 0.2f,0.2f,1.f);
                 glVertex3f( 0,0, 0 );
-                glVertex3f( 0,0,1);
+                glVertex3f( 0,0,0.1);
 
                 glEnd();
 

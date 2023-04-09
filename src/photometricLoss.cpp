@@ -189,6 +189,8 @@ int main(int argc, char **argv) {
     int image_pyramid= 5;
     int lvl_target, lvl_ref;
     std::vector<cv::Point3f> points3D;
+    std::vector<cv::Vec<float,6>> points6D;// x ,y, z, r, g, b
+
     Mat pointOfInterestArea(grayImage_ref.rows, grayImage_ref.cols, CV_8UC1, Scalar(0));
     Mat deltaMap(grayImage_ref.rows, grayImage_ref.cols, CV_32FC3, Scalar(0,0,0)); // storing delta  Scalar(1,1,1) for ratio
     Mat deltaMapGT_res(grayImage_ref.rows, grayImage_ref.cols, CV_32FC1, Scalar(0));
@@ -440,7 +442,6 @@ int main(int argc, char **argv) {
                     specularHighlightRemoval_spcularity_2.initialize(Image_ref8UC3.rows, Image_ref8UC3.cols);
                     Mat diffuseImage_specular_2 = specularHighlightRemoval_spcularity_2.run(specularityMap_2_8UC3, specularityMap_2_mask);
 //                    Mat diffuseImage_specular_2 = specularHighlightRemoval_spcularity_2.run(dsoSelectedPointMask_tar_C3, sparsityMaskTar);
-
                     Mat clusterImage_specular_2 = specularHighlightRemoval_spcularity_2.clusterImage;
                     // suppress the left specular area intensity in the image
                     // calculate the mean of the not specular area
@@ -460,7 +461,6 @@ int main(int argc, char **argv) {
                     cout << "mean_not_specular_right: " << mean_not_specular_right << endl;
                     //  y= x*max(exp(-6x), 0.25);
                     // apply the function to the specular area
-
                     Mat I_before(Image_ref8UC3.rows, Image_ref8UC3.cols, CV_32FC1, Scalar(0));
                     Mat I_after(Image_ref8UC3.rows, Image_ref8UC3.cols, CV_32FC1, Scalar(0));
                     for(int pixel = 0; pixel < Image_ref8UC3.rows * Image_ref8UC3.cols; pixel++) {
@@ -479,9 +479,7 @@ int main(int argc, char **argv) {
                     imshow("I_after",I_after);
                     imshow("diffusePartofSpecularityImage2_afterRemovespecular",diffuseImage_specular_2);
                     drawClusters(clusterImage_specular_2,specularityMap_2_8UC3,"specularityMap_2");
-
 // ============================finish removing specular reflection area=================================================
-
                     waitKey(0);
                     cvtColor(specularityMap_1,specularityMap_1,CV_RGB2GRAY);
                     cvtColor(specularityMap_2,specularityMap_2,CV_RGB2GRAY);
@@ -489,7 +487,6 @@ int main(int argc, char **argv) {
                     cout<<"show type of specularityMap_1:"<<specularityMap_1.type()<<endl;
                     vector<double> specularityMap_Vec_1;
                     specularityMap_Vec_1 = vectorizeImage(specularityMap_1); // specularityMap_1
-
 //                    float  sum=0;
 //                    for(int i = 0; i < specularityMap_Vec_1.size(); i++){
 //                        if(specularityMap_Vec_1[i] > 0.0){
@@ -545,11 +542,10 @@ int main(int argc, char **argv) {
 //                            }
 //                        }
 //                    }
-//
 //                    imshow("specularityMask",specularityMask);
                     //then remove the specular area(red area) from the image, smooth the image and then use the smoothed image to update the delta map
                     specularityMap_Vec_1.erase(std::remove(specularityMap_Vec_1.begin(), specularityMap_Vec_1.end(), 0.0), specularityMap_Vec_1.end());
-                    drawResidualDistribution(specularityMap_Vec_1, "Sparse Gray Radiance Distribution", 480, 640);
+//                    drawResidualDistribution(specularityMap_Vec_1, "Sparse Gray Radiance Distribution", 480, 640);
                     imshow("specularityMap_1",specularityMap_1);
                     imshow("specularityMap_2",specularityMap_2);
                     waitKey(0);
@@ -933,7 +929,7 @@ int main(int argc, char **argv) {
     float cx_ = K_synthetic(0,2);
     float cy_ = K_synthetic(1,2);
 
-    showPointCloud(inputPoseGT,inputPose, pose1_gt, pose2_gt, pose_2, points3D, fx_, fy_, cx_, cy_);
+    showPointCloud(Image_ref8UC3, Image_tar8UC3, inputPoseGT,inputPose, pose1_gt, pose2_gt, pose_2, points3D, fx_, fy_, cx_, cy_);
 
 
     // apply the intensity segmentation here // && (grayImage_ref.at<uchar>(u,v)>(mean_val+scale_std*std_dev))

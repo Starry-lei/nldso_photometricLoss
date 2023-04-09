@@ -48,7 +48,7 @@ namespace DSONL {
 
 
 
-    void pbaRelativePose(float huberPara, Mat &image_left,float* statusMapPoints_ref,Mat &idepth_1_float, Mat &image_right, float* statusMapPoints_tar, const Eigen::Matrix3d &K, double* camera_poses, std::vector<cv::Point3f>& points3D){
+    void pbaRelativePose(float huberPara, Mat &image_left,float* statusMapPoints_ref,Mat &idepth_1_float, Mat &image_right, float* statusMapPoints_tar, const Eigen::Matrix3d &K, double* camera_poses, std::vector<cv::Point3f>& points3D){ // std::vector<cv::Point3f>& points3D
         // construct image patches
         ceres::Problem problem;
 
@@ -264,8 +264,6 @@ namespace DSONL {
                 problem.AddResidualBlock(cost_fun, loss_function, &(camera_poses[7]), &(depth_array[r*idepth_1_float.cols + c]));
                 // optimize depth
                 problem.SetParameterBlockConstant(&(depth_array[r*idepth_1_float.cols + c]));
-
-
 
 //            ceres::CostFunction* cost_fun_orig = PhotometricBundleAdjustment::Create(image_1_vectorized,
 //                                                                                image_1.cols, image_1.rows,
