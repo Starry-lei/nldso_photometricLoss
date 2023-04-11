@@ -46,8 +46,6 @@ namespace DSONL {
 
     }
 
-
-
     void pbaRelativePose(float huberPara, Mat &image_left,float* statusMapPoints_ref,Mat &idepth_1_float, Mat &image_right, float* statusMapPoints_tar, const Eigen::Matrix3d &K, double* camera_poses, std::vector<cv::Point3f>& points3D){ // std::vector<cv::Point3f>& points3D
         // construct image patches
         ceres::Problem problem;
