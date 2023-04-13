@@ -45,6 +45,7 @@ int main(int argc, char **argv) {
 
 //    std::string envMap_Folder="/home/lei/Documents/Research/envMapData/SeventeenPointsEnvMap";
 //    string controlPointPose_path= "/home/lei/Documents/Research/envMapData/scene0370_02_control_cam_pose.txt";
+//    string  renderedEnvMapPath="/home/lei/Documents/Research/envMapData/SeventeenPointsEnvMap";
 
 //    std::string envMap_Folder=    "/home/lei/Documents/Research/envMapData/EnvMap_2358";
 //    string controlPointPose_path= "/home/lei/Documents/Research/envMapData/2frame0370_02_control_cam_pose_2358.txt";
@@ -62,9 +63,9 @@ int main(int argc, char **argv) {
 //    string controlPointPose_path= "/home/lei/Documents/Research/envMapData/2frame0370_02_control_cam_pose_150.txt";
 //    string  renderedEnvMapPath=   "/home/lei/Documents/Research/envMapData/EnvMap150_wholeImg";
 
-    std::string envMap_Folder="/home/lei/Documents/Research/envMapData/EnvMap_156ctrlPoints";
-    string controlPointPose_path= "/home/lei/Documents/Research/envMapData/2frame0370_02_control_cam_pose156.txt";
-    string  renderedEnvMapPath=   "/home/lei/Documents/Research/envMapData/EnvMap_156ctrlPoints";
+//    std::string envMap_Folder="/home/lei/Documents/Research/envMapData/EnvMap_156ctrlPoints";
+//    string controlPointPose_path= "/home/lei/Documents/Research/envMapData/2frame0370_02_control_cam_pose156.txt";
+//    string  renderedEnvMapPath=   "/home/lei/Documents/Research/envMapData/EnvMap_156ctrlPoints";
 
 
 
@@ -116,15 +117,15 @@ int main(int argc, char **argv) {
         for (int v = 0; v < grayImage_ref.cols; v++)
         {
 //             if (static_cast<int>(sPointLambertianMask_10011.at<uchar>(u, v))==255 || static_cast<int>(pointOfInterestArea_Non_Lambertian_2358.at<uchar>(u, v))==255 ){
-            if (int(pointOfInterestArea_allPoints_38880.at<uchar>(u, v))==255 ) {
-                num_points_used+=1;
-                pointOfInterestArea.at<uchar>(u,v)= 255;
-            }
-
-//            if (int(pointOfInterestArea_Non_Lambertian_2358.at<uchar>(u, v))==255 ) {
+//            if (int(pointOfInterestArea_allPoints_38880.at<uchar>(u, v))==255 ) {
 //                num_points_used+=1;
 //                pointOfInterestArea.at<uchar>(u,v)= 255;
 //            }
+
+            if (int(pointOfInterestArea_Non_Lambertian_2358.at<uchar>(u, v))==255 ) {
+                num_points_used+=1;
+                pointOfInterestArea.at<uchar>(u,v)= 255;
+            }
 
 
         }

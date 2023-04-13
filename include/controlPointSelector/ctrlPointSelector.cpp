@@ -73,6 +73,8 @@ namespace DSONL {
         if (ControlpointCloud->empty()) { std::cerr << "\n Wrong Control-pointCloud!" << endl; }
         kdtree.setInputCloud(ControlpointCloud);
         imshow("slamImg", Image);
+        imwrite("slamImg.png", Image*255);
+
 
         std::unordered_map<int, int> inliers_filter, inliers_filter_i;
 //        inliers_filter.emplace(108, 97 );//cabinet
@@ -200,6 +202,7 @@ namespace DSONL {
         cout << "\n show number of selected ctrlPoints size:" << selectedIndex_vec.size() << endl;
 
         imshow("checkingArea", checkingArea);
+        imwrite("checkingArea.png", checkingArea*255);
         waitKey(0);
 
 
