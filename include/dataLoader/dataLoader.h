@@ -113,9 +113,8 @@ namespace DSONL {
 
 
                 if (useHDR){
-//                    image_ref_path =            "../data/exp_image0405/rgb/orig_4.pfm"; // HDR
-                    image_ref_path =            "../data/exp_image0405/twoLightSrcs_rgb/rgbp_4.pfm"; // HDR
-
+                    image_ref_path =            "../data/exp_image0405/rgb/orig_4.pfm"; // HDR
+//                    image_ref_path =            "../data/exp_image0405/twoLightSrcs_rgb/rgbp_4.pfm"; // HDR
                 }else{
                     //image_ref_path =            "../data/exp_image0405/rgb/image_04.png"; // LDR
                 }
@@ -176,8 +175,8 @@ namespace DSONL {
 
 
                     if (useHDR){
-//                        image_target_path ="../data/exp_image0405/rgb/orig_5.pfm"; // HDR
-                        image_target_path ="../data/exp_image0405/twoLightSrcs_rgb/rgbp_5.pfm"; // HDR
+                        image_target_path ="../data/exp_image0405/rgb/orig_5.pfm"; // HDR
+//                        image_target_path ="../data/exp_image0405/twoLightSrcs_rgb/rgbp_5.pfm"; // HDR
                     }else{
                         image_target_path = "../data/exp_image0405/rgb/image_05.png"; // LDR
                     }

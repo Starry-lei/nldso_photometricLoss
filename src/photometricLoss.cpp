@@ -37,15 +37,12 @@ int main(int argc, char **argv) {
 //    string controlPointPose_path= "/home/lei/Documents/Research/envMapData/2frame0370_02_control_cam_pose156.txt";
 //    string  renderedEnvMapPath=   "/home/lei/Documents/Research/envMapData/EnvMap_156ctrlPoints";
 
-//    std::string envMap_Folder=    "/home/lei/Documents/Research/envMapData/EnvMap_Img04_260";
-//    string controlPointPose_path= "/home/lei/Documents/Research/envMapData/2frame0370_02_control_cam_pose_image4.txt";
-//    string  renderedEnvMapPath=   "/home/lei/Documents/Research/envMapData/EnvMap_Img04_260";
-//
-
-
-    std::string envMap_Folder=    "/home/lei/Documents/Research/envMapData/EnvMap_Img04_moreSpecular_260";
+    std::string envMap_Folder=    "/home/lei/Documents/Research/envMapData/EnvMap_Img04_260";
     string controlPointPose_path= "/home/lei/Documents/Research/envMapData/2frame0370_02_control_cam_pose_image4.txt";
-    string  renderedEnvMapPath=   "/home/lei/Documents/Research/envMapData/EnvMap_Img04_moreSpecular_260";
+    string  renderedEnvMapPath=   "/home/lei/Documents/Research/envMapData/EnvMap_Img04_260";
+//    std::string envMap_Folder=    "/home/lei/Documents/Research/envMapData/EnvMap_Img04_moreSpecular_260";
+//    string controlPointPose_path= "/home/lei/Documents/Research/envMapData/2frame0370_02_control_cam_pose_image4.txt";
+//    string  renderedEnvMapPath=   "/home/lei/Documents/Research/envMapData/EnvMap_Img04_moreSpecular_260";
 
 
 
@@ -66,6 +63,7 @@ int main(int argc, char **argv) {
 
     normal_map_GT = dataLoader->normal_map_GT;
     image_ref_roughness = dataLoader->image_ref_roughness;
+    Mat grayImage_ref,grayImage_ref_pS, grayImage_tar,grayImage_tar_pS, grayImage_ref_green, grayImage_tar_green, grayImage_ref_32FC1, grayImage_tar_32FC1;
 
     if(usePFM){
         Image_ref32FC3 = dataLoader->grayImage_ref;
@@ -94,7 +92,7 @@ int main(int argc, char **argv) {
     Mat diffuse_mask(Image_ref8UC3.rows, Image_ref8UC3.cols,CV_8UC1,Scalar(0));
  //  1: specular_diffuse transition, 2: diffuse, 3: specular
 
-    Mat grayImage_ref,grayImage_ref_pS, grayImage_tar,grayImage_tar_pS, grayImage_ref_green, grayImage_tar_green, grayImage_ref_32FC1, grayImage_tar_32FC1;
+//    Mat grayImage_ref,grayImage_ref_pS, grayImage_tar,grayImage_tar_pS, grayImage_ref_green, grayImage_tar_green, grayImage_ref_32FC1, grayImage_tar_32FC1;
     // use it for photometric loss
     extractChannel(Image_ref32FC3, grayImage_ref_green, channelIdx);
     extractChannel(Image_tar32FC3, grayImage_tar_green, channelIdx);
@@ -157,7 +155,7 @@ int main(int argc, char **argv) {
     // setup ceres problem
     size_t num_cameras = 2;
     Sophus::SE3d inputPose(q12_input,t12_input);
-    bool useGT= true;
+    bool useGT= false;
     bool useImagePyramid = true;
 //    bool useImagePyramid = false;
     bool useDelta = true;
@@ -547,7 +545,10 @@ int main(int argc, char **argv) {
                     specularityMap_Vec_1.erase(std::remove(specularityMap_Vec_1.begin(), specularityMap_Vec_1.end(), 0.0), specularityMap_Vec_1.end());
 //                    drawResidualDistribution(specularityMap_Vec_1, "Sparse Gray Radiance Distribution", 480, 640);
                     imshow("specularityMap_1",specularityMap_1);
+                    imwrite("specularityMap_1.png",specularityMap_1*255);
                     imshow("specularityMap_2",specularityMap_2);
+                    imwrite("specularityMap_2.png",specularityMap_2*255);
+
                     waitKey(0);
 
 
@@ -565,6 +566,8 @@ int main(int argc, char **argv) {
                     cv::normalize(sumChannel, specularityChange, 0, 1, cv::NORM_MINMAX, CV_32F);
 
                     imshow("specularityChange",specularityChange);
+                    imwrite("specularityChange.png",specularityChange*255);
+
                     waitKey(0);
 
                     // calculate W_specularity map based on exp(-x)
@@ -581,6 +584,7 @@ int main(int argc, char **argv) {
                     }
 
                     imshow("W_specularity",W_specularity);
+                    imwrite("W_specularity.png",W_specularity*255);
                     waitKey(0);
 
 
@@ -603,7 +607,7 @@ int main(int argc, char **argv) {
                     greenChannel_deltaMap_vec.erase(std::remove(greenChannel_deltaMap_vec.begin(), greenChannel_deltaMap_vec.end(), 0.0), greenChannel_deltaMap_vec.end());
                     saveArray(greenChannel_deltaMap_vec);
 
-                    drawResidualDistribution(greenChannel_deltaMap_vec, "GT pose SpecularityErrorDistributionDSOselectedAndEnvmap F", 480, 640);
+                    drawResidualDistribution(greenChannel_deltaMap_vec, " Specular term residual distribution ", 480, 640);
 //                    imshow("deltaMap",deltaMap);
 //                    imshow("envMapWorkMask",envMapWorkMask);
 //                    waitKey(0);

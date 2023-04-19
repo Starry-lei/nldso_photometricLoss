@@ -100,8 +100,8 @@ namespace DSONL {
                 Eigen::Vector3f p_eigen(p.x, p.y, p.z);
 
 
-                Eigen::Vector3f p_transfromed = pose.rotationMatrix().cast<float>() * p_eigen + pose.translation().cast<float>();
-                p_eigen=p_transfromed;
+//                Eigen::Vector3f p_transfromed = pose.rotationMatrix().cast<float>() * p_eigen + pose.translation().cast<float>();
+//                p_eigen=p_transfromed;
 
 
 
@@ -110,11 +110,11 @@ namespace DSONL {
                 float u1 = pc1_cv[0] / pc1_cv[2];
                 float v1 = pc1_cv[1] / pc1_cv[2];
                 float r1, g1, b1;
-//                GetPixelValue(image_ref, u1, v1, r1, g1, b1);
+                GetPixelValue(image_ref, u1, v1, r1, g1, b1);
 
 
 
-                GetPixelValue(image_tar, u1, v1, r1, g1, b1);
+//                GetPixelValue(image_tar, u1, v1, r1, g1, b1);
 
 
 
