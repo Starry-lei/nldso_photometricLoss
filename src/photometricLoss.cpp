@@ -25,17 +25,13 @@ int main(int argc, char **argv) {
     // A: line: 26-27
     dataLoader *dataLoader = new DSONL::dataLoader();
 	dataLoader->Init();
-
-
     // ===========================Environment Light preprocessing module===========================================
-
-//    std::string envMap_Folder="/home/lei/Documents/Research/envMapData/EnvMap150_wholeImg";
-//    string controlPointPose_path= "/home/lei/Documents/Research/envMapData/2frame0370_02_control_cam_pose_150.txt";
-//    string  renderedEnvMapPath=   "/home/lei/Documents/Research/envMapData/EnvMap150_wholeImg";
-
-//    std::string envMap_Folder=    "/home/lei/Documents/Research/envMapData/EnvMap_156ctrlPoints";
-//    string controlPointPose_path= "/home/lei/Documents/Research/envMapData/2frame0370_02_control_cam_pose156.txt";
-//    string  renderedEnvMapPath=   "/home/lei/Documents/Research/envMapData/EnvMap_156ctrlPoints";
+    //    std::string envMap_Folder="/home/lei/Documents/Research/envMapData/EnvMap150_wholeImg";
+    //    string controlPointPose_path= "/home/lei/Documents/Research/envMapData/2frame0370_02_control_cam_pose_150.txt";
+    //    string  renderedEnvMapPath=   "/home/lei/Documents/Research/envMapData/EnvMap150_wholeImg";
+    //    std::string envMap_Folder=    "/home/lei/Documents/Research/envMapData/EnvMap_156ctrlPoints";
+    //    string controlPointPose_path= "/home/lei/Documents/Research/envMapData/2frame0370_02_control_cam_pose156.txt";
+    //    string  renderedEnvMapPath=   "/home/lei/Documents/Research/envMapData/EnvMap_156ctrlPoints";
 
     std::string envMap_Folder=    "/home/lei/Documents/Research/envMapData/EnvMap_Img04_260";
     string controlPointPose_path= "/home/lei/Documents/Research/envMapData/2frame0370_02_control_cam_pose_image4.txt";
@@ -43,11 +39,6 @@ int main(int argc, char **argv) {
 //    std::string envMap_Folder=    "/home/lei/Documents/Research/envMapData/EnvMap_Img04_moreSpecular_260";
 //    string controlPointPose_path= "/home/lei/Documents/Research/envMapData/2frame0370_02_control_cam_pose_image4.txt";
 //    string  renderedEnvMapPath=   "/home/lei/Documents/Research/envMapData/EnvMap_Img04_moreSpecular_260";
-
-
-
-
-
 
 
     // data loading
@@ -63,17 +54,10 @@ int main(int argc, char **argv) {
 
     normal_map_GT = dataLoader->normal_map_GT;
     image_ref_roughness = dataLoader->image_ref_roughness;
-    Mat grayImage_ref,grayImage_ref_pS, grayImage_tar,grayImage_tar_pS, grayImage_ref_green, grayImage_tar_green, grayImage_ref_32FC1, grayImage_tar_32FC1;
+    Mat grayImage_ref, grayImage_tar;
 
-    if(usePFM){
-        Image_ref32FC3 = dataLoader->grayImage_ref;
-        Image_tar32FC3 = dataLoader->grayImage_target;
-        Image_ref32FC3.convertTo(Image_ref8UC3, CV_8UC3, 255.0);
-        Image_tar32FC3.convertTo(Image_tar8UC3, CV_8UC3, 255.0);
-    }else{
-        Image_ref8UC3 = dataLoader->grayImage_ref;
-        Image_tar8UC3 = dataLoader->grayImage_target;
-    }
+    Image_ref8UC3 = dataLoader->grayImage_ref;
+    Image_tar8UC3 = dataLoader->grayImage_target;
 
 	depth_ref_inv = dataLoader->depth_map_ref;
     depth_tar_inv = dataLoader->depth_map_target;
@@ -92,27 +76,11 @@ int main(int argc, char **argv) {
     Mat diffuse_mask(Image_ref8UC3.rows, Image_ref8UC3.cols,CV_8UC1,Scalar(0));
  //  1: specular_diffuse transition, 2: diffuse, 3: specular
 
-//    Mat grayImage_ref,grayImage_ref_pS, grayImage_tar,grayImage_tar_pS, grayImage_ref_green, grayImage_tar_green, grayImage_ref_32FC1, grayImage_tar_32FC1;
-    // use it for photometric loss
-    extractChannel(Image_ref32FC3, grayImage_ref_green, channelIdx);
-    extractChannel(Image_tar32FC3, grayImage_tar_green, channelIdx);
-
-    cvtColor(Image_ref32FC3, grayImage_ref_32FC1, CV_RGB2GRAY);
-    cvtColor(Image_tar32FC3, grayImage_tar_32FC1, CV_RGB2GRAY);
-
 
     cvtColor(Image_ref8UC3, grayImage_ref, CV_RGB2GRAY);
     cvtColor(Image_tar8UC3, grayImage_tar, CV_RGB2GRAY);
 
-    Mat grayImg, mat_mean, mat_stddev;
-    double mean_val;
-    double std_dev;
-    meanStdDev(grayImage_ref_pS, mat_mean, mat_stddev);
-    mean_val= mat_mean.at<double>(0,0);
-    std_dev = mat_stddev.at<double>(0,0);
-
-
-    // ====================================== pointSelector========================================
+// ====================================== pointSelector========================================
     bool usePixelSelector= true;
     float densities[] = {1,0.5,0.15,0.05,0.03}; // 不同层取得点密度
 //    float densities[] = {0.03,0.003, 0.05,0.15,0.5,1}; /// number of optimized depths,  current index is 1
@@ -140,7 +108,6 @@ int main(int argc, char **argv) {
 //    Eigen::Vector3d perturbedTranslation = translation_pertabation(0.3, 0.3, 0.3, T_GT, trErr); // percentage
     Eigen::Vector3d perturbedTranslation = translation_pertabation(0.0, 0.0, 0.0, xi_GT.translation(), trErr); // percentage
     Eigen::Vector3d t12_input = perturbedTranslation;
-
     double roErr;
 //    Eigen::Matrix3d perturbedRotation = rotation_pertabation(8.0,8.0,8.0, R_GT, roErr); // degree
     Eigen::Matrix3d perturbedRotation = rotation_pertabation(0.0,0.0,0.0, xi_GT.rotationMatrix(), roErr); // degree
@@ -167,7 +134,6 @@ int main(int argc, char **argv) {
 
 
 
-
     // initial error analysis
     Sophus::SE3d pose_ini = Sophus::SE3d(Eigen::Quaterniond(camera_poses[7], camera_poses[8], camera_poses[9], camera_poses[10]),
                                        Eigen::Vector3d(camera_poses[11], camera_poses[12], camera_poses[13]));
@@ -180,10 +146,8 @@ int main(int argc, char **argv) {
          << "\n Show depth error :" << "depthErr(depth_ref_gt, inv_depth_ref).val[0]"
          << endl;
 
+   float huberPara=40.0f;
 
-
-    // use image pyramid or not
-    float huberPara=4.0f/255.0; // 4.0f / 255.0;
     int image_pyramid= 5;
     int lvl_target, lvl_ref;
     std::vector<cv::Point3f> points3D;
@@ -197,294 +161,266 @@ int main(int argc, char **argv) {
     imshow("Image_tar8UC3",Image_tar8UC3);
     waitKey(0);
 
-    if (useImagePyramid){
-        Eigen::Matrix3f K=K_synthetic.cast<float>();
-        for (int lvl = image_pyramid; lvl >= 1; lvl--) {
-            points3D.clear();
-            cout << "\n Show the value of lvl:" << lvl << endl;
-            Mat IRef,IRef_8UC1, DRef, I, I_8UC1, D;
-            Eigen::Matrix3f Klvl, Klvl_ignore;
-            lvl_target = lvl;
-            lvl_ref = lvl;
-            int  npts_lvl_ref[lvl];
-            int  npts_lvl_tar[lvl];
-            float* statusMapPoints_ref= new float[wG[lvl-1]*hG[lvl-1]];
-            float* statusMapPoints_tar= new float[wG[lvl-1]*hG[lvl-1]];
-            if (usePFM){
-                cout<<"\n show type of grayImage_ref_green:"<<grayImage_ref_green.type()<<endl;
-                cout<<"\n show type of grayImage_tar_green:"<<grayImage_tar_green.type()<<endl;
-                downscale(grayImage_ref_32FC1, depth_ref_inv, K, lvl_ref, IRef, DRef, Klvl);
-                downscale(grayImage_tar_32FC1, depth_tar_inv, K, lvl_target, I, D, Klvl_ignore);
-            }else{
-                downscale(grayImage_ref, depth_ref_inv, K, lvl_ref, IRef, DRef, Klvl);
-                downscale(grayImage_tar, depth_tar_inv, K, lvl_target, I, D, Klvl_ignore);
+    Eigen::Matrix3f K=K_synthetic.cast<float>();
+    for (int lvl = image_pyramid; lvl >= 1; lvl--) {
+        points3D.clear();
+        cout << "\n Show the value of lvl:" << lvl << endl;
+        Mat IRef, DRef, I, D;
+        Eigen::Matrix3f Klvl, Klvl_ignore;
+        lvl_target = lvl;
+        lvl_ref = lvl;
+        int  npts_lvl_ref[lvl];
+        int  npts_lvl_tar[lvl];
+        float* statusMapPoints_ref= new float[wG[lvl-1]*hG[lvl-1]];
+        float* statusMapPoints_tar= new float[wG[lvl-1]*hG[lvl-1]];
+
+        downscale(grayImage_ref, depth_ref_inv, K, lvl_ref, IRef, DRef, Klvl);
+        downscale(grayImage_tar, depth_tar_inv, K, lvl_target, I, D, Klvl_ignore);
+        // show size of IRef
+        cout << "\n Show the size of IRef:" << IRef.size() << endl;
+        if (usePixelSelector and lvl==1){
+            FrameHessian* frame_ref= new FrameHessian();
+            FrameHessian* frame_tar= new FrameHessian();
+            PixelSelector* pixelSelector_lvl= new PixelSelector(wG[lvl-1],hG[lvl-1]);
+            float* color_ref_lvl= new float[wG[lvl-1]*hG[lvl-1]];
+            float* color_tar_lvl= new float[wG[lvl-1]*hG[lvl-1]];
+            for (int row = 0; row < hG[lvl-1]; ++row) {
+                uchar *pixel_ref_lvl=IRef.ptr<uchar>(row);
+                uchar *pixel_tar_lvl=I.ptr<uchar>(row);
+                for (int col = 0; col < wG[lvl-1]; ++col) {
+                    color_ref_lvl[row*wG[lvl-1]+col]= (float) pixel_ref_lvl[col];
+                    color_tar_lvl[row*wG[lvl-1]+col]= (float) pixel_tar_lvl[col];
+                }
             }
-            // show size of IRef
-            cout << "\n Show the size of IRef:" << IRef.size() << endl;
-            if (usePixelSelector and lvl==1){
-                IRef.convertTo(IRef_8UC1, CV_8UC1,255.0);
-                I.convertTo(I_8UC1, CV_8UC1, 255.0);
-                FrameHessian* frame_ref= new FrameHessian();
-                FrameHessian* frame_tar= new FrameHessian();
-                PixelSelector* pixelSelector_lvl= new PixelSelector(wG[lvl-1],hG[lvl-1]);
-                float* color_ref_lvl= new float[wG[lvl-1]*hG[lvl-1]];
-                float* color_tar_lvl= new float[wG[lvl-1]*hG[lvl-1]];
-                for (int row = 0; row < hG[lvl-1]; ++row) {
-                    uchar *pixel_ref_lvl=IRef_8UC1.ptr<uchar>(row);
-                    uchar *pixel_tar_lvl=I_8UC1.ptr<uchar>(row);
-                    for (int col = 0; col < wG[lvl-1]; ++col) {
-                        color_ref_lvl[row*wG[lvl-1]+col]= (float) pixel_ref_lvl[col];
-                        color_tar_lvl[row*wG[lvl-1]+col]= (float) pixel_tar_lvl[col];
+            frame_ref->makeImages(color_ref_lvl);
+            frame_tar->makeImages(color_tar_lvl);
+            pixelSelector_lvl->currentPotential= 3;
+
+            npts_lvl_ref[lvl-1]=  pixelSelector_lvl->makeMaps(frame_ref, statusMapPoints_ref, densities[lvl-1] * wG[0] * hG[0], 1, false, 2);
+            cout << "\n npts_lvl_ref[i]: " << npts_lvl_ref[lvl-1] << "\n densities[i-1]*wG[0]*hG[0]:" << densities[lvl-1] * wG[0] * hG[0] << endl;
+            npts_lvl_tar[lvl-1]=  pixelSelector_lvl->makeMaps(frame_tar, statusMapPoints_tar, densities[lvl-1] * wG[0] * hG[0], 1, false, 2);
+            cout << "\n npts_lvl_tar[i]: " << npts_lvl_tar[lvl-1] << "\n densities[i-1]*wG[0]*hG[0]:" << densities[lvl-1] * wG[0] * hG[0] << endl;
+
+
+            // check the dso selected points
+            Mat dsoSelectedPointMask(grayImage_ref.rows,  grayImage_ref.cols, CV_8UC1, Scalar(0));
+            Mat dsoSelectedPointMask_C3(grayImage_ref.rows,  grayImage_ref.cols, CV_8UC3, Scalar(0,0,0));
+            Mat dsoSelectedPointMask_tar_C3(grayImage_ref.rows,  grayImage_ref.cols, CV_8UC3, Scalar(0,0,0));
+            Mat sparsityMaskRef(grayImage_ref.rows,  grayImage_ref.cols, CV_32FC1, Scalar(0));
+            Mat sparsityMaskTar(grayImage_ref.rows,  grayImage_ref.cols, CV_32FC1, Scalar(0));
+            Mat dsoSelectedPointAndISMask(grayImage_ref.rows,  grayImage_ref.cols, CV_8UC1, Scalar(0));
+            Mat dsoSelectedPixels(grayImage_ref.rows,  grayImage_ref.cols, CV_32FC1, Scalar(0));
+
+
+            int point_counter=0;
+            int dso_point_counter=0;
+            int dso_point_counter_merge=0;
+            for (int u = 0; u< grayImage_ref.rows; u++) // colId, cols: 0 to 480
+            {
+                for (int v = 0; v < grayImage_ref.cols; v++) // rowId,  rows: 0 to 640
+                {
+                    if ((statusMapPoints_ref!=NULL && statusMapPoints_ref[u*grayImage_ref.cols+v]!=0) ){
+                        dso_point_counter+=1;
+                        dsoSelectedPointMask.at<uchar>(u,v)= 255;
+                        sparsityMaskRef.at<float>(u,v)= 1;
+                        dsoSelectedPointMask_C3.at<cv::Vec3b>(u,v)=Image_ref8UC3.at<cv::Vec3b>(u,v);
+                        pointOfInterestArea.at<uchar>(u,v)= 255;
+                        dsoSelectedPixels.at<float>(u,v)= IRef.at<float>(u,v);
                     }
                 }
-                frame_ref->makeImages(color_ref_lvl);
-                frame_tar->makeImages(color_tar_lvl);
-                pixelSelector_lvl->currentPotential= 3;
-
-                npts_lvl_ref[lvl-1]=  pixelSelector_lvl->makeMaps(frame_ref, statusMapPoints_ref, densities[lvl-1] * wG[0] * hG[0], 1, false, 2);
-                cout << "\n npts_lvl_ref[i]: " << npts_lvl_ref[lvl-1] << "\n densities[i-1]*wG[0]*hG[0]:" << densities[lvl-1] * wG[0] * hG[0] << endl;
-                npts_lvl_tar[lvl-1]=  pixelSelector_lvl->makeMaps(frame_tar, statusMapPoints_tar, densities[lvl-1] * wG[0] * hG[0], 1, false, 2);
-                cout << "\n npts_lvl_tar[i]: " << npts_lvl_tar[lvl-1] << "\n densities[i-1]*wG[0]*hG[0]:" << densities[lvl-1] * wG[0] * hG[0] << endl;
-
-
-                // check the dso selected points
-                Mat dsoSelectedPointMask(grayImage_ref.rows,  grayImage_ref.cols, CV_8UC1, Scalar(0));
-                Mat dsoSelectedPointMask_C3(grayImage_ref.rows,  grayImage_ref.cols, CV_8UC3, Scalar(0,0,0));
-                Mat dsoSelectedPointMask_tar_C3(grayImage_ref.rows,  grayImage_ref.cols, CV_8UC3, Scalar(0,0,0));
-
-                Mat sparsityMaskRef(grayImage_ref.rows,  grayImage_ref.cols, CV_32FC1, Scalar(0));
-                Mat sparsityMaskTar(grayImage_ref.rows,  grayImage_ref.cols, CV_32FC1, Scalar(0));
-
-                Mat dsoSelectedPointAndISMask(grayImage_ref.rows,  grayImage_ref.cols, CV_8UC1, Scalar(0));
-                Mat dsoSelectedPixels(grayImage_ref.rows,  grayImage_ref.cols, CV_32FC1, Scalar(0));
-
-
-                int point_counter=0;
-                int dso_point_counter=0;
-                int dso_point_counter_merge=0;
-                for (int u = 0; u< grayImage_ref.rows; u++) // colId, cols: 0 to 480
+            }
+            int counter_outlier=0;
+            for (int u = 0; u < IRef.rows; u++)// colId, cols: 0 to 480
+            {
+                for (int v = 0; v < IRef.cols; v++)// rowId,  rows: 0 to 640
                 {
-                    for (int v = 0; v < grayImage_ref.cols; v++) // rowId,  rows: 0 to 640
-                    {
-                        if ((statusMapPoints_ref!=NULL && statusMapPoints_ref[u*grayImage_ref.cols+v]!=0) ){
-                            dso_point_counter+=1;
-                            dsoSelectedPointMask.at<uchar>(u,v)= 255;
-                            sparsityMaskRef.at<float>(u,v)= 1;
-                            dsoSelectedPointMask_C3.at<cv::Vec3b>(u,v)=Image_ref8UC3.at<cv::Vec3b>(u,v);
-                            pointOfInterestArea.at<uchar>(u,v)= 255;
-                            dsoSelectedPixels.at<float>(u,v)= IRef.at<float>(u,v);
-                        }
-                    }
-                }
-//                for (int u = 0; u< grayImage_ref.rows; u++) // colId, cols: 0 to 480
-//                {
-//                    for (int v = 0; v < grayImage_ref.cols; v++) // rowId,  rows: 0 to 640
-//                    {
-//                        if(image_ref_roughness.at<float>(u,v) < roughness_threshold ){ //&& clusterImage.at<int>(u, v) == 1
-////                            pointOfInterestArea.at<uchar>(u,v)= 255;
-//                        }
-//                        if (((statusMapPoints_ref!=NULL && statusMapPoints_ref[u*grayImage_ref.cols+v]!=0 )) || (image_ref_roughness.at<float>(u,v) < roughness_threshold )){ //&& clusterImage.at<int>(u, v) == 1
-//                            dso_point_counter_merge+=1;
-//                            dsoSelectedPointAndISMask.at<uchar>(u,v)= 255;
-////                            statusMapPoints_ref[u*grayImage_ref.cols+v]=6;// 6 is not fixed
-//                        }
-//                    }
-//                }
-//                imshow("dsoSelectedPointMask", dsoSelectedPointAndISMask);
-//                cout << "\n dso_point_counter_merge: " << dso_point_counter_merge << endl;
-                int counter_outlier=0;
-                for (int u = 0; u < IRef.rows; u++)// colId, cols: 0 to 480
-                {
-                    for (int v = 0; v < IRef.cols; v++)// rowId,  rows: 0 to 640
-                    {
-                        // print out the value of the pixel
-                        if (((int)pointOfInterestArea.at<uchar>(u,v)) ==255){
-                                 Sophus::SE3d pose_temp = Sophus::SE3d(Eigen::Quaterniond(camera_poses[7], camera_poses[8], camera_poses[9], camera_poses[10]),
-                                                                  Eigen::Vector3d(camera_poses[11], camera_poses[12], camera_poses[13]));
-                            Eigen::Matrix<float, 3, 3> KRKi = K_synthetic * pose_temp.rotationMatrix().cast<float>() * K_synthetic.inverse();
-                            Eigen::Matrix<float, 3, 1> Kt = K_synthetic * pose_temp.translation().cast<float>();
-                            Eigen::Vector2d pixelCoord((double) v, (double) u);
-                            Eigen::Matrix<float, 2, 1> pt2d;
-                            if (!project((float) v, (float) u, (float) DRef.at<float>(u, v), (int) IRef.cols, (int) IRef.rows, KRKi, Kt, pt2d)) {
-                                counter_outlier+=1;continue; }
-                            sparsityMaskTar.at<float>(round(pt2d[1]),round(pt2d[0]))= 1;
-                            dsoSelectedPointMask_tar_C3.at<cv::Vec3b>(round(pt2d[1]),
-                                                                      round(pt2d[0]))=Image_tar8UC3.at<cv::Vec3b>(round(pt2d[1]),
-                                                                                                       round(pt2d[0]));
+                    // print out the value of the pixel
+                    if (((int)pointOfInterestArea.at<uchar>(u,v)) ==255){
+                        Sophus::SE3d pose_temp = Sophus::SE3d(Eigen::Quaterniond(camera_poses[7], camera_poses[8], camera_poses[9], camera_poses[10]),
+                                                              Eigen::Vector3d(camera_poses[11], camera_poses[12], camera_poses[13]));
+                        Eigen::Matrix<float, 3, 3> KRKi = K_synthetic * pose_temp.rotationMatrix().cast<float>() * K_synthetic.inverse();
+                        Eigen::Matrix<float, 3, 1> Kt = K_synthetic * pose_temp.translation().cast<float>();
+                        Eigen::Vector2d pixelCoord((double) v, (double) u);
+                        Eigen::Matrix<float, 2, 1> pt2d;
+                        if (!project((float) v, (float) u, (float) DRef.at<float>(u, v), (int) IRef.cols, (int) IRef.rows, KRKi, Kt, pt2d)) {
+                            counter_outlier+=1;continue; }
+                        sparsityMaskTar.at<float>(round(pt2d[1]),round(pt2d[0]))= 1;
+                        dsoSelectedPointMask_tar_C3.at<cv::Vec3b>(round(pt2d[1]),
+                                                                  round(pt2d[0]))=Image_tar8UC3.at<cv::Vec3b>(round(pt2d[1]),
+                                                                                                              round(pt2d[0]));
 
 //                                IRef.at<float>(u,v)=IRef.at<float>(u,v)+greenChannel_deltaMap.at<float>(u,v);
 //                                IRef.at<float>(u,v)= 1/greenChannel_deltaMap.at<float>(u,v) * IRef.at<float>(u,v);
-                        }
                     }
                 }
+            }
 
-                imshow("dsoSelectedPointMask_ref_C3",dsoSelectedPointMask_C3);
-                imshow("dsoSelectedPointMask_tar_C3",dsoSelectedPointMask_tar_C3);
+            imshow("dsoSelectedPointMask_ref_C3",dsoSelectedPointMask_C3);
+            imshow("dsoSelectedPointMask_tar_C3",dsoSelectedPointMask_tar_C3);
 
-                pbaRelativePose(huberPara, IRef,statusMapPoints_ref,DRef, I,statusMapPoints_tar,Klvl.cast<double>(),camera_poses, points3D);
-
-
-                // result analysis
-                Sophus::SE3d pose_2 = Sophus::SE3d(Eigen::Quaterniond(camera_poses[7], camera_poses[8], camera_poses[9], camera_poses[10]),
-                                                   Eigen::Vector3d(camera_poses[11], camera_poses[12], camera_poses[13]));
-
-                std::cout << pose_2.matrix() << std::endl;
-                cout << "\n Show optimized rotation:\n" << pose_2.rotationMatrix()<< std::endl;
-                Eigen::Vector3d ea = pose_2.rotationMatrix().eulerAngles(0, 1, 2);
-                cout << "to Euler angles(XYZ):" << endl;
-                cout << ea*180/M_PI << endl << endl;
-                cout<<"\n Show optimized translation:\n"<< pose_2.translation() << endl;
-                cout << "\n Show Rotational error :" << rotationErr(xi_GT.rotationMatrix(),  pose_2.rotationMatrix())
-                     << "(degree)." << "\n Show translational error :"
-                     << 100 * translationErr(xi_GT.translation(), pose_2.translation()) << "(%) "
-                     << "\n Show depth error :" << "depthErr(depth_ref_gt, inv_depth_ref).val[0]"
-                     << endl;
+            pbaRelativePose(huberPara, IRef,statusMapPoints_ref,DRef, I,statusMapPoints_tar,Klvl.cast<double>(),camera_poses, points3D);
 
 
-                // merge the transition field (less roughness)and dso selected points and use non-lambertian correction then optimize the pose , depth again
-                // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!try to not use dso pixel selector but use the intensity segmentation method while using the dso selected points, information(lambertian+ corrected non-lambertian) merging
-                if (useDelta){
-                    double distanceThres = 0.0035;
-                    float upper = 2.0;
-                    float buttom = 0.5;
-                    imshow("pointOfInterestArea", pointOfInterestArea);
-                    //	//--------------------------------------------------normal_map_GT---------------------------------------------------
-                    cv::Mat normal_map(grayImage_ref.rows, grayImage_ref.cols, CV_32FC3);
-                    for (int u = 0; u < grayImage_ref.rows; u++) // colId, cols: 0 to 480
+            // result analysis
+            Sophus::SE3d pose_2 = Sophus::SE3d(Eigen::Quaterniond(camera_poses[7], camera_poses[8], camera_poses[9], camera_poses[10]),
+                                               Eigen::Vector3d(camera_poses[11], camera_poses[12], camera_poses[13]));
+
+            std::cout << pose_2.matrix() << std::endl;
+            cout << "\n Show optimized rotation:\n" << pose_2.rotationMatrix()<< std::endl;
+            Eigen::Vector3d ea = pose_2.rotationMatrix().eulerAngles(0, 1, 2);
+            cout << "to Euler angles(XYZ):" << endl;
+            cout << ea*180/M_PI << endl << endl;
+            cout<<"\n Show optimized translation:\n"<< pose_2.translation() << endl;
+            cout << "\n Show Rotational error :" << rotationErr(xi_GT.rotationMatrix(),  pose_2.rotationMatrix())
+                 << "(degree)." << "\n Show translational error :"
+                 << 100 * translationErr(xi_GT.translation(), pose_2.translation()) << "(%) "
+                 << "\n Show depth error :" << "depthErr(depth_ref_gt, inv_depth_ref).val[0]"
+                 << endl;
+
+
+            // merge the transition field (less roughness)and dso selected points and use non-lambertian correction then optimize the pose , depth again
+            // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!try to not use dso pixel selector but use the intensity segmentation method while using the dso selected points, information(lambertian+ corrected non-lambertian) merging
+            if (useDelta){
+                double distanceThres = 0.0035;
+                float upper = 2.0;
+                float buttom = 0.5;
+                imshow("pointOfInterestArea", pointOfInterestArea);
+                //	//--------------------------------------------------normal_map_GT---------------------------------------------------
+                cv::Mat normal_map(grayImage_ref.rows, grayImage_ref.cols, CV_32FC3);
+                for (int u = 0; u < grayImage_ref.rows; u++) // colId, cols: 0 to 480
+                {
+                    for (int v = 0; v < grayImage_ref.cols; v++) // rowId,  rows: 0 to 640
                     {
-                        for (int v = 0; v < grayImage_ref.cols; v++) // rowId,  rows: 0 to 640
-                        {
-                            Eigen::Vector3f normal_new(normal_map_GT.at<cv::Vec3f>(u, v)[0], normal_map_GT.at<cv::Vec3f>(u, v)[1],normal_map_GT.at<cv::Vec3f>(u, v)[2]);
-                            //			normal_new = (dataLoader->R1.cast<float>()).transpose()* normal_new;
-                            Eigen::Vector3f principal_axis(0, 0, 1);
-                            if (normal_new.dot(principal_axis) > 0) {normal_new = -normal_new;}
-                            normal_map.at<Vec3f>(u, v)[0] = normal_new(0);
-                            normal_map.at<Vec3f>(u, v)[1] = normal_new(1);
-                            normal_map.at<Vec3f>(u, v)[2] = normal_new(2);
-                        }
+                        Eigen::Vector3f normal_new(normal_map_GT.at<cv::Vec3f>(u, v)[0], normal_map_GT.at<cv::Vec3f>(u, v)[1],normal_map_GT.at<cv::Vec3f>(u, v)[2]);
+                        //			normal_new = (dataLoader->R1.cast<float>()).transpose()* normal_new;
+                        Eigen::Vector3f principal_axis(0, 0, 1);
+                        if (normal_new.dot(principal_axis) > 0) {normal_new = -normal_new;}
+                        normal_map.at<Vec3f>(u, v)[0] = normal_new(0);
+                        normal_map.at<Vec3f>(u, v)[1] = normal_new(1);
+                        normal_map.at<Vec3f>(u, v)[2] = normal_new(2);
                     }
-                    Mat newNormalMap = normal_map;
-                    //Mat deltaMap(grayImage_ref.rows, grayImage_ref.cols, CV_32FC3, Scalar(1,1,1)); // storing delta
-                    Mat envMapWorkMask(deltaMap.rows, deltaMap.cols, CV_8UC1, Scalar(0));
+                }
+                Mat newNormalMap = normal_map;
+                //Mat deltaMap(grayImage_ref.rows, grayImage_ref.cols, CV_32FC3, Scalar(1,1,1)); // storing delta
+                Mat envMapWorkMask(deltaMap.rows, deltaMap.cols, CV_8UC1, Scalar(0));
 
-                    Sophus::SO3d Rotation_GT(xi_GT.rotationMatrix());
-                    Eigen::Matrix<double, 3, 1> Translation_GT(xi_GT.translation());
-                    Mat specularityMap_1, specularityMap_2;
-                    DSONL::updateDelta(dataLoader->camPose1,EnvLightLookup, statusMapPoints_ref,Rotation_GT,Translation_GT,K_synthetic,depth_ref_inv,image_ref_roughness,deltaMap,newNormalMap, pointOfInterestArea, renderedEnvMapPath,envMapWorkMask,specularityMap_1,specularityMap_2);
+                Sophus::SO3d Rotation_GT(xi_GT.rotationMatrix());
+                Eigen::Matrix<double, 3, 1> Translation_GT(xi_GT.translation());
+                Mat specularityMap_1, specularityMap_2;
+                DSONL::updateDelta(dataLoader->camPose1,EnvLightLookup, statusMapPoints_ref,Rotation_GT,Translation_GT,K_synthetic,depth_ref_inv,image_ref_roughness,deltaMap,newNormalMap, pointOfInterestArea, renderedEnvMapPath,envMapWorkMask,specularityMap_1,specularityMap_2);
 
-                    // =================use the specularity map as weight map to remove the specular area of the image===========
-                    Mat specularityMap_1_8UC3,specularityMap_1_mask_8uC1, specularityMap_1_mask;
-                    Mat specularityMap_2_8UC3,specularityMap_2_mask_8uC1, specularityMap_2_mask;
-                    specularityMap_1.convertTo(specularityMap_1_8UC3,CV_8UC3,255);
-                    specularityMap_2.convertTo(specularityMap_2_8UC3,CV_8UC3,255);
-                    cvtColor(specularityMap_1,specularityMap_1_mask,CV_RGB2GRAY);
-                    specularityMap_1.convertTo(specularityMap_1_mask_8uC1, CV_8UC1, 255);
-                    specularityMap_2.convertTo(specularityMap_2_mask_8uC1, CV_8UC1, 255);
-                    cvtColor(specularityMap_2,specularityMap_2_mask,CV_RGB2GRAY);
-                    double min_specularity, max_specularity;
-                    cv::minMaxLoc(specularityMap_1, &min_specularity, &max_specularity);
-                    cout << "\n show specularityMap_1 min, max:\n" << min_specularity << "," << max_specularity << endl;
+                // =================use the specularity map as weight map to remove the specular area of the image===========
+                Mat specularityMap_1_8UC3,specularityMap_1_mask_8uC1, specularityMap_1_mask;
+                Mat specularityMap_2_8UC3,specularityMap_2_mask_8uC1, specularityMap_2_mask;
+                specularityMap_1.convertTo(specularityMap_1_8UC3,CV_8UC3,255);
+                specularityMap_2.convertTo(specularityMap_2_8UC3,CV_8UC3,255);
+                cvtColor(specularityMap_1,specularityMap_1_mask,CV_RGB2GRAY);
+                specularityMap_1.convertTo(specularityMap_1_mask_8uC1, CV_8UC1, 255);
+                specularityMap_2.convertTo(specularityMap_2_mask_8uC1, CV_8UC1, 255);
+                cvtColor(specularityMap_2,specularityMap_2_mask,CV_RGB2GRAY);
+                double min_specularity, max_specularity;
+                cv::minMaxLoc(specularityMap_1, &min_specularity, &max_specularity);
+                cout << "\n show specularityMap_1 min, max:\n" << min_specularity << "," << max_specularity << endl;
 //
-                    imshow("specularityMap_1_8UC3",specularityMap_1_8UC3);
-                    imshow("specularityMap_1_mask",specularityMap_1_mask);
+                imshow("specularityMap_1_8UC3",specularityMap_1_8UC3);
+                imshow("specularityMap_1_mask",specularityMap_1_mask);
 
-                    SpecularHighlightRemoval specularHighlightRemoval_spcularity;
-                    specularHighlightRemoval_spcularity.initialize(Image_ref8UC3.rows, Image_ref8UC3.cols);
-                    Mat diffuseImage_specular = specularHighlightRemoval_spcularity.run(specularityMap_1_8UC3, specularityMap_1_mask);
+                SpecularHighlightRemoval specularHighlightRemoval_spcularity;
+                specularHighlightRemoval_spcularity.initialize(Image_ref8UC3.rows, Image_ref8UC3.cols);
+                Mat diffuseImage_specular = specularHighlightRemoval_spcularity.run(specularityMap_1_8UC3, specularityMap_1_mask);
 //                    Mat diffuseImage_specular = specularHighlightRemoval_spcularity.run(dsoSelectedPointMask_C3, sparsityMaskRef);
 
-                    Mat clusterImage_specular=  specularHighlightRemoval_spcularity.clusterImage;
-                    // suppress the left specular area intensity in the image
-                    // calculate the mean of the not specular area
-                    float sum_not_specular = 0;
-                    int count_not_specular = 0;
-                    float mean_not_specular_left= 0;
-                    for(int pixel = 0; pixel < Image_ref8UC3.rows * Image_ref8UC3.cols; pixel++) {
-                        // continue when the pixel is zero
-                        if (specularityMap_1_mask.ptr<float>()[pixel]==0.0f){continue;}
-                        if(clusterImage_specular.ptr<int>()[pixel]==3){continue;}
-                        // get the pixel value of the gray image
-                        sum_not_specular += IRef.ptr<float>()[pixel];
-                        count_not_specular+=1;
-                    }
-                    if(count_not_specular==0){mean_not_specular_left=0;}else{
-                        mean_not_specular_left = sum_not_specular/count_not_specular;
-                    }
-                    cout << "mean_not_specular_left: " << mean_not_specular_left << endl;
-                    // y= max(x*exp(-6x) , mean_not_specular_left);
-                    // apply the function to the specular area
+                Mat clusterImage_specular=  specularHighlightRemoval_spcularity.clusterImage;
+                // suppress the left specular area intensity in the image
+                // calculate the mean of the not specular area
+                int sum_not_specular = 0;
+                int count_not_specular = 0;
+                float mean_not_specular_left= 0;
+                for(int pixel = 0; pixel < Image_ref8UC3.rows * Image_ref8UC3.cols; pixel++) {
+                    // continue when the pixel is zero
+                    if (specularityMap_1_mask.ptr<float>()[pixel]==0.0f){continue;}
+                    if(clusterImage_specular.ptr<int>()[pixel]==3){continue;}
+                    // get the pixel value of the gray image
+                    sum_not_specular += static_cast<int>(IRef.ptr<uchar>()[pixel]);
+                    count_not_specular+=1;
+                }
+                if(count_not_specular==0){mean_not_specular_left=0;}else{
+                    mean_not_specular_left = static_cast<float>(sum_not_specular)/count_not_specular;
+                }
+                cout << "mean_not_specular_left: " << mean_not_specular_left << endl;
+                // y= max(x*exp(-6x) , mean_not_specular_left);
+                // apply the function to the specular area
 
-                    Mat IRef_before(Image_ref8UC3.rows, Image_ref8UC3.cols, CV_32FC1, Scalar(0));
-                    Mat IRef_after(Image_ref8UC3.rows, Image_ref8UC3.cols, CV_32FC1, Scalar(0));
+                Mat IRef_before(Image_ref8UC3.rows, Image_ref8UC3.cols, CV_32FC1, Scalar(0));
+                Mat IRef_after(Image_ref8UC3.rows, Image_ref8UC3.cols, CV_32FC1, Scalar(0));
 
-                    for(int pixel = 0; pixel < Image_ref8UC3.rows * Image_ref8UC3.cols; pixel++) {
-                        // continue when the pixel is zero
-                        if (specularityMap_1_mask.ptr<float>()[pixel]==0.0f){continue;}
-                        // get the pixel value of the gray image
-                        IRef_before.ptr<float>()[pixel] = IRef.ptr<float>()[pixel];
-                        if(clusterImage_specular.ptr<int>()[pixel]!=3){continue;}
-                        float x = IRef.ptr<float>()[pixel];
-                        float y = x*(exp(-8.0*x)> 0.25f ? exp(-8.0*x) : 0.25f);
-                        IRef.ptr<float>()[pixel] = y;
-                        IRef_after.ptr<float>()[pixel] = IRef.ptr<float>()[pixel];
-                    }
+//                for(int pixel = 0; pixel < Image_ref8UC3.rows * Image_ref8UC3.cols; pixel++) {
+//                    // continue when the pixel is zero
+//                    if (specularityMap_1_mask.ptr<float>()[pixel]==0.0f){continue;}
+//                    // get the pixel value of the gray image
+//                    IRef_before.ptr<float>()[pixel] = IRef.ptr<uchar>()[pixel];
+//                    if(clusterImage_specular.ptr<int>()[pixel]!=3){continue;}
+//                    float x = IRef.ptr<uchar>()[pixel];
+//                    float y = x*(exp(-8.0*x)> 0.25f ? exp(-8.0*x) : 0.25f);
+//                    IRef.ptr<uchar>()[pixel] = y;
+//                    IRef_after.ptr<uchar>()[pixel] = IRef.ptr<uchar>()[pixel];
+//                }
+//                imshow("IRef_before",IRef_before);
+//                imshow("IRef_after",IRef_after);
+//                waitKey(0);
 
-                    imshow("IRef_before",IRef_before);
-                    imshow("IRef_after",IRef_after);
-                    waitKey(0);
 
-
-                    imshow("diffusePartofSpecularityImage_afterRemovespecular",diffuseImage_specular);
-                    drawClusters(clusterImage_specular,specularityMap_1_8UC3,"specularityMap_1");
-                    SpecularHighlightRemoval specularHighlightRemoval_spcularity_2;
-                    specularHighlightRemoval_spcularity_2.initialize(Image_ref8UC3.rows, Image_ref8UC3.cols);
-                    Mat diffuseImage_specular_2 = specularHighlightRemoval_spcularity_2.run(specularityMap_2_8UC3, specularityMap_2_mask);
-//                    Mat diffuseImage_specular_2 = specularHighlightRemoval_spcularity_2.run(dsoSelectedPointMask_tar_C3, sparsityMaskTar);
-                    Mat clusterImage_specular_2 = specularHighlightRemoval_spcularity_2.clusterImage;
-                    // suppress the left specular area intensity in the image
-                    // calculate the mean of the not specular area
-                    float sum_not_specular_2 = 0;
-                    int count_not_specular_2 = 0;
-                    float mean_not_specular_right=0.0;
-                    for(int pixel = 0; pixel < Image_ref8UC3.rows * Image_ref8UC3.cols; pixel++) {
-                        // continue when the pixel is zero
-                        if (specularityMap_2_mask.ptr<float>()[pixel]==0.0f){continue;}
-                        if(clusterImage_specular_2.ptr<int>()[pixel]==3){continue;}
-                        sum_not_specular_2 += I.ptr<float>()[pixel];
-                        count_not_specular_2 +=1;
-                    }
-                    if (count_not_specular_2==0){mean_not_specular_right=0;}else{
-                         mean_not_specular_right = sum_not_specular_2/count_not_specular_2;
-                    }
-                    cout << "mean_not_specular_right: " << mean_not_specular_right << endl;
-                    //  y= x*max(exp(-6x), 0.25);
-                    // apply the function to the specular area
-                    Mat I_before(Image_ref8UC3.rows, Image_ref8UC3.cols, CV_32FC1, Scalar(0));
-                    Mat I_after(Image_ref8UC3.rows, Image_ref8UC3.cols, CV_32FC1, Scalar(0));
-                    for(int pixel = 0; pixel < Image_ref8UC3.rows * Image_ref8UC3.cols; pixel++) {
-                        // continue when the pixel is zero
-                        if (specularityMap_2_mask.ptr<float>()[pixel]==0.0f){continue;}
-                        // get the pixel value of the gray image
-                        I_before.ptr<float>()[pixel] = I.ptr<float>()[pixel];
-                        if(clusterImage_specular_2.ptr<int>()[pixel]!=3){continue;}
-                        float x = I.ptr<float>()[pixel];
-//                        float y = max(x*exp(-6*x) , mean_not_specular_right);
-                        float y = x*(exp(-6.0*x)> 0.25f ? exp(-6.0*x) : 0.25f);
-                        I.ptr<float>()[pixel] = y;
-                        I_after.ptr<float>()[pixel] = I.ptr<float>()[pixel];
-                    }
-                    imshow("I_before",I_before);
-                    imshow("I_after",I_after);
-                    imshow("diffusePartofSpecularityImage2_afterRemovespecular",diffuseImage_specular_2);
-                    drawClusters(clusterImage_specular_2,specularityMap_2_8UC3,"specularityMap_2");
+                imshow("diffusePartofSpecularityImage_afterRemovespecular",diffuseImage_specular);
+                drawClusters(clusterImage_specular,specularityMap_1_8UC3,"specularityMap_1");
+                SpecularHighlightRemoval specularHighlightRemoval_spcularity_2;
+                specularHighlightRemoval_spcularity_2.initialize(Image_ref8UC3.rows, Image_ref8UC3.cols);
+                Mat diffuseImage_specular_2 = specularHighlightRemoval_spcularity_2.run(specularityMap_2_8UC3, specularityMap_2_mask);
+//              Mat diffuseImage_specular_2 = specularHighlightRemoval_spcularity_2.run(dsoSelectedPointMask_tar_C3, sparsityMaskTar);
+                Mat clusterImage_specular_2 = specularHighlightRemoval_spcularity_2.clusterImage;
+                // suppress the left specular area intensity in the image
+                // calculate the mean of the not specular area
+                float sum_not_specular_2 = 0;
+                int   count_not_specular_2 = 0;
+                float mean_not_specular_right=0.0;
+                for(int pixel = 0; pixel < Image_ref8UC3.rows * Image_ref8UC3.cols; pixel++) {
+                    // continue when the pixel is zero
+                    if (specularityMap_2_mask.ptr<float>()[pixel]==0.0f){continue;}
+                    if(clusterImage_specular_2.ptr<int>()[pixel]==3){continue;}
+                    sum_not_specular_2 += I.ptr<float>()[pixel];
+                    count_not_specular_2 +=1;
+                }
+                if (count_not_specular_2==0){mean_not_specular_right=0;}else{
+                    mean_not_specular_right = sum_not_specular_2/count_not_specular_2;
+                }
+                cout << "mean_not_specular_right: " << mean_not_specular_right << endl;
+                //  y= x*max(exp(-6x), 0.25);
+                // apply the function to the specular area
+//                Mat I_before(Image_ref8UC3.rows, Image_ref8UC3.cols, CV_32FC1, Scalar(0));
+//                Mat I_after(Image_ref8UC3.rows, Image_ref8UC3.cols, CV_32FC1, Scalar(0));
+//                for(int pixel = 0; pixel < Image_ref8UC3.rows * Image_ref8UC3.cols; pixel++) {
+//                    // continue when the pixel is zero
+//                    if (specularityMap_2_mask.ptr<float>()[pixel]==0.0f){continue;}
+//                    // get the pixel value of the gray image
+//                    I_before.ptr<float>()[pixel] = I.ptr<float>()[pixel];
+//                    if(clusterImage_specular_2.ptr<int>()[pixel]!=3){continue;}
+//                    float x = I.ptr<float>()[pixel];
+////                        float y = max(x*exp(-6*x) , mean_not_specular_right);
+//                    float y = x*(exp(-6.0*x)> 0.25f ? exp(-6.0*x) : 0.25f);
+//                    I.ptr<float>()[pixel] = y;
+//                    I_after.ptr<float>()[pixel] = I.ptr<float>()[pixel];
+//                }
+//                imshow("I_before",I_before);
+//                imshow("I_after",I_after);
+//                imshow("diffusePartofSpecularityImage2_afterRemovespecular",diffuseImage_specular_2);
+//                drawClusters(clusterImage_specular_2,specularityMap_2_8UC3,"specularityMap_2");
 // ============================finish removing specular reflection area=================================================
-                    waitKey(0);
-                    cvtColor(specularityMap_1,specularityMap_1,CV_RGB2GRAY);
-                    cvtColor(specularityMap_2,specularityMap_2,CV_RGB2GRAY);
-                    // start removing specular reflection area
-                    cout<<"show type of specularityMap_1:"<<specularityMap_1.type()<<endl;
-                    vector<double> specularityMap_Vec_1;
-                    specularityMap_Vec_1 = vectorizeImage(specularityMap_1); // specularityMap_1
+//                waitKey(0);
+                cvtColor(specularityMap_1,specularityMap_1,CV_RGB2GRAY);
+                cvtColor(specularityMap_2,specularityMap_2,CV_RGB2GRAY);
+                // start removing specular reflection area
+                cout<<"show type of specularityMap_1:"<<specularityMap_1.type()<<endl;
+                vector<double> specularityMap_Vec_1;
+                specularityMap_Vec_1 = vectorizeImage(specularityMap_1); // specularityMap_1
 //                    float  sum=0;
 //                    for(int i = 0; i < specularityMap_Vec_1.size(); i++){
 //                        if(specularityMap_Vec_1[i] > 0.0){
@@ -541,58 +477,58 @@ int main(int argc, char **argv) {
 //                        }
 //                    }
 //                    imshow("specularityMask",specularityMask);
-                    //then remove the specular area(red area) from the image, smooth the image and then use the smoothed image to update the delta map
-                    specularityMap_Vec_1.erase(std::remove(specularityMap_Vec_1.begin(), specularityMap_Vec_1.end(), 0.0), specularityMap_Vec_1.end());
+                //then remove the specular area(red area) from the image, smooth the image and then use the smoothed image to update the delta map
+                specularityMap_Vec_1.erase(std::remove(specularityMap_Vec_1.begin(), specularityMap_Vec_1.end(), 0.0), specularityMap_Vec_1.end());
 //                    drawResidualDistribution(specularityMap_Vec_1, "Sparse Gray Radiance Distribution", 480, 640);
-                    imshow("specularityMap_1",specularityMap_1);
-                    imwrite("specularityMap_1.png",specularityMap_1*255);
-                    imshow("specularityMap_2",specularityMap_2);
-                    imwrite("specularityMap_2.png",specularityMap_2*255);
+                imshow("specularityMap_1",specularityMap_1);
+                imwrite("specularityMap_1.png",specularityMap_1*255);
+                imshow("specularityMap_2",specularityMap_2);
+                imwrite("specularityMap_2.png",specularityMap_2*255);
 
-                    waitKey(0);
-
-
-                    Mat greenChannel_deltaMap, redChannel_deltaMap, blueChannel_deltaMap;
-                    extractChannel(deltaMap, greenChannel_deltaMap, 1);// !!!!!!!!!!!!!!1!11!!!!only one channel now!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-                    extractChannel(deltaMap, blueChannel_deltaMap, 0);
-                    extractChannel(deltaMap, redChannel_deltaMap, 2);
-                    Mat sumChannel= 0.587*greenChannel_deltaMap+0.114*blueChannel_deltaMap+0.299*redChannel_deltaMap;
-                    Mat specularityChange;
+                waitKey(0);
 
 
-                    //  ==================================================add weight to the specular points===================================================================
-                    Mat  W_specularity = Mat::zeros(sumChannel.rows, sumChannel.cols, CV_32FC1); // not specular points and specular points
-                    Mat  W_values = Mat::zeros(sumChannel.rows, sumChannel.cols, CV_32FC1); // not specular points and specular points
-                    cv::normalize(sumChannel, specularityChange, 0, 1, cv::NORM_MINMAX, CV_32F);
+                Mat greenChannel_deltaMap, redChannel_deltaMap, blueChannel_deltaMap;
+                extractChannel(deltaMap, greenChannel_deltaMap, 1);// !!!!!!!!!!!!!!1!11!!!!only one channel now!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                extractChannel(deltaMap, blueChannel_deltaMap, 0);
+                extractChannel(deltaMap, redChannel_deltaMap, 2);
+                Mat sumChannel= 0.587*greenChannel_deltaMap+0.114*blueChannel_deltaMap+0.299*redChannel_deltaMap;
+                Mat specularityChange;
 
-                    imshow("specularityChange",specularityChange);
-                    imwrite("specularityChange.png",specularityChange*255);
 
-                    waitKey(0);
+                //  ==================================================add weight to the specular points===================================================================
+                Mat  W_specularity = Mat::zeros(sumChannel.rows, sumChannel.cols, CV_32FC1); // not specular points and specular points
+                Mat  W_values = Mat::zeros(sumChannel.rows, sumChannel.cols, CV_32FC1); // not specular points and specular points
+                cv::normalize(sumChannel, specularityChange, 0, 1, cv::NORM_MINMAX, CV_32F);
 
-                    // calculate W_specularity map based on exp(-x)
-                    // test function 1:
-                    for(int pixel = 0; pixel < W_specularity.rows * W_specularity.cols; pixel++) {
-                        // continue when the pixel is zero
-                        if (specularityChange.ptr<float>()[pixel]==0.0f){continue;}
-                        float x =specularityChange.ptr<float>()[pixel];
+                imshow("specularityChange",specularityChange);
+                imwrite("specularityChange.png",specularityChange*255);
+
+                waitKey(0);
+
+                // calculate W_specularity map based on exp(-x)
+                // test function 1:
+                for(int pixel = 0; pixel < W_specularity.rows * W_specularity.cols; pixel++) {
+                    // continue when the pixel is zero
+                    if (specularityChange.ptr<float>()[pixel]==0.0f){continue;}
+                    float x =specularityChange.ptr<float>()[pixel];
 //                        float y = exp(-10.3*x);
-                        float y = exp(-15*x);
+                    float y = exp(-15*x);
 //                        float y = 1.0;
-                        W_values.ptr<float>()[pixel] = y;
-                        W_specularity.ptr<float>()[pixel] = y;
-                    }
+                    W_values.ptr<float>()[pixel] = y;
+                    W_specularity.ptr<float>()[pixel] = y;
+                }
 
-                    imshow("W_specularity",W_specularity);
-                    imwrite("W_specularity.png",W_specularity*255);
-                    waitKey(0);
+                imshow("W_specularity",W_specularity);
+                imwrite("W_specularity.png",W_specularity*255);
+                waitKey(0);
 
 
 
-                    vector<double> W_values_vec;
-                    W_values_vec= vectorizeImage(W_values);
-                    W_values_vec.erase(std::remove(W_values_vec.begin(), W_values_vec.end(), 0.0), W_values_vec.end());
-                    drawResidualDistribution(W_values_vec, "probability values", 480, 640);
+                vector<double> W_values_vec;
+                W_values_vec= vectorizeImage(W_values);
+                W_values_vec.erase(std::remove(W_values_vec.begin(), W_values_vec.end(), 0.0), W_values_vec.end());
+                drawResidualDistribution(W_values_vec, "probability values", 480, 640);
 
 //                    deltaMapGT_res= deltaMapGT(grayImage_ref_32FC1,depth_ref_GT,grayImage_tar_32FC1,depth_tar_GT,K.cast<double>(),distanceThres,xi_GT,
 //                                           upper, buttom, deltaMap, statusMapPoints_ref, envMapWorkMask,controlPointPose_path,
@@ -602,51 +538,51 @@ int main(int argc, char **argv) {
 //                    deltaMap_gray_distribution_vec.erase(std::remove(deltaMap_gray_distribution_vec.begin(), deltaMap_gray_distribution_vec.end(), 0.0), deltaMap_gray_distribution_vec.end());
 //                    drawResidualDistribution(deltaMap_gray_distribution_vec, "GT pose,RadianceErrorDistributionDSOselected", 480, 640);
 
-                    vector<double> greenChannel_deltaMap_vec;
-                    greenChannel_deltaMap_vec = vectorizeImage(specularityChange);
-                    greenChannel_deltaMap_vec.erase(std::remove(greenChannel_deltaMap_vec.begin(), greenChannel_deltaMap_vec.end(), 0.0), greenChannel_deltaMap_vec.end());
-                    saveArray(greenChannel_deltaMap_vec);
+                vector<double> greenChannel_deltaMap_vec;
+                greenChannel_deltaMap_vec = vectorizeImage(specularityChange);
+                greenChannel_deltaMap_vec.erase(std::remove(greenChannel_deltaMap_vec.begin(), greenChannel_deltaMap_vec.end(), 0.0), greenChannel_deltaMap_vec.end());
+                saveArray(greenChannel_deltaMap_vec);
 
-                    drawResidualDistribution(greenChannel_deltaMap_vec, " Specular term residual distribution ", 480, 640);
+                drawResidualDistribution(greenChannel_deltaMap_vec, " Specular term residual distribution ", 480, 640);
 //                    imshow("deltaMap",deltaMap);
 //                    imshow("envMapWorkMask",envMapWorkMask);
 //                    waitKey(0);
 //                    Mat deltaMap_gray_distribution(deltaMap.rows, deltaMap.cols, CV_32FC1, Scalar(0));
 //                    cvtColor(deltaMap, deltaMap_gray_distribution, COLOR_BGR2GRAY);
 //                    Mat IRef_=(IRef-greenChannel_deltaMap);
-                    int counter_outlier=0;
-                    cv::imshow("IRef",IRef);
-                    cv::imshow("greenChannel_deltaMap",greenChannel_deltaMap);
-                    Mat checkingOutlier(deltaMap.rows, deltaMap.cols, CV_8UC1, Scalar(0));
+                int counter_outlier=0;
+                cv::imshow("IRef",IRef);
+                cv::imshow("greenChannel_deltaMap",greenChannel_deltaMap);
+                Mat checkingOutlier(deltaMap.rows, deltaMap.cols, CV_8UC1, Scalar(0));
 
-                    for (int u = 0; u < IRef.rows; u++)// colId, cols: 0 to 480
+                for (int u = 0; u < IRef.rows; u++)// colId, cols: 0 to 480
+                {
+                    for (int v = 0; v < IRef.cols; v++)// rowId,  rows: 0 to 640
                     {
-                        for (int v = 0; v < IRef.cols; v++)// rowId,  rows: 0 to 640
-                        {
-                            // print out the value of the pixel
-                            if (greenChannel_deltaMap.at<float>(u,v)!=0.0){
+                        // print out the value of the pixel
+                        if (greenChannel_deltaMap.at<float>(u,v)!=0.0){
 //                                cout<<"\n show IRef:"<<IRef.at<float>(u,v)<<endl;
 //                                cout<<"\n show greenChannel_deltaMap:"<<greenChannel_deltaMap.at<float>(u,v)<<endl;
-                                Sophus::SE3d pose_temp = Sophus::SE3d(Eigen::Quaterniond(camera_poses[7], camera_poses[8], camera_poses[9], camera_poses[10]),
-                                                                   Eigen::Vector3d(camera_poses[11], camera_poses[12], camera_poses[13]));
-                                Eigen::Matrix<float, 3, 3> KRKi = K_synthetic * pose_temp.rotationMatrix().cast<float>() * K_synthetic.inverse();
-                                Eigen::Matrix<float, 3, 1> Kt = K_synthetic * pose_temp.translation().cast<float>();
-                                Eigen::Vector2d pixelCoord((double) v, (double) u);
-                                Eigen::Matrix<float, 2, 1> pt2d;
-                                if (!project((float) v, (float) u, (float) DRef.at<float>(u, v), (int) IRef.cols, (int) IRef.rows, KRKi, Kt, pt2d))
-                                {
-                                    counter_outlier+=1;continue;
-                                }
-                                checkingOutlier.at<uchar>(u,v)=255;
+                            Sophus::SE3d pose_temp = Sophus::SE3d(Eigen::Quaterniond(camera_poses[7], camera_poses[8], camera_poses[9], camera_poses[10]),
+                                                                  Eigen::Vector3d(camera_poses[11], camera_poses[12], camera_poses[13]));
+                            Eigen::Matrix<float, 3, 3> KRKi = K_synthetic * pose_temp.rotationMatrix().cast<float>() * K_synthetic.inverse();
+                            Eigen::Matrix<float, 3, 1> Kt = K_synthetic * pose_temp.translation().cast<float>();
+                            Eigen::Vector2d pixelCoord((double) v, (double) u);
+                            Eigen::Matrix<float, 2, 1> pt2d;
+                            if (!project((float) v, (float) u, (float) DRef.at<float>(u, v), (int) IRef.cols, (int) IRef.rows, KRKi, Kt, pt2d))
+                            {
+                                counter_outlier+=1;continue;
+                            }
+                            checkingOutlier.at<uchar>(u,v)=255;
 //                                IRef.at<float>(u,v)=IRef.at<float>(u,v)+greenChannel_deltaMap.at<float>(u,v);
 //                                IRef.at<float>(u,v)= 1/greenChannel_deltaMap.at<float>(u,v) * IRef.at<float>(u,v);
-                            }
                         }
                     }
+                }
 
-                    cout<<"counter_outlier size: "<<counter_outlier<<endl;
-                    imshow("checkingOutlier",checkingOutlier);
-                    waitKey(0);
+                cout<<"counter_outlier size: "<<counter_outlier<<endl;
+                imshow("checkingOutlier",checkingOutlier);
+                waitKey(0);
 //                    vector<double> IRef_vec,IRefItself_vec;
 //                    IRef_vec = vectorizeImage(IRef);
 //                    IRef_vec.erase(std::remove(IRef_vec.begin(), IRef_vec.end(), 0.0), IRef_vec.end());
@@ -655,203 +591,7 @@ int main(int argc, char **argv) {
 //                    IRefItself_vec = vectorizeImage(IRef);
 //                    IRefItself_vec.erase(std::remove(IRefItself_vec.begin(), IRefItself_vec.end(), 0.0), IRefItself_vec.end());
 //                    drawResidualDistribution(IRefItself_vec, "IRefItself_vec", 480, 640);
-                    pbaRelativePose(huberPara, W_specularity, IRef,statusMapPoints_ref,DRef, I,statusMapPoints_tar,Klvl.cast<double>(),camera_poses, points3D);
-                }
-
-//                bool checkES_changeOfSpecularity = true;
-//                if (checkES_changeOfSpecularity){
-//                    Mat deltaMap_gray_show(deltaMap.rows, deltaMap.cols, CV_8UC1, Scalar(0));
-//                    Mat deltaMap_gray_distribution(deltaMap.rows, deltaMap.cols, CV_32FC1, Scalar(0));
-//                    deltaMap.convertTo(deltaMap_gray_show, CV_8UC3, 255.0);
-//                    cvtColor(deltaMap, deltaMap_gray_distribution, COLOR_RGB2GRAY);
-//                    vector<double> deltaMap_gray_distribution_vec;
-//                    deltaMap_gray_distribution_vec= vectorizeImage(deltaMap_gray_distribution);
-//                    cv::imshow("deltaMap_specularity_term_gray_show", deltaMap_gray_show);
-//                    waitKey(0);
-//                    deltaMap_gray_distribution_vec.erase(std::remove(deltaMap_gray_distribution_vec.begin(), deltaMap_gray_distribution_vec.end(), 0), deltaMap_gray_distribution_vec.end());
-//                    drawResidualDistribution(deltaMap_gray_distribution_vec, "ESSpecularityErrorDistributionWholeImage", 480, 640);
-//                } else{
-//
-//                Mat deltaMapGT_res_gray_show(deltaMap.rows, deltaMap.cols, CV_8UC1, Scalar(0));
-//                deltaMapGT_res.convertTo(deltaMapGT_res_gray_show, CV_8UC3, 255.0);
-//                cv::imshow("deltaMap_gray_show", deltaMapGT_res_gray_show);
-//                waitKey(0);
-//                vector<double> deltaMap_gray_distribution_vec;
-//                deltaMap_gray_distribution_vec= vectorizeImage(deltaMapGT_res);
-//                deltaMap_gray_distribution_vec.erase(std::remove(deltaMap_gray_distribution_vec.begin(), deltaMap_gray_distribution_vec.end(), 0.0), deltaMap_gray_distribution_vec.end());
-//                drawResidualDistribution(deltaMap_gray_distribution_vec, "GTSpecularityErrorDistributionWholeImage", 480, 640);
-//                }
-//                for (int u = 0; u< grayImage_ref.rows; u++) // colId, cols: 0 to 480
-//                {
-//                    for (int v = 0; v < grayImage_ref.cols; v++) // rowId,  rows: 0 to 640
-//                    {
-//                        // || clusterImage.at<int>(u, v) == 1
-//                        if (((statusMap!=NULL && statusMapPoints_ref[u*grayImage_ref.cols+v]!=0 )) || ((image_ref_roughness.at<float>(u,v) < roughness_threshold)&&clusterImage.at<int>(u, v) == 1)){
-//                            dso_point_counter+=1;
-//                            dsoSelectedPointAndISMask.at<uchar>(u,v)= 255;
-//                            statusMapPoints_ref[u*grayImage_ref.cols+v]=6;// 6 is not fixed
-//
-//                            // apply the intensity segmentation here // && (grayImage_ref.at<uchar>(u,v)>(mean_val+scale_std*std_dev))
-////                            if ( (image_ref_roughness.at<float>(u,v) < roughness_threshold)  && clusterImage.at<int>(u, v) == 1 ){
-////                                transitionField.at<uchar>(u,v)= 255;
-////                                statusMap[u*grayImage_ref.cols+v]=255;
-////                                point_counter+=1;
-////                            }
-//                        }
-//                    }
-//                }
-//
-//                imshow("dsoSelectedPointAndISMask", dsoSelectedPointAndISMask);
-                delete pixelSelector_lvl;
-                delete frame_ref;
-                delete frame_tar;
-                delete[] statusMapPoints_ref;
-                delete[] statusMapPoints_tar;
-                delete[] color_ref_lvl;
-                delete[] color_tar_lvl;
-
-            }
-            else{pbaRelativePose(huberPara, IRef,DRef, I,Klvl.cast<double>(),camera_poses, points3D);}
-        }
-
-    } else{
-
-        Eigen::Matrix3f K_nonImPy=K_synthetic.cast<float>();
-
-        if (usePixelSelector){
-            Mat IRef,IRef_8UC1, DRef, I, I_8UC1, D;
-            grayImage_ref_32FC1.convertTo(IRef_8UC1, CV_8UC1,255.0);
-            grayImage_tar_32FC1.convertTo(I_8UC1, CV_8UC1, 255.0);
-            int  npts_lvl_ref[0];
-            int  npts_lvl_tar[0];
-            float* statusMapPoints_ref= new float[wG[0]*hG[0]];
-            float* statusMapPoints_tar= new float[wG[0]*hG[0]];
-
-            FrameHessian* frame_ref= new FrameHessian();
-            FrameHessian* frame_tar= new FrameHessian();
-            PixelSelector* pixelSelector_lvl= new PixelSelector(wG[0],hG[0]);
-            float* color_ref_lvl= new float[wG[0]*hG[0]];
-            float* color_tar_lvl= new float[wG[0]*hG[0]];
-            for (int row = 0; row < hG[0]; ++row) {
-                uchar *pixel_ref_lvl=IRef_8UC1.ptr<uchar>(row);
-                uchar *pixel_tar_lvl=I_8UC1.ptr<uchar>(row);
-                for (int col = 0; col < wG[0]; ++col) {
-                    color_ref_lvl[row*wG[0]+col]= (float) pixel_ref_lvl[col];
-                    color_tar_lvl[row*wG[0]+col]= (float) pixel_tar_lvl[col];
-                }
-            }
-
-            frame_ref->makeImages(color_ref_lvl);
-            frame_tar->makeImages(color_tar_lvl);
-            pixelSelector_lvl->currentPotential= 3;
-
-            npts_lvl_ref[0]=  pixelSelector_lvl->makeMaps(frame_ref, statusMapPoints_ref, densities[0] * wG[0] * hG[0], 1, false, 2);
-            cout << "\n npts_lvl_ref[i]: " << npts_lvl_ref[0] << "\n densities[i-1]*wG[0]*hG[0]:" << densities[0] * wG[0] * hG[0] << endl;
-            npts_lvl_tar[0]=  pixelSelector_lvl->makeMaps(frame_tar, statusMapPoints_tar, densities[0] * wG[0] * hG[0], 1, false, 2);
-            cout << "\n npts_lvl_tar[i]: " << npts_lvl_tar[0] << "\n densities[i-1]*wG[0]*hG[0]:" << densities[0] * wG[0] * hG[0] << endl;
-
-
-            // check the dso selected points
-            Mat dsoSelectedPointMask(grayImage_ref.rows,  grayImage_ref.cols, CV_8UC1, Scalar(0));
-            Mat dsoSelectedPointAndISMask(grayImage_ref.rows,  grayImage_ref.cols, CV_8UC1, Scalar(0));
-
-
-            int point_counter = 0;
-            int dso_point_counter = 0;
-            int dso_point_counter_merge=0;
-            for (int u = 0; u< grayImage_ref.rows; u++) // colId, cols: 0 to 480
-            {
-                for (int v = 0; v < grayImage_ref.cols; v++) // rowId,  rows: 0 to 640
-                {
-                    if ((statusMapPoints_ref!=NULL && statusMapPoints_ref[u*grayImage_ref.cols+v]!=0) ){
-                        dso_point_counter+=1;
-                        dsoSelectedPointMask.at<uchar>(u,v)= 255;
-                        pointOfInterestArea.at<uchar>(u,v)= 255;
-                    }
-                }
-            }
-            imshow("puredsoSelectedPointMask", dsoSelectedPointMask);
-//            for (int u = 0; u< grayImage_ref.rows; u++) // colId, cols: 0 to 480
-//            {
-//                for (int v = 0; v < grayImage_ref.cols; v++) // rowId,  rows: 0 to 640
-//                {
-//                    if(image_ref_roughness.at<float>(u,v) < roughness_threshold ){ //&& clusterImage.at<int>(u, v) == 1
-////                            pointOfInterestArea.at<uchar>(u,v)= 255;
-//                    }
-//                    if (((statusMapPoints_ref!=NULL && statusMapPoints_ref[u*grayImage_ref.cols+v]!=0 )) || (image_ref_roughness.at<float>(u,v) < roughness_threshold )){ //&& clusterImage.at<int>(u, v) == 1
-//                        dso_point_counter_merge+=1;
-//                        dsoSelectedPointAndISMask.at<uchar>(u,v)= 255;
-////                            statusMapPoints_ref[u*grayImage_ref.cols+v]=6;// 6 is not fixed
-//                    }
-//                }
-//            }
-//            imshow("dsoSelectedPointMask", dsoSelectedPointAndISMask);
-//            cout << "\n dso_point_counter_merge: " << dso_point_counter_merge << endl;
-            pbaRelativePose(huberPara, grayImage_ref_32FC1,statusMapPoints_ref,depth_ref_inv, grayImage_tar_32FC1,statusMapPoints_tar,K_synthetic.cast<double>(),camera_poses, points3D);
-
-//            pbaRelativePose(huberPara, IRef,statusMapPoints_ref,DRef, I,statusMapPoints_tar,K_nonImPy.cast<double>(),camera_poses, points3D);
-            // merge the transition field (less roughness)and dso selected points and use non-lambertian correction then optimize the pose , depth again
-            // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!try to not use dso pixel selector but use the intensity segmentation method while using the dso selected points, information(lambertian+ corrected non-lambertian) merging
-            if (useDelta){
-                double distanceThres = 0.0035;
-                float upper = 2.0;
-                float buttom = 0.5;
-                imshow("pointOfInterestArea", pointOfInterestArea);
-                //	//--------------------------------------------------normal_map_GT---------------------------------------------------
-                cv::Mat normal_map(grayImage_ref.rows, grayImage_ref.cols, CV_32FC3);
-                for (int u = 0; u < grayImage_ref.rows; u++) // colId, cols: 0 to 480
-                {
-                    for (int v = 0; v < grayImage_ref.cols; v++) // rowId,  rows: 0 to 640
-                    {
-                        Eigen::Vector3f normal_new(normal_map_GT.at<cv::Vec3f>(u, v)[0], normal_map_GT.at<cv::Vec3f>(u, v)[1],normal_map_GT.at<cv::Vec3f>(u, v)[2]);
-                        //			normal_new = (dataLoader->R1.cast<float>()).transpose()* normal_new;
-                        Eigen::Vector3f principal_axis(0, 0, 1);
-                        if (normal_new.dot(principal_axis) > 0) {normal_new = -normal_new;}
-                        normal_map.at<Vec3f>(u, v)[0] = normal_new(0);
-                        normal_map.at<Vec3f>(u, v)[1] = normal_new(1);
-                        normal_map.at<Vec3f>(u, v)[2] = normal_new(2);
-                    }
-                }
-                imshow("normal_map",normal_map);
-                waitKey(0);
-                Mat newNormalMap = normal_map;
-//                    Mat deltaMap(grayImage_ref.rows, grayImage_ref.cols, CV_32FC3, Scalar(1,1,1)); // storing delta
-                Mat envMapWorkMask(deltaMap.rows, deltaMap.cols, CV_8UC1, Scalar(0));
-                Sophus::SO3d Rotation_GT(xi_GT.rotationMatrix());
-                Eigen::Matrix<double, 3, 1> Translation_GT(xi_GT.translation());
-                Mat specularityMap_1, specularityMap_2;
-                DSONL::updateDelta(dataLoader->camPose1,EnvLightLookup, statusMapPoints_ref,Rotation_GT,Translation_GT,K_synthetic,depth_ref_inv,image_ref_roughness,deltaMap,newNormalMap, pointOfInterestArea, renderedEnvMapPath,envMapWorkMask, specularityMap_1, specularityMap_2);
-
-                Mat greenChannel_deltaMap, redChannel_deltaMap, blueChannel_deltaMap;
-                extractChannel(deltaMap, greenChannel_deltaMap, 1);// !!!!!!!!!!!!!!1!11!!!!only one channel now!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-                extractChannel(deltaMap, blueChannel_deltaMap, 0);
-                extractChannel(deltaMap, redChannel_deltaMap, 2);
-                Mat sumChannel= 0.587*greenChannel_deltaMap+0.114*blueChannel_deltaMap+0.299*redChannel_deltaMap;
-
-//                    deltaMapGT_res= deltaMapGT(grayImage_ref_32FC1,depth_ref_GT,grayImage_tar_32FC1,depth_tar_GT,K.cast<double>(),distanceThres,xi_GT,
-//                                           upper, buttom, deltaMap, statusMapPoints_ref, envMapWorkMask,controlPointPose_path,
-//                                           dataLoader->camPose1.cast<float>(),newNormalMap);
-//                    vector<double> deltaMap_gray_distribution_vec;
-//                    deltaMap_gray_distribution_vec= vectorizeImage(deltaMapGT_res);
-//                    deltaMap_gray_distribution_vec.erase(std::remove(deltaMap_gray_distribution_vec.begin(), deltaMap_gray_distribution_vec.end(), 0.0), deltaMap_gray_distribution_vec.end());
-//                    drawResidualDistribution(deltaMap_gray_distribution_vec, "GT pose,RadianceErrorDistributionDSOselected", 480, 640);
-
-
-                vector<double> greenChannel_deltaMap_vec;
-                greenChannel_deltaMap_vec = vectorizeImage(sumChannel);
-                greenChannel_deltaMap_vec.erase(std::remove(greenChannel_deltaMap_vec.begin(), greenChannel_deltaMap_vec.end(), 0.0), greenChannel_deltaMap_vec.end());
-                drawResidualDistribution(greenChannel_deltaMap_vec, "GT pose SpecularityErrorDistributionDSOselectedAndEnvmap F", 480, 640);
-
-//                    imshow("deltaMap",deltaMap);
-//                    imshow("envMapWorkMask",envMapWorkMask);
-//                    waitKey(0);
-//                    Mat deltaMap_gray_distribution(deltaMap.rows, deltaMap.cols, CV_32FC1, Scalar(0));
-//                    cvtColor(deltaMap, deltaMap_gray_distribution, COLOR_BGR2GRAY);
-                grayImage_ref_32FC1 = grayImage_ref_32FC1-greenChannel_deltaMap;
-                pbaRelativePose(huberPara, grayImage_ref_32FC1,statusMapPoints_ref,depth_ref_inv, grayImage_tar_32FC1,statusMapPoints_tar,K_synthetic.cast<double>(),camera_poses, points3D);
-
-//                pbaRelativePose(huberPara, IRef,statusMapPoints_ref,DRef, I,statusMapPoints_tar,K_nonImPy.cast<double>(),camera_poses, points3D);
-
+                pbaRelativePose(huberPara, W_specularity, IRef,statusMapPoints_ref,DRef, I,statusMapPoints_tar,Klvl.cast<double>(),camera_poses, points3D);
             }
 
 //                bool checkES_changeOfSpecularity = true;
@@ -877,7 +617,6 @@ int main(int argc, char **argv) {
 //                deltaMap_gray_distribution_vec.erase(std::remove(deltaMap_gray_distribution_vec.begin(), deltaMap_gray_distribution_vec.end(), 0.0), deltaMap_gray_distribution_vec.end());
 //                drawResidualDistribution(deltaMap_gray_distribution_vec, "GTSpecularityErrorDistributionWholeImage", 480, 640);
 //                }
-
 //                for (int u = 0; u< grayImage_ref.rows; u++) // colId, cols: 0 to 480
 //                {
 //                    for (int v = 0; v < grayImage_ref.cols; v++) // rowId,  rows: 0 to 640
@@ -908,8 +647,7 @@ int main(int argc, char **argv) {
             delete[] color_tar_lvl;
 
         }
-
-
+        else{pbaRelativePose(huberPara, IRef,DRef, I,Klvl.cast<double>(),camera_poses, points3D);}
     }
 
     // result analysis
@@ -936,17 +674,31 @@ int main(int argc, char **argv) {
     showPointCloud(Image_ref8UC3, Image_tar8UC3, inputPoseGT,inputPose, pose1_gt, pose2_gt, pose_2, points3D, fx_, fy_, cx_, cy_);
 
 
-    // apply the intensity segmentation here // && (grayImage_ref.at<uchar>(u,v)>(mean_val+scale_std*std_dev))
-//                            if ( (image_ref_roughness.at<float>(u,v) < roughness_threshold)  && clusterImage.at<int>(u, v) == 1 ){
-//                                transitionField.at<uchar>(u,v)= 255;
-//                                statusMap[u*grayImage_ref.cols+v]=255;
-//                                point_counter+=1;
-//                            }
+
+
+
+//	// tidy up
+	delete dataLoader;
+	if (usePixelSelector) {
+		delete pixelSelector;
+		delete newFrame_ref;
+		delete newFrame_tar;
+		delete depthMap_ref;
+		delete[] statusMap;
+		delete[] color_ref;
+		delete[] color_tar;
+		delete[] depthMapArray_ref;
+		delete[] statusMap;
+		delete[] statusMapB;
+	}
+	return 0;
+}
 
 
 
 
 
+// notes:
 
 
 
@@ -1389,29 +1141,6 @@ int main(int argc, char **argv) {
 //		waitKey(0);
 //	}
 //
-//	// tidy up
-	delete dataLoader;
-	if (usePixelSelector) {
-		delete pixelSelector;
-		delete newFrame_ref;
-		delete newFrame_tar;
-		delete depthMap_ref;
-		delete[] statusMap;
-		delete[] color_ref;
-		delete[] color_tar;
-		delete[] depthMapArray_ref;
-		delete[] statusMap;
-		delete[] statusMapB;
-	}
-	return 0;
-}
-
-
-
-
-
-// notes:
-
 //
 //std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
 //std::chrono::steady_clock::time_point t2 = std::chrono::steady_clock::now();

@@ -91,8 +91,8 @@ namespace DSONL {
                 // use DSO pixel selector
                  if (statusMapPoints_ref!=NULL && statusMapPoints_ref[r*image_1.cols+c]==0 ){ continue;}
 
-                    std::vector<double> patch(PATTERN_SIZE, 0.0);
-                    std::vector<double> patch_weigts(PATTERN_SIZE, 1.0);
+                std::vector<double> patch(PATTERN_SIZE, 0.0);
+                std::vector<double> patch_weigts(PATTERN_SIZE, 1.0);
 
                 for (size_t i = 0; i < PATTERN_SIZE; i++){
                     int du = PATTERN_OFFSETS[i][0];
@@ -298,11 +298,6 @@ namespace DSONL {
         if (image_left.cols==640){
             drawResidualDistribution(residuals,"residualsDistri_withCorrection", image_1.rows,image_1.cols);
         }
-
-
-
-
-
 
 
         //    drawResidualPerPixels(residuals, 5.0,"residuals", image_1.cols, image_1.rows);

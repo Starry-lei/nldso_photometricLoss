@@ -98,7 +98,7 @@ namespace DSONL {
 			S_x << 1.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, -1.0;
 
 
-            bool useHDR= true;
+            bool useHDR= false;
 
 
 			if (options_.isTextured) {
@@ -112,13 +112,14 @@ namespace DSONL {
                 string image_ref_seletor_path;
 
 
-                if (useHDR){
-                    image_ref_path =            "../data/exp_image0405/rgb/orig_4.pfm"; // HDR
-//                    image_ref_path =            "../data/exp_image0405/twoLightSrcs_rgb/rgbp_4.pfm"; // HDR
-                }else{
-                    //image_ref_path =            "../data/exp_image0405/rgb/image_04.png"; // LDR
-                }
+//                if (useHDR){
+//                    image_ref_path =            "../data/exp_image0405/rgb/orig_4.pfm"; // HDR
+////                    image_ref_path =            "../data/exp_image0405/twoLightSrcs_rgb/rgbp_4.pfm"; // HDR
+//                }else{
+//                    image_ref_path =            "../data/exp_image0405/rgb/image_04.png"; // LDR
+//                }
 
+                image_ref_path =            "../data/exp_image0405/rgb/image_04.png"; // LDR
                 depth_ref_path =            "../data/exp_image0405/depth/origdepth_4.png";
                 image_ref_roughness_path =  "../data/exp_image0405/roughness/origroughness_4.pfm";
                 image_normal_GT_path =      "../data/exp_image0405/normal/orignormal_4.dat";
@@ -136,11 +137,7 @@ namespace DSONL {
                 camPose1.translation()=t1_w_l;
                 //cout<<"show camPose1:"<<camPose1.matrix()<<endl;
                 Mat image_ref;
-                if (useHDR){
-                    image_ref= loadPFM(image_ref_path);// HDR image type is CV_32FC3(21)
-                }else{
-                    image_ref =imread(image_ref_path, IMREAD_ANYCOLOR | IMREAD_ANYDEPTH);// LDR image type is CV_8UC3(16)
-                }
+                image_ref =imread(image_ref_path, IMREAD_ANYCOLOR | IMREAD_ANYDEPTH);// LDR image type is CV_8UC3(16)
 //                Mat image_ref_seletor= loadPFM(image_ref_seletor_path);
                 // load and convert depth
                 cv::Mat depth_1 = cv::imread(depth_ref_path, -1);
@@ -172,15 +169,7 @@ namespace DSONL {
 				string depth_target_path;
 
 				if (options_.baseline == 0) {
-
-
-                    if (useHDR){
-                        image_target_path ="../data/exp_image0405/rgb/orig_5.pfm"; // HDR
-//                        image_target_path ="../data/exp_image0405/twoLightSrcs_rgb/rgbp_5.pfm"; // HDR
-                    }else{
-                        image_target_path = "../data/exp_image0405/rgb/image_05.png"; // LDR
-                    }
-
+                    image_target_path = "../data/exp_image0405/rgb/image_05.png"; // LDR
                     depth_target_path = "../data/exp_image0405/depth/origdepth_5.png";
 					Eigen::Matrix3d R2_w_l, R1_w_r, R2_w_r;
 					Eigen::Vector3d t2_w_l;
@@ -205,18 +194,19 @@ namespace DSONL {
 				}
 
                 Mat image_target;
-                if (useHDR){
-                    image_target= loadPFM(image_target_path);// HDR image type is CV_32FC3(21)
-                }else{
-                    image_target =imread(image_target_path, IMREAD_ANYCOLOR | IMREAD_ANYDEPTH);// LDR image type is CV_8UC3(16)
-                }
-                grayImage_target= image_target.clone();
+                image_target = imread(image_target_path, IMREAD_ANYCOLOR | IMREAD_ANYDEPTH);// LDR image type is CV_8UC3(16)Image_target= image_target.clone();
                 // load and convert depth
                 cv::Mat depth_2 = cv::imread(depth_target_path, -1);
                 cv::Mat idepth_2_float;
                 depth_2.convertTo(idepth_2_float, CV_32F);
                 idepth_2_float = 5000.0f / idepth_2_float;
                 depth_map_target= idepth_2_float.clone();
+                grayImage_target= image_target.clone();
+
+
+                imshow("Image_ref8UC3",grayImage_ref);
+                imshow("Image_tar8UC3",grayImage_target);
+                waitKey(0);
 
 			} else {
 				// RGB image without texture
