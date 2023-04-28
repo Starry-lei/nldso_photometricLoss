@@ -12,6 +12,17 @@ set(EIGEN_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/eigen")
 set(CERES_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/build-ceres-solver")
 
  set(PANGOLIN_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/build-Pangolin/src")
+
+
+
+option(BUILD_STATIC   "Build static libraries"  ON)
+option(WITH_TBB      "with Intel TBB"          ON)
+option(WITH_OPENMP   "with openmp"             ON)
+option(WITH_OPENCV   "with opencv"             ON)
+option(WITH_MATLAB   "compile with Matlab interface" OFF)
+
+
+
 # set(OPENGV_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/build-opengv")
 # set(g2o_DIR "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/g2o/lib/cmake/g2o")
 
@@ -51,6 +62,18 @@ SET(CXX_MARCH native)
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+
+if(BUILD_STATIC)
+  set(LIBRARY_TYPE STATIC)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
+else()
+  set(LIBRARY_TYPE SHARED)
+endif()
+
+
+
+
+
 
 # for some reason clang doesn't include them in Wall whereas gcc does, so include them explicitly.
 SET(EXTRA_WARNING_FLAGS "-Wsign-compare")
@@ -99,7 +122,8 @@ find_package(fmt REQUIRED)
 # to use link to target "TBB"
 find_package(TBB REQUIRED)
 message(STATUS "Found TBB ${TBB_VERSION_MAJOR}.${TBB_VERSION_MINOR} (interface version ${TBB_INTERFACE_VERSION}) headers in: ${TBB_INCLUDE_DIRS}")
-
+list(APPEND MY_LIBRARIES ${TBB_LIBRARIES})
+add_definitions(-DWITH_TBB)
 # to use link to target "OpenCV"
 # NOTE: not specifying version, since 2, 3 or 4 is fine
 find_package(OpenCV 3.3 REQUIRED)
@@ -131,22 +155,23 @@ find_package(GLUT REQUIRED)
 find_package(GLEW REQUIRED)
 include_directories(${OPENGL_INCLUDE_DIRS} ${GLEW_INCLUDE_DIRS})
 
+find_package(OpenMP REQUIRED)
+if(OPENMP_FOUND)
+  add_definitions(-DWITH_OPENMP)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+endif()
 
 # message(STATUS "show PCL-----${OPENGL_INCLUDE_DIRS}")
 # message(STATUS "show PCL-----${GLEW_INCLUDE_DIRS}")
 # message(STATUS "show PCL-----PCL_DEFINITIONS: ${PCL_DEFINITIONS}")
 # some output:
-message(STATUS "show IT: ${CMAKE_CURRENT_SOURCE_DIR}")
+#message(STATUS "show IT: ${CMAKE_CURRENT_SOURCE_DIR}")
 
 set(dsonl_SOURCE_FILES
 
   include/settings/setting.cpp
-
-
   include/dataLoader/PFMReadWrite.cpp
   include/preFilter/preFilter.h
-
-
   # include/numType.h
   include/preFilter/FileTools.cpp
   include/preFilter/Renderer.cpp
@@ -192,6 +217,18 @@ set(dsonl_SOURCE_FILES
 
         )
 
+
+find_package(Boost 1.71.0 REQUIRED COMPONENTS system filesystem program_options)
+include_directories( ${Boost_INCLUDE_DIRS})
+link_directories( ${Boost_LIBRARY_DIRS})
+#add_definitions(${Boost_LIB_DIAGNOSTIC_DEFINITIONS})
+#add_definitions(-DWITH_BOOST)
+#add_definitions(-DWITH_SIMD)
+include_directories(${Boost_INCLUDE_DIRS})
+list(APPEND MY_LIBRARIES ${Boost_LIBRARIES})
+
+message(STATUS "show ${Boost_LIBRARIES} Boost_LIBRARIES: ${Boost_INCLUDE_DIRS}")
+
 add_library(dsonl ${dsonl_SOURCE_FILES})
 add_subdirectory(include/matplotplusplus)
 
@@ -208,6 +245,20 @@ target_link_libraries(photometricLoss
   ${OPENGL_LIBRARIES}
   ${GLUT_LIBRARIES}
   ${GLEW_LIBRARIES}
+)
+
+
+add_subdirectory(include/PhotometricBA)
+
+add_executable(pba src/photoBA.cpp include/PhotometricBA/pba.cpp include/PhotometricBA/utils.cpp include/PhotometricBA/trajectory.cpp include/PhotometricBA/pose_utils.cpp
+        include/PhotometricBA/imgproc.cpp include/PhotometricBA/dataset.cpp  include/PhotometricBA/file_loader.cpp  include/PhotometricBA/stereo_algorithm.cpp
+        )
+target_link_libraries(pba
+        Eigen3::Eigen
+        ${Boost_LIBRARIES}
+  Ceres::ceres
+  TBB::tbb
+  OpenCV
 )
 
 #add_executable(test_functions src/test_functions.cpp)
