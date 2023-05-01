@@ -51,6 +51,10 @@ int main(int argc, char** argv)
         if(!result.refinedPoints.empty()) {
             // store the refinement points if you'd like
         }
+
+        if (f_i==20) {
+            break;
+        }
     }
 
     auto output_fn = options.get<std::string>("output");

@@ -600,6 +600,8 @@ addFrame(const uint8_t* I_ptr, const float* Z_ptr, const Mat44& T, Result* resul
          num_updated, 100.0 * num_updated / _scene_points.size(),
          max_num_to_update, num_new_points);
 
+    Info("num_channels %d num_new_points %d\n", num_channels, num_new_points);
+
     for(int k = 0; k < num_channels; ++k) {
         const auto& channel = frame->getChannel(k);
         for(int i = 0; i < num_new_points; ++i) {
@@ -781,7 +783,10 @@ void PhotometricBundleAdjustment::optimize(Result* result)
     for(auto id = frame_id_start; id <= frame_id_end; ++id) {
         // NOTE camera parameters are inverted
         camera_params[id] = PoseToParams(Eigen::Isometry3d(_trajectory.atId(id)).inverse().matrix());
+        std::cout<<"before optimize: _trajectory.atId(it.first:\n"<<_trajectory.atId(id)<<std::endl;
     }
+    Info("_trajectory.size() = %d, frame_id_start=  %d", _trajectory.size(), frame_id_start);
+
 
     //
     // get the points that we *should* optimize. They must have a large enough
@@ -847,6 +852,8 @@ void PhotometricBundleAdjustment::optimize(Result* result)
     for(auto& it : camera_params) {
         _trajectory.atId(it.first) = Eigen::Isometry3d(
                 ParamsToPose(it.second.data())).inverse().matrix();
+
+        std::cout<<"\"after optimize:_trajectory.atId(it.first:\n"<<_trajectory.atId(it.first)<<std::endl;
     }
 
 
