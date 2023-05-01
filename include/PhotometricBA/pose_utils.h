@@ -9,12 +9,14 @@ typedef EigenAlignedContainer_<Mat44> PoseList;
  * \return list of poses from a file
  */
 PoseList loadPosesKittiFormat(std::string);
+PoseList loadPosesTumRGBDFormat(std::string);
 
 /**
  * Writes a list of poses to a file using the KITTI benchmark format
  * \return true on success
  */
 bool writePosesKittiFormat(std::string, const PoseList&);
+bool writePosesTumRGBDFormat(std::string, const PoseList&, const std::vector<std::string>&);
 
 /**
  * \param input poses in 'global' coordinate system. i.e. if you plot the camera

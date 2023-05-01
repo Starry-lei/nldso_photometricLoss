@@ -459,7 +459,6 @@ PhotometricBundleAdjustment::PhotometricBundleAdjustment(
 {
     _mask.resize(_image_size.rows, _image_size.cols);
     _saliency_map.resize(_image_size.rows, _image_size.cols);
-
     _K_inv = calib.K().inverse();
 }
 
@@ -498,10 +497,20 @@ addFrame(const uint8_t* I_ptr, const float* Z_ptr, const Mat44& T, Result* resul
     typedef Eigen::Map<const Image_<float>, Eigen::Aligned> SrcDepthMap;
     auto Z = SrcDepthMap(Z_ptr, _image_size.rows, _image_size.cols);
 
-    auto frame = DescriptorFrame::Create(_frame_id, I, _options.descriptorType);
+    // check the depth map
 
-    auto B = std::max(_options.maskBlockRadius, std::max(2, _options.patchRadius));
-    auto max_rows = (int) I.rows() - B - 1,
+
+
+
+
+
+    DescriptorFrame* frame = DescriptorFrame::Create(_frame_id, I, _options.descriptorType);
+    // show the selected points
+    std::cout<<"number of channels: "<<frame->numChannels()<<std::endl;
+
+
+    int B = std::max(_options.maskBlockRadius, std::max(2, _options.patchRadius));
+    int max_rows = (int) I.rows() - B - 1,
             max_cols = (int) I.cols() - B - 1,
             radius = _options.patchRadius,
             patch_length = PatchSizeFromRadius(radius),
@@ -513,6 +522,8 @@ addFrame(const uint8_t* I_ptr, const float* Z_ptr, const Mat44& T, Result* resul
     // computation
     //
     _mask.setOnes();
+
+    std::cout<<"show scene point size:"<<_scene_points.size() <<std::endl;
 
     int num_updated = 0, max_num_to_update = 0;
     for(size_t i = 0; i < _scene_points.size(); ++i) {
@@ -536,7 +547,7 @@ addFrame(const uint8_t* I_ptr, const float* Z_ptr, const Mat44& T, Result* resul
                     pt->addFrame(_frame_id);
 
                     //
-                    // block an area in the mask to prevent initializing redandant new
+                    // block an area in the mask to prevent initializing redundant new
                     // scene points
                     //
                     for(int r_i = -mask_radius; r_i <= mask_radius; ++r_i)
@@ -555,28 +566,63 @@ addFrame(const uint8_t* I_ptr, const float* Z_ptr, const Mat44& T, Result* resul
     new_scene_points.reserve( max_rows * max_cols * 0.5 );
     frame->computeSaliencyMap(_saliency_map);
 
+    // print the saliency map
+//    for (int i = 0; i < _saliency_map.rows(); ++i) {
+//        for (int j = 0; j < _saliency_map.cols(); ++j) {
+//            std::cout<<_saliency_map(i,j)<<" ";
+//        }
+//        std::cout<<std::endl;
+//
+//    }
+
+
+
+
+    // Convert the Image_<T> to a cv::Mat
+    cv::Mat salientImage(_saliency_map.rows(), _saliency_map.cols(), CV_32F, _saliency_map.data(), _saliency_map.stride());
+    cv::Mat cmuSelectedPointMask(salientImage.rows,  salientImage.cols, CV_8UC1, cv::Scalar(0));
+    cv::Mat cmuSelectedPointMask2(salientImage.rows,  salientImage.cols, CV_8UC1, cv::Scalar(0));
+    // Display the image using OpenCV
+    int count_selectedPoint = 0;
+    salientImage.convertTo(salientImage, CV_8UC1);
+//    cv::imshow("saliency_map", salientImage);
+//    cv::waitKey(0);
+
+
     typedef IsLocalMax_<decltype(_saliency_map), decltype(_mask)> IsLocalMax;
     const IsLocalMax is_local_max(_saliency_map, _mask, _options.nonMaxSuppRadius);
 
     for(int y = B; y < max_rows; ++y) {
         for(int x = B; x < max_cols; ++x) {
-            auto z = Z(y,x);
+            double z = Z(y,x);
+//            std::cout<<"z: "<<z<<std::endl;
             if(z >= _options.minValidDepth && z <= _options.maxValidDepth) {
                 if(is_local_max(y, x)) {
-                    Vec3 X = T_w * (z * _K_inv * Vec3(x, y, 1.0));
+                    Vec3 X = T_w * (z * _K_inv * Vec3(x, y, 1.0)); // X in the world frame
 
-                    auto p = make_unique<ScenePoint>(X, _frame_id);
+                    std::unique_ptr<ScenePoint> p = make_unique<ScenePoint>(X, _frame_id);// associate a new scene point with its frame id
                     Vec_<int,2> xy(x, y);
                     p->setZnccPach( I, xy );
                     p->descriptor().resize(descriptor_dim);
                     p->setSaliency( _saliency_map(y,x) );
                     p->setFirstProjection(xy);
 
+                    // draw the first round selected points
+                    cmuSelectedPointMask.at<uchar>(y,x)= 255;
                     new_scene_points.push_back(std::move(p));
+
                 }
             }
         }
     }
+
+    std::cout<<"new scene points size: "<<new_scene_points.size()<<std::endl;
+    std::cout<<"count_selectedPoint: "<<count_selectedPoint<<std::endl;
+//    imshow("saliency_map_drawed", salientImage);
+//    imshow("cmuSelectedPointMask", cmuSelectedPointMask);
+    int num_selected = cv::countNonZero(cmuSelectedPointMask);
+    std::cout<<"num_nonZero_selected: "<<num_selected<<std::endl;
+
 
     //
     // keep the best N points
@@ -589,6 +635,19 @@ addFrame(const uint8_t* I_ptr, const float* Z_ptr, const Mat44& T, Result* resul
                          });
         new_scene_points.erase(nth, new_scene_points.end());
     }
+
+    // show the filtered selected points
+
+    for (int i = 0; i < new_scene_points.size(); ++i) {
+        cmuSelectedPointMask2.at<uchar>(new_scene_points[i]->_x[1],new_scene_points[i]->_x[0])= 255;
+    }
+
+//    imshow("cmuSelectedPointMask2", cmuSelectedPointMask2);
+    int num_selected_cmuSelectedPointMask2 = cv::countNonZero(cmuSelectedPointMask2);
+    std::cout<<"num_nonZero_selected_cmuSelectedPointMask2: "<<num_selected_cmuSelectedPointMask2<<std::endl;
+//    cv::waitKey(0);
+
+
 
     //
     // extract the descriptors
@@ -769,7 +828,7 @@ GetSolverOptions(int num_threads, bool verbose = false, double tol = 1e-6)
 
 void PhotometricBundleAdjustment::optimize(Result* result)
 {
-    auto frame_id_start = _frame_buffer.front()->id(),
+    uint32_t frame_id_start = _frame_buffer.front()->id(),
             frame_id_end   = _frame_buffer.back()->id();
 
     auto patch_weights = MakePatchWeights(_options.patchRadius, _options.doGaussianWeighting);
@@ -778,7 +837,7 @@ void PhotometricBundleAdjustment::optimize(Result* result)
     // collect the camera poses in a single map for easy access
     //
     std::map<uint32_t, Vec_<double,6>> camera_params;
-    for(auto id = frame_id_start; id <= frame_id_end; ++id) {
+    for(uint32_t id = frame_id_start; id <= frame_id_end; ++id) {
         // NOTE camera parameters are inverted
         camera_params[id] = PoseToParams(Eigen::Isometry3d(_trajectory.atId(id)).inverse().matrix());
     }
@@ -814,7 +873,10 @@ void PhotometricBundleAdjustment::optimize(Result* result)
     // set the first camera cosntant
     {
         auto p = camera_params[frame_id_start].data();
+
+        Info("first camera id %d\n", frame_id_start);
         if(problem.HasParameterBlock(p)) {
+            Info("setting first camera constant" );
             problem.SetParameterBlockConstant(p);
         } else {
             Warn("first camera is not in bundle\n");
@@ -834,7 +896,8 @@ void PhotometricBundleAdjustment::optimize(Result* result)
 
     ceres::Solve(GetSolverOptions(num_threads, _options.verbose), &problem, &summary);
     if(_options.verbose)
-        std::cout << summary.FullReport() << std::endl;
+//        std::cout << summary.FullReport() << std::endl;
+        std::cout << summary.BriefReport() << std::endl;
 
     //
     // TODO: run another optimization pass over residuals with small error

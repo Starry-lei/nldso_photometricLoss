@@ -20,8 +20,9 @@ enum class DatasetType
 struct DatasetFrame
 {
   virtual const cv::Mat& image() const = 0;
-  virtual const cv::Mat& disparity() const = 0;
-
+  virtual  cv::Mat& depth()  = 0;
+  virtual const cv::Mat& normal() const = 0;
+  virtual const cv::Mat& roughness() const = 0;
   virtual std::string filename() const { return ""; }
 
   virtual ~DatasetFrame() {}
@@ -37,6 +38,11 @@ class Dataset
    * Get the i-th frame
    */
   virtual UniquePointer<DatasetFrame> getFrame(int f_i) const = 0;
+
+    /**
+     * Get the timestamp of the i-th frameme
+     */
+    virtual std::vector<std::string> getTimestamp() const = 0;
 
   /**
    * \return the image size
@@ -77,51 +83,6 @@ class Dataset
   int _first_frame_index = 0;
 }; // Dataset
 
-class DisparityDataset : public Dataset
-{
- public:
-  /**
-   * frame is composed of the left image and a disparity
-   */
-  struct DisparityFrame : DatasetFrame
-  {
-    cv::Mat I_orig; //< the original image
-    cv::Mat I;      //< grayscale image
-    cv::Mat D;      //< disparity as float
-    std::string fn; //< filename if read from disk
-
-    DisparityFrame();
-    DisparityFrame(cv::Mat I_, cv::Mat D_, cv::Mat I_orig_ = cv::Mat(),
-                   std::string image_filename = "");
-
-    inline const cv::Mat& image() const { return I; }
-    inline const cv::Mat& disparity() const { return D; }
-    inline std::string filename() const { return fn; }
-
-    virtual ~DisparityFrame() {}
-  }; // DisparityFrame
-
- public:
-  DisparityDataset(std::string config_file);
-  virtual ~DisparityDataset();
-
-  virtual Calibration calibration() const = 0;
-  virtual std::string name() const  = 0;
-
-  inline DatasetType type() const { return DatasetType::Disparity; }
-  inline ImageSize imageSize() const { return _image_size; }
-
-  UniquePointer<DatasetFrame> getFrame(int f_i) const;
-
- protected:
-  ImageSize _image_size;
-  UniquePointer<FileLoader> _image_filenames;
-  UniquePointer<FileLoader> _disparity_filenames;
-
-  bool init(const utils::ConfigFile&);
-
-  float _disparity_scale = 1.0 / 16.0;
-}; // DisparityDataset
 
 class StereoAlgorithm;
 
@@ -136,6 +97,9 @@ class StereoDataset : public Dataset
     cv::Mat D;         //< disparity as float
 
     inline const cv::Mat& image() const { return I[0]; }
+    inline  cv::Mat& depth()  { return D; }
+    inline const cv::Mat& normal() const { return D; }
+    inline const cv::Mat& roughness() const { return D; }
     inline const cv::Mat& disparity() const { return D; }
     inline std::string filename() const { return fn; }
 
@@ -153,6 +117,7 @@ class StereoDataset : public Dataset
   inline ImageSize imageSize() const { return _image_size; }
 
   UniquePointer<DatasetFrame> getFrame(int f_i) const;
+  std::vector<std::string> getTimestamp() const;
 
   const StereoAlgorithm* stereo() const;
 
@@ -167,6 +132,76 @@ class StereoDataset : public Dataset
 
   virtual bool init(const utils::ConfigFile&);
 }; // StereoDataset
+
+
+class RGBDDataset : public Dataset
+{
+public:
+    struct MonoFrame : DatasetFrame
+    {
+        std::string fn;
+        cv::Mat I_orig; //< original rgb image
+        cv::Mat I;      //< grayscale image
+        cv::Mat D;      //< depth as float
+        cv::Mat N;      //< normal as float
+        cv::Mat R;      //< roughness as float
+
+        inline const cv::Mat& image() const { return I; }
+        inline cv::Mat& depth()  { return D; }
+        inline const cv::Mat& normal() const { return N; }
+        inline const cv::Mat& roughness() const { return R; }
+        inline std::string filename() const { return fn; }
+
+        virtual ~MonoFrame() {}
+    }; // singleFrame
+
+public:
+    RGBDDataset(std::string conf_fn);
+    virtual ~RGBDDataset();
+
+    virtual Calibration calibration() const = 0;
+    virtual std::string name() const = 0;
+
+    inline DatasetType type() const { return DatasetType::Depth; }
+    inline ImageSize imageSize() const { return _image_size; }
+
+    UniquePointer<DatasetFrame> getFrame(int f_i) const;
+    std::vector<std::string> getTimestamp() const;
+
+
+protected:
+    ImageSize _image_size;
+    int _scale_by = 1;
+    std::vector<std::string>  _rgb;
+    std::vector<std::string>  _depth;
+    std::vector<std::string> _normal;
+    std::vector<std::string>  _roughness;
+
+    float _depth_scale= 5000.0f;
+    std::vector<std::string> timestamps;
+
+    virtual bool init(const utils::ConfigFile&);
+}; // RGBDDataset
+
+class tumRGBDDataset : public RGBDDataset
+{
+
+public:
+    tumRGBDDataset(std::string conf_fn);
+    virtual ~tumRGBDDataset();
+
+    inline std::string name() const { return "tum_rgbd"; }
+    inline Calibration calibration() const { return _calib; }
+
+protected:
+    Calibration _calib;
+
+    bool init(const utils::ConfigFile&);
+    bool loadCalibration(std::string calib_fn);
+
+
+}; // tumRGBDDataset
+
 
 class KittiDataset : public StereoDataset
 {

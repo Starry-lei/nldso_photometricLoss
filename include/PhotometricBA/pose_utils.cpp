@@ -3,6 +3,7 @@
 #include <fstream>
 #include <sstream>
 #include <stdexcept>
+#include <iomanip>
 
 #include <Eigen/Geometry>
 
@@ -39,6 +40,35 @@ PoseList loadPosesKittiFormat(std::string fn)
   return ret;
 }
 
+PoseList loadPosesTumRGBDFormat(std::string fn)
+{
+  std::ifstream ifs(fn);
+  if(!ifs.is_open()) {
+    throw std::runtime_error("failed to open pose file");
+  }
+
+  PoseList ret;
+  std::string timeStamp;
+  double  qw, qx, qy, qz, tx, ty, tz;
+  while(!ifs.eof()) {
+    std::string line;
+    std::getline(ifs, line);
+
+      std::stringstream lineStream(line);
+      lineStream >> timeStamp >>tx >> ty >> tz >> qw >> qx >> qy >> qz;// tum format : 'timestamp tx ty tz qx qy qz qw'
+
+      Eigen::Vector3d t(tx, ty, tz);
+      Eigen::Quaterniond q = Eigen::Quaterniond(qw, qx, qy, qz).normalized();
+
+      Mat44 T(Mat44::Identity());
+      T.block<3,3>(0,0) = q.toRotationMatrix();
+      T.block<3,1>(0,3) = t;
+
+      ret.push_back( T );
+    }
+
+  return ret;
+}
 
 bool writePosesKittiFormat(std::string fn, const PoseList& T)
 {
@@ -57,7 +87,22 @@ bool writePosesKittiFormat(std::string fn, const PoseList& T)
 
   return true;
 }
+bool writePosesTumRGBDFormat(std::string fn, const PoseList& T,const std::vector<std::string>& timeStamp)
+{
+  std::ofstream ofs(fn);
+  if(!ofs.is_open())
+    return false;
 
+  for(size_t i = 0; i < T.size(); ++i) {
+    Eigen::Quaterniond q(T[i].block<3,3>(0,0));
+    Eigen::Vector3d t(T[i].block<3,1>(0,3));
+
+    ofs << std::fixed << std::setprecision(6)<<timeStamp[i]<<" "<< t.x() << " "<< t.y()<< " "<<t.z()<<" "<< q.w() << " " << q.x() << " " << q.y() <<" "<< q.z()<< "\n";
+  }
+  ofs.close();
+
+  return true;
+}
 
 PoseList convertPoseToLocal(const PoseList& T_w)
 {

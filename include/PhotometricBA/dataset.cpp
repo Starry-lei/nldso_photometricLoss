@@ -22,76 +22,7 @@ static void toGray(const cv::Mat& src, cv::Mat& ret)
   }
 }
 
-DisparityDataset::DisparityFrame::DisparityFrame() {}
 
-DisparityDataset::DisparityFrame::
-DisparityFrame(cv::Mat I_, cv::Mat D_, cv::Mat I_orig_, std::string fn_)
-    : I_orig(I_orig_), I(I_), D(D_), fn(fn_) {}
-
-DisparityDataset::DisparityDataset(std::string conf_fn)
-{
-  ConfigFile cf(conf_fn);
-  _disparity_scale = cf.get<float>("DisparityScale", 1.0/16.0);
-
-  THROW_ERROR_IF( !this->init(cf), "failed to initialize DisparityDataset" );
-}
-
-DisparityDataset::~DisparityDataset() {}
-
-UniquePointer<DatasetFrame> DisparityDataset::getFrame(int f_i) const
-{
-  THROW_ERROR_IF( _image_filenames == nullptr, "dataset is not initialized" );
-
-  auto image_fn = _image_filenames->operator[](f_i);
-  cv::Mat I = cv::imread(image_fn, cv::IMREAD_UNCHANGED);
-  cv::Mat D = cv::imread(_disparity_filenames->operator[](f_i), cv::IMREAD_UNCHANGED);
-
-  if(I.empty() || D.empty())
-    return nullptr;
-
-  THROW_ERROR_IF( D.channels() > 1, "disparity must be a single channel" );
-  THROW_ERROR_IF( I.size() != D.size(), "frame size mismatch" );
-
-  if(D.type() != cv::DataType<float>::type)
-    D.convertTo(D, CV_32FC1, _disparity_scale, 0.0);
-
-  cv::Mat I_gray;
-  toGray(I, I_gray);
-  return UniquePointer<DatasetFrame>(new DisparityFrame(I_gray, D, I, image_fn));
-}
-
-bool DisparityDataset::init(const ConfigFile& cf)
-{
-  try
-  {
-    auto root_dir = fs::expand_tilde(cf.get<std::string>("DataSetRootDirectory"));
-    THROW_ERROR_IF( !fs::exists(root_dir),
-                   Format("DataSetRootDirectory '%s' does not exist", root_dir.c_str()).c_str() );
-
-    auto left_fmt = cf.get<std::string>("LeftImageFormat", "");
-    auto dmap_fmt = cf.get<std::string>("DisparityMapFormat", "");
-    auto frame_start = cf.get<int>("FirstFrameNumber", 0);
-
-    //
-    // allow children to set this later
-    //
-    if(!left_fmt.empty())
-    {
-      _image_filenames = std::make_unique<FileLoader>(root_dir, left_fmt, frame_start);
-      _disparity_filenames = std::make_unique<FileLoader>(root_dir, dmap_fmt, frame_start);
-
-      auto frame = this->getFrame(0);
-      THROW_ERROR_IF( frame == nullptr, "failed to read frame" );
-      _image_size = Dataset::GetImageSize(frame.get());
-    }
-  } catch(const std::exception& ex)
-  {
-    Warn("Error %s\n", ex.what());
-    return false;
-  }
-
-  return true;
-}
 
 StereoDataset::StereoDataset(std::string conf_fn)
 : _stereo_alg(new StereoAlgorithm(ConfigFile(conf_fn)))
@@ -101,6 +32,17 @@ StereoDataset::StereoDataset(std::string conf_fn)
 }
 
 StereoDataset::~StereoDataset() {}
+
+RGBDDataset::RGBDDataset(std::string conf_fn)
+:_scale_by( ConfigFile(conf_fn).get<int>("ScaleBy", 1) )
+{
+  ConfigFile cf(conf_fn);
+
+  THROW_ERROR_IF( !this->init(cf), "failed to initialize RGBDDataset" );
+}
+
+RGBDDataset::~RGBDDataset() {}
+
 
 UniquePointer<DatasetFrame> StereoDataset::getFrame(int f_i) const
 {
@@ -134,6 +76,45 @@ UniquePointer<DatasetFrame> StereoDataset::getFrame(int f_i) const
 
   _stereo_alg->run(frame.I[0], frame.I[1], frame.D);
   return UniquePointer<DatasetFrame>(new StereoFrame(frame));
+}
+
+UniquePointer<DatasetFrame> RGBDDataset::getFrame(int f_i) const
+{
+  THROW_ERROR_IF( _rgb.size() == 0 || _depth.size() ==0,
+                 "has not been initialized" );
+
+  std::string image_fn = _rgb[f_i];
+  MonoFrame frame;
+  frame.I_orig = cv::imread(image_fn, cv::IMREAD_UNCHANGED);
+  std::string depth_fn = _depth[f_i];
+  frame.D= cv::imread(depth_fn, cv::IMREAD_UNCHANGED);
+  frame.D.convertTo(frame.D, CV_32FC1);  // scale depth by factor 5000.0f
+  frame.D = frame.D/this->_depth_scale;
+
+  // read normal and roughness later
+
+//  imshow("frame.I_orig", frame.I_orig);
+//  imshow("frame.D", frame.D);
+//  cv::waitKey(0);
+
+  if(frame.I_orig.empty())
+  {
+    dprintf("no more images?\nrgb:%s\ndepth:%s",
+            _rgb[f_i].c_str(),
+            _depth[f_i].c_str());
+    return nullptr;
+  }
+
+  toGray(frame.I_orig, frame.I);
+
+  if(_scale_by > 1) {
+    double s = 1.0 / _scale_by;
+    cv::resize(frame.I, frame.I, cv::Size(), s, s);
+  }
+
+  frame.fn = image_fn;
+
+  return UniquePointer<DatasetFrame>(new MonoFrame(frame));
 }
 
 const StereoAlgorithm* StereoDataset::stereo() const { return _stereo_alg.get(); }
@@ -170,9 +151,85 @@ bool StereoDataset::init(const ConfigFile& cf)
   return true;
 }
 
+std::vector<std::string> StereoDataset::getTimestamp() const {
+    return std::vector<std::string>();
+}
+
+bool RGBDDataset::init(const utils::ConfigFile & cf) {
+
+    try
+    {
+        std::string root_dir = fs::expand_tilde(cf.get<std::string>("DataSetRootDirectory"));
+        THROW_ERROR_IF(!fs::exists(root_dir), "DataSetRootDirectory does not exist");
+
+        std::string sequenceFolder = cf.get<std::string>("SequenceFolder", "");
+        int sequence = cf.get<int>("SequenceNumber");
+        sequenceFolder= root_dir + Format("/sequences/%02d", sequence);
+        THROW_ERROR_IF(!fs::exists(sequenceFolder), "SequenceFolder does not exist");
+        std::string  strAssociationFilename = sequenceFolder + Format("/associated.txt");
+
+        std::ifstream fAssociation;
+        fAssociation.open(strAssociationFilename.c_str());
+        if (!fAssociation)
+        {
+            printf("please ensure that you have the associate file\n");
+            return -1;
+        }
+        while (!fAssociation.eof())
+        {
+            std::string s;
+            std::getline(fAssociation, s);
+            if (!s.empty())
+            {
+                std::stringstream ss;
+                ss << s;
+                std::string t;
+                std::string sRGB, sDepth;
+//                std::string sRGB, sDepth, sMetallic, sBasecolor, sNormal, sRoughness;
+                // readin rgb file
+
+                ss >> t;
+                timestamps.push_back(t);
+                ss >> sRGB;
+                sRGB = sequenceFolder + "/" + sRGB;
+                _rgb.push_back(sRGB);
+                // readin depth file
+                ss >> t;
+                ss >> sDepth;
+                sDepth = sequenceFolder + "/" + sDepth;
+                _depth.push_back(sDepth);
+
+                // readin Normal file
+                //                ss >> t;
+                //                ss >> sNormal;
+                //                sNormal = dir + "/" + sNormal;
+                //                normalfiles.push_back(sNormal);
+                //                // readin Roughness file
+                //                ss >> t;
+                //                ss >> sRoughness;
+                //                sRoughness = dir + "/" + sRoughness;
+                //                roughnessfiles.push_back(sRoughness);
+            }
+        }
+        auto frame = this->getFrame(0);
+        THROW_ERROR_IF( nullptr == frame, "failed to load frame" );
+        _image_size = Dataset::GetImageSize(frame.get());
+
+    } catch(const std::exception& ex)
+    {
+        Warn("Error %s\n", ex.what());
+        return false;
+    }
+    return true;
+}
+
+std::vector<std::string> RGBDDataset::getTimestamp() const {
+    return timestamps;
+}
+
 namespace {
 
-static inline Mat_<double,3,4> set_kitti_camera_from_line(std::string line)
+    static inline Mat_<double,3,4> set_kitti_camera_from_line(std::string line)
 {
   auto tokens = utils::splitstr(line);
   THROW_ERROR_IF( tokens.empty() || tokens[0].empty() || tokens[0][0] != 'P',
@@ -193,6 +250,12 @@ static inline Mat_<double,3,4> set_kitti_camera_from_line(std::string line)
 
 } // namespace
 
+tumRGBDDataset::tumRGBDDataset(std::string conf_fn)
+    : RGBDDataset(conf_fn)
+{
+  THROW_ERROR_IF( !this->init(conf_fn), "failed to initialize tumRGBDDataset" );
+}
+
 KittiDataset::KittiDataset(std::string conf_fn)
     : StereoDataset(conf_fn)
 {
@@ -200,13 +263,14 @@ KittiDataset::KittiDataset(std::string conf_fn)
 }
 
 KittiDataset::~KittiDataset(){}
+tumRGBDDataset::~tumRGBDDataset(){}
 
 bool KittiDataset::init(const utils::ConfigFile& cf)
 {
   try
   {
-    auto root_dir = fs::expand_tilde(cf.get<std::string>("DataSetRootDirectory"));
-    auto sequence = cf.get<int>("SequenceNumber");
+    std::string root_dir = fs::expand_tilde(cf.get<std::string>("DataSetRootDirectory"));
+    int sequence = cf.get<int>("SequenceNumber");
 
     auto left_fmt = Format("sequences/%02d/image_0/%s.png", sequence, "%06d");
     auto right_fmt = Format("sequences/%02d/image_1/%s.png", sequence, "%06d");
@@ -231,6 +295,38 @@ bool KittiDataset::init(const utils::ConfigFile& cf)
 
   return true;
 }
+
+bool tumRGBDDataset::init(const utils::ConfigFile &cf) {
+
+    try
+    {
+
+        std::string root_dir = fs::expand_tilde(cf.get<std::string>("DataSetRootDirectory"));
+        THROW_ERROR_IF(!fs::exists(root_dir), "DataSetRootDirectory does not exist");
+
+        std::string sequenceFolder = cf.get<std::string>("SequenceFolder", "");
+        int sequence = cf.get<int>("SequenceNumber");
+        sequenceFolder= root_dir + Format("/sequences/%02d", sequence);
+        THROW_ERROR_IF(!fs::exists(sequenceFolder), "SequenceFolder does not exist");
+
+        std::string strCalibFilename = sequenceFolder + Format("/calibration.txt");
+        printf("loading calibration from %s!\n", strCalibFilename.c_str());
+
+        auto frame = this->getFrame(0);
+        THROW_ERROR_IF( nullptr == frame, "failed to load frame" );
+        this->_image_size = Dataset::GetImageSize(frame.get());
+
+        return loadCalibration(strCalibFilename);
+
+    } catch(std::exception& ex)
+    {
+        Warn("Error %s\n", ex.what());
+        return false;
+    }
+
+    return true;
+}
+
 
 bool KittiDataset::loadCalibration(std::string filename)
 {
@@ -261,6 +357,27 @@ bool KittiDataset::loadCalibration(std::string filename)
   return true;
 }
 
+bool tumRGBDDataset::loadCalibration(std::string filename) {
+
+    std::ifstream f(filename.c_str());
+    THROW_ERROR_IF( !f.is_open(), "failed to open calib.txt" );
+    std::string l1;
+    std::getline(f, l1);
+    f.close();
+    double fx, fy, cx, cy; // only pinhole model supported
+    int num_fields = std::sscanf(l1.c_str(), "%lf %lf %lf %lf", &fx, &fy, &cx, &cy);
+
+    _calib.K() = Eigen::Matrix3d::Identity();
+
+    _calib.K()(0,0) = fx;
+    _calib.K()(1,1) = fy;
+    _calib.K()(0,2) = cx;
+    _calib.K()(1,2) = cy;
+    _calib.K()(2,2) = 1.0f;
+    std::cout<<"show intrinsics:"<<fx<<" "<<fy<<" "<<cx<<" "<<cy<<std::endl;
+    return true;
+}
+
 UniquePointer<Dataset> Dataset::Create(std::string conf_fn)
 {
   ConfigFile cf(conf_fn);
@@ -269,8 +386,13 @@ UniquePointer<Dataset> Dataset::Create(std::string conf_fn)
 
   if(icompare("kitti", name))
     return UniquePointer<Dataset>( new KittiDataset(conf_fn) );
+  else if (icompare("tumRGBD",name))
+      return UniquePointer<Dataset>( new tumRGBDDataset(conf_fn) );
 
   THROW_ERROR(Format("unknown dataset '%s'\n", name.c_str()).c_str());
 }
+
+
+
 
 

@@ -31,10 +31,10 @@ class FileLoader
    * \return the number of files
    */
   size_t size() const;
+  std::vector<std::string> _files;
 
  private:
   std::string _fmt;
-  std::vector<std::string> _files;
   int _frame_start;
   int _frame_counter;
 }; // FileLoader

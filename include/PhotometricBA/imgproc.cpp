@@ -74,8 +74,8 @@ struct ImageGradientFunc_
 template <typename TSrc = uint8_t> inline
 void imgradient_(const TSrc* src_ptr, const ImageSize& im_size, float* Ix_ptr, float* Iy_ptr)
 {
-  auto rows = im_size.rows;
-  auto cols = im_size.cols;
+  int rows = im_size.rows;
+  int cols = im_size.cols;
 
   memset(Ix_ptr, 0.0, sizeof(float) * cols);
   memset(Iy_ptr, 0.0, sizeof(float) * cols);

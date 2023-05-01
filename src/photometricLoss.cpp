@@ -328,7 +328,7 @@ int main(int argc, char **argv) {
                 SpecularHighlightRemoval specularHighlightRemoval_spcularity;
                 specularHighlightRemoval_spcularity.initialize(Image_ref8UC3.rows, Image_ref8UC3.cols);
                 Mat diffuseImage_specular = specularHighlightRemoval_spcularity.run(specularityMap_1_8UC3, specularityMap_1_mask);
-//                    Mat diffuseImage_specular = specularHighlightRemoval_spcularity.run(dsoSelectedPointMask_C3, sparsityMaskRef);
+//              Mat diffuseImage_specular = specularHighlightRemoval_spcularity.run(dsoSelectedPointMask_C3, sparsityMaskRef);
 
                 Mat clusterImage_specular=  specularHighlightRemoval_spcularity.clusterImage;
                 // suppress the left specular area intensity in the image
