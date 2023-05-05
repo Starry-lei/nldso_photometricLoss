@@ -17,7 +17,7 @@
 
 
 
-
+using namespace cv;
 
 namespace DSONL{
 

@@ -33,9 +33,9 @@ int main(int argc, char **argv) {
     //    string controlPointPose_path= "/home/lei/Documents/Research/envMapData/2frame0370_02_control_cam_pose156.txt";
     //    string  renderedEnvMapPath=   "/home/lei/Documents/Research/envMapData/EnvMap_156ctrlPoints";
 
-    std::string envMap_Folder=    "/home/lei/Documents/Research/envMapData/EnvMap_Img04_260";
-    string controlPointPose_path= "/home/lei/Documents/Research/envMapData/2frame0370_02_control_cam_pose_image4.txt";
-    string  renderedEnvMapPath=   "/home/lei/Documents/Research/envMapData/EnvMap_Img04_260";
+    std::string envMap_Folder =    "/home/lei/Documents/Research/envMapData/EnvMap_Img04_260";
+    string controlPointPose_path = "/home/lei/Documents/Research/envMapData/2frame0370_02_control_cam_pose_image4.txt";
+    string  renderedEnvMapPath =   "/home/lei/Documents/Research/envMapData/EnvMap_Img04_260";
 //    std::string envMap_Folder=    "/home/lei/Documents/Research/envMapData/EnvMap_Img04_moreSpecular_260";
 //    string controlPointPose_path= "/home/lei/Documents/Research/envMapData/2frame0370_02_control_cam_pose_image4.txt";
 //    string  renderedEnvMapPath=   "/home/lei/Documents/Research/envMapData/EnvMap_Img04_moreSpecular_260";
@@ -66,7 +66,7 @@ int main(int argc, char **argv) {
     divide(Scalar(1), depth_tar_inv, depth_tar_GT);
     float roughness_threshold = 0.3;
 
-    // ===========================ctrlPoint Selector==========================================
+    // ==================================ctrlPoint Selector=================================================
     ctrlPointSelector  * ctrlPoint_Selector= new ctrlPointSelector(dataLoader->camPose1, controlPointPose_path,Image_ref8UC3, depth_ref_GT,K_synthetic);
     envLightLookup  *EnvLightLookup= new envLightLookup(ctrlPoint_Selector->selectedIndex, argc, argv, envMap_Folder,controlPointPose_path);
 
@@ -75,7 +75,6 @@ int main(int argc, char **argv) {
     Mat specular_diffuse_transition_mask(Image_ref8UC3.rows, Image_ref8UC3.cols,CV_8UC1,Scalar(0));
     Mat diffuse_mask(Image_ref8UC3.rows, Image_ref8UC3.cols,CV_8UC1,Scalar(0));
  //  1: specular_diffuse transition, 2: diffuse, 3: specular
-
 
     cvtColor(Image_ref8UC3, grayImage_ref, CV_RGB2GRAY);
     cvtColor(Image_tar8UC3, grayImage_tar, CV_RGB2GRAY);

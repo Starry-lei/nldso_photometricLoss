@@ -33,6 +33,8 @@ class FileLoader
   size_t size() const;
   std::vector<std::string> _files;
 
+
+
  private:
   std::string _fmt;
   int _frame_start;

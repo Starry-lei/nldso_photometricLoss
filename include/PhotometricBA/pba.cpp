@@ -42,11 +42,11 @@
 static PhotometricBundleAdjustment::Options::DescriptorType
 DescriptorTypeFromString(std::string s)
 {
-    if(utils::icompare("Intensity", s))
+    if(pbaUtils::icompare("Intensity", s))
         return PhotometricBundleAdjustment::Options::DescriptorType::Intensity;
-    else if(utils::icompare("IntensityAndGradient", s))
+    else if(pbaUtils::icompare("IntensityAndGradient", s))
         return PhotometricBundleAdjustment::Options::DescriptorType::IntensityAndGradient;
-    else if(utils::icompare("BitPlanes", s))
+    else if(pbaUtils::icompare("BitPlanes", s))
         return PhotometricBundleAdjustment::Options::DescriptorType::BitPlanes;
     else {
         Warn("Unknown descriptorType '%s'\n", s.c_str());
@@ -85,13 +85,13 @@ bool PhotometricBundleAdjustment::Result::Writer::add(const Result& result)
     ret = true;
   }
 #else
-    utils::UNUSED(result);
+    pbaUtils::UNUSED(result);
 #endif
 
     return ret;
 }
 
-PhotometricBundleAdjustment::Options::Options(const utils::ConfigFile& cf)
+PhotometricBundleAdjustment::Options::Options(const pbaUtils::ConfigFile& cf)
         : maxNumPoints(cf.get<int>("maxNumPoints", 4096)),
           slidingWindowSize(cf.get<int>("slidingWindowSize", 5)),
           patchRadius(cf.get<int>("patchRadius", 2)),
@@ -441,6 +441,7 @@ struct PhotometricBundleAdjustment::ScenePoint
 
     Vec3 _X;
     Vec3 _X_original;
+    Vec3 specularity;
     VisibilityList _f;
     ZnccPatchType _patch;
     std::vector<double> _descriptor;
@@ -488,32 +489,18 @@ void PhotometricBundleAdjustment::
 addFrame(const uint8_t* I_ptr, const float* Z_ptr, const Mat44& T, Result* result)
 {
 
-
-
-//    std::cerr<<"show T in the function addFrame:\n "<<T.matrix()<<std::endl;
-//    _trajectory.push_back(T, _frame_id);
     _trajectory.push_back(T, _frame_id);
     const Eigen::Isometry3d T_w(_trajectory.back());
     const Eigen::Isometry3d T_c(T_w.inverse());
 
-    // output the size of _trajectory
-//    std::cerr<<"_trajectory size: "<<_trajectory.size()<<std::endl;
-//    // output the T_w
-//    std::cerr<<"T_w: "<<T_w.matrix()<<std::endl;
+
 
     typedef Eigen::Map<const Image_<uint8_t>, Eigen::Aligned> SrcMap;
     auto I = SrcMap(I_ptr, _image_size.rows, _image_size.cols);
-
     typedef Eigen::Map<const Image_<float>, Eigen::Aligned> SrcDepthMap;
     auto Z = SrcDepthMap(Z_ptr, _image_size.rows, _image_size.cols);
 
     // check the depth map
-
-
-
-
-
-
     DescriptorFrame* frame = DescriptorFrame::Create(_frame_id, I, _options.descriptorType);
     // show the selected points
 //    std::cout<<"number of channels: "<<frame->numChannels()<<std::endl;
@@ -548,7 +535,7 @@ addFrame(const uint8_t* I_ptr, const float* Z_ptr, const Mat44& T, Result* resul
 
             int r = std::round(uv[1]), c = std::round(uv[0]);
             if(r >= B && r < max_rows && c >= B && c <= max_cols) {
-                typename ScenePoint::ZnccPatchType other_patch(I, uv);
+                typename ScenePoint::ZnccPatchType other_patch(I, uv);// use this uv to calculate the specularity!!!!!!!!!!!!!!!!!!!!!!!!!!!
                 auto score = pt->patch().score( other_patch );
                 if(score > _options.minScore) {
                     num_updated++;
@@ -576,14 +563,6 @@ addFrame(const uint8_t* I_ptr, const float* Z_ptr, const Mat44& T, Result* resul
     new_scene_points.reserve( max_rows * max_cols * 0.5 );
     frame->computeSaliencyMap(_saliency_map);
 
-    // print the saliency map
-//    for (int i = 0; i < _saliency_map.rows(); ++i) {
-//        for (int j = 0; j < _saliency_map.cols(); ++j) {
-//            std::cout<<_saliency_map(i,j)<<" ";
-//        }
-//        std::cout<<std::endl;
-//
-//    }
 
     // Convert the Image_<T> to a cv::Mat
     cv::Mat salientImage(_saliency_map.rows(), _saliency_map.cols(), CV_32F, _saliency_map.data(), _saliency_map.stride());
@@ -598,26 +577,17 @@ addFrame(const uint8_t* I_ptr, const float* Z_ptr, const Mat44& T, Result* resul
 
     for(int y = B; y < max_rows; ++y) {
         for(int x = B; x < max_cols; ++x) {
-            double z = Z(y,x);
-
-            //std::cout<<"z: "<<z<<std::endl;
+            double z = Z(y,x);// maybe use inverse depth later
             if(z >= _options.minValidDepth && z <= _options.maxValidDepth) {
                 if(is_local_max(y, x)) {
                     Vec3 X = T_w * (z * _K_inv * Vec3(x, y, 1.0)); // X in the world frame
-
-                    std::unique_ptr<ScenePoint> p = make_unique<ScenePoint>(X, _frame_id);// associate a new scene point with its frame id
+                    std::unique_ptr<ScenePoint> p = std::make_unique<ScenePoint>(X, _frame_id);// associate a new scene point with its frame id
                     Vec_<int,2> xy(x, y);
                     p->setZnccPach( I, xy );
                     p->descriptor().resize(descriptor_dim);
                     p->setSaliency( _saliency_map(y,x) );
                     p->setFirstProjection(xy);
 
-                   // show the visibility of the point
-//                    std::cout<<"show the visibility size of the point:"<<p->visibilityList().size()<<std::endl;
-//                    for (int i = 0; i < p->visibilityList().size(); ++i) {
-//                        std::cout<<p->visibilityList()[i]<<" ";
-//                    }
-                    // draw the first round selected points
                     cmuSelectedPointMask.at<uchar>(y,x)= 255;
                     new_scene_points.push_back(std::move(p));
 
@@ -627,14 +597,7 @@ addFrame(const uint8_t* I_ptr, const float* Z_ptr, const Mat44& T, Result* resul
     }
 
     std::cout<<"new scene points size: "<<new_scene_points.size()<<std::endl;
-//    std::cout<<"count_selectedPoint: "<<count_selectedPoint<<std::endl;
-//    imshow("saliency_map_drawed", salientImage);
-//    imshow("cmuSelectedPointMask", cmuSelectedPointMask);
-////    cv::imshow("saliency_map", salientImage);
-//    cv::imwrite("cmuSelectedPointMask"+std::to_string(_frame_id)+".png", cmuSelectedPointMask);
-//     cv::waitKey(0);
-//    int num_selected = cv::countNonZero(cmuSelectedPointMask);
-//    std::cout<<"num_nonZero_selected: "<<num_selected<<std::endl;
+
 //
 // keep the best N points
 //
@@ -647,24 +610,30 @@ addFrame(const uint8_t* I_ptr, const float* Z_ptr, const Mat44& T, Result* resul
         new_scene_points.erase(nth, new_scene_points.end());
     }
 
-    // show the filtered selected points
+    //
+    // show the filtered selected points and calculate the specularity value for selected points
+    //
 
     for (int i = 0; i < new_scene_points.size(); ++i) {
         cmuSelectedPointMask2.at<uchar>(new_scene_points[i]->_x[1],new_scene_points[i]->_x[0])= 255;
+
+         new_scene_points[i]->X();// point at world coordinate
+//         new_scene_points[i].
+
+
+
     }
-    imshow("cmuSelectedPointMask2", cmuSelectedPointMask2);
+//    imshow("cmuSelectedPointMask2", cmuSelectedPointMask2);
 //    cv::imwrite("cmuSelectedPointMask2"+std::to_string(_frame_id)+".png", cmuSelectedPointMask2);
 //    cv::waitKey(0);
 //    int num_selected_cmuSelectedPointMask2 = cv::countNonZero(cmuSelectedPointMask2);
 //    std::cout<<"num_nonZero_selected_cmuSelectedPointMask2: "<<num_selected_cmuSelectedPointMask2<<std::endl;
-    cv::waitKey(0);
-
+//    cv::waitKey(0);
     //
     // extract the descriptors
     //
     const int num_channels = frame->numChannels(),
             num_new_points = (int) new_scene_points.size();
-
     Info("updated %d [%0.2f%%] max %d new %d\n",
          num_updated, 100.0 * num_updated / _scene_points.size(),
          max_num_to_update, num_new_points);
@@ -682,8 +651,6 @@ addFrame(const uint8_t* I_ptr, const float* Z_ptr, const Mat44& T, Result* resul
     _frame_buffer.push_back(DescriptorFramePointer(frame));
 
     if(_frame_buffer.full()) {
-
-
 //        uint32_t frame_id_start = _frame_buffer.front()->id(),
 //                frame_id_end   = _frame_buffer.back()->id();
 //        int num_selected_points = 0;
@@ -702,12 +669,6 @@ addFrame(const uint8_t* I_ptr, const float* Z_ptr, const Mat44& T, Result* resul
 //        }
 //
 //        Info("!!! show num_selected_points: %d\n", num_selected_points);
-
-
-
-
-
-
         optimize(result);
     }
 
@@ -746,7 +707,7 @@ MakePatchWeights(int radius, bool do_gaussian, double s_x = 1.0,
 static Vec_<double,6> PoseToParams(const Mat44& T)
 {
     Vec_<double,6> ret;
-    const Mat_<double,3,3> R = T.block<3,3>(0,0);
+    const Mat_eigen<double,3,3> R = T.block<3,3>(0,0);
     ceres::RotationMatrixToAngleAxis(ceres::ColumnMajorAdapter3x3(R.data()), ret.data());
 
     ret[3] = T(0,3);
@@ -755,12 +716,12 @@ static Vec_<double,6> PoseToParams(const Mat44& T)
     return ret;
 }
 
-static Mat_<double,4,4> ParamsToPose(const double* p)
+static Mat_eigen<double,4,4> ParamsToPose(const double* p)
 {
-    Mat_<double,3,3> R;
+    Mat_eigen<double,3,3> R;
     ceres::AngleAxisToRotationMatrix(p, ceres::ColumnMajorAdapter3x3(R.data()));
 
-    Mat_<double,4,4> ret(Mat_<double,4,4>::Identity());
+    Mat_eigen<double,4,4> ret(Mat_eigen<double,4,4>::Identity());
     ret.block<3,3>(0,0) = R;
     ret.block<3,1>(0,3) = Vec_<double,3>(p[3], p[4], p[5]);
     return ret;
@@ -866,7 +827,7 @@ void PhotometricBundleAdjustment::optimize(Result* result)
     uint32_t frame_id_start = _frame_buffer.front()->id(),
             frame_id_end   = _frame_buffer.back()->id();
 
-    auto patch_weights = MakePatchWeights(_options.patchRadius, _options.doGaussianWeighting);
+    std::vector<double> patch_weights = MakePatchWeights(_options.patchRadius, _options.doGaussianWeighting);
 
     //
     // collect the camera poses in a single map for easy access
@@ -890,10 +851,10 @@ void PhotometricBundleAdjustment::optimize(Result* result)
         // it is enough to check the visibility list length, because we will remove
         // points as soon as they leave the optimization window
 
-        int checkpointer=pt->visibilityList().size();
-        int checkpointer2=pt->numFrames();
-        int checkpointer3=pt->refFrameId();
-        int checkpointer4=frame_id_start;
+//        int checkpointer=pt->visibilityList().size();
+//        int checkpointer2=pt->numFrames();
+//        int checkpointer3=pt->refFrameId();
+//        int checkpointer4=frame_id_start;
 
         if(pt->numFrames() >= 3 && pt->refFrameId() >= frame_id_start) {
             num_selected_points++;
@@ -1021,4 +982,25 @@ auto PhotometricBundleAdjustment::removePointsAtFrame(uint32_t id) -> ScenePoint
     return points_to_remove;
 }
 
+Vec3 PhotometricBundleAdjustment::calcuSpecularity(Vec3 &point, DSONL::envLightLookup *EnvLightLookup, Vec3 normal,
+                                                   float roughness) {
 
+
+
+
+
+
+    return Vec3();
+}
+
+
+// notes
+
+//    std::cout<<"count_selectedPoint: "<<count_selectedPoint<<std::endl;
+//    imshow("saliency_map_drawed", salientImage);
+//    imshow("cmuSelectedPointMask", cmuSelectedPointMask);
+////    cv::imshow("saliency_map", salientImage);
+//    cv::imwrite("cmuSelectedPointMask"+std::to_string(_frame_id)+".png", cmuSelectedPointMask);
+//     cv::waitKey(0);
+//    int num_selected = cv::countNonZero(cmuSelectedPointMask);
+//    std::cout<<"num_nonZero_selected: "<<num_selected<<std::endl;

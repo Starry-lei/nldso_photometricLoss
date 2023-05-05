@@ -250,15 +250,41 @@ target_link_libraries(photometricLoss
 
 add_subdirectory(include/PhotometricBA)
 
-add_executable(pba src/photoBA.cpp include/PhotometricBA/pba.cpp include/PhotometricBA/utils.cpp include/PhotometricBA/trajectory.cpp include/PhotometricBA/pose_utils.cpp
-        include/PhotometricBA/imgproc.cpp include/PhotometricBA/dataset.cpp  include/PhotometricBA/file_loader.cpp  include/PhotometricBA/stereo_algorithm.cpp
+add_executable(pba
+        src/photoBA.cpp
+        include/PhotometricBA/pba.cpp
+        include/PhotometricBA/utils.cpp
+        include/PhotometricBA/trajectory.cpp
+        include/PhotometricBA/pose_utils.cpp
+        include/PhotometricBA/imgproc.cpp
+        include/PhotometricBA/dataset.cpp
+        include/PhotometricBA/file_loader.cpp
+        include/dataLoader/PFMReadWrite.cpp
+        include/PhotometricBA/envLightPreProcessing.cpp
+        include/preFilter/preFilter.cpp
+        include/preFilter/specular_mask_Renderer.cpp
+        include/preFilter/FileTools.cpp
+        include/preFilter/LoadOBJ.cpp
+        include/preFilter/Matrix.cpp
+        include/preFilter/Mesh.cpp
+        include/preFilter/Renderer.cpp
+        include/preFilter/ShaderNode.cpp
+        include/preFilter/StringTools.cpp
+        include/diffuseMap/Renderer_diffuse.cpp
+        include/diffuseMap/diffuse_mask_Renderer.cpp
+        include/settings/preComputeSetting.cpp
         )
 target_link_libraries(pba
         Eigen3::Eigen
         ${Boost_LIBRARIES}
-  Ceres::ceres
-  TBB::tbb
-  OpenCV
+        Ceres::ceres
+        TBB::tbb
+        OpenCV
+        pangolin
+        ${PCL_LIBRARIES}
+        ${OPENGL_LIBRARIES}
+        ${GLUT_LIBRARIES}
+        ${GLEW_LIBRARIES}
 )
 
 #add_executable(test_functions src/test_functions.cpp)

@@ -10,15 +10,19 @@
 #include "types.h"
 #include "trajectory.h"
 #include "calibration.h"
+//#include "pangolinVis.h"
 
 #include <iosfwd>
 #include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
 #include <boost/circular_buffer.hpp>
+#include "envLightPreProcessing.h"
 
 
-namespace utils {
+
+
+namespace pbaUtils {
     class ConfigFile;
 };  // utils
 
@@ -84,7 +88,7 @@ public:
 
         Options() {}
 
-        Options(const utils::ConfigFile& cf);
+        Options(const pbaUtils::ConfigFile& cf);
 
     private:
         friend std::ostream& operator<<(std::ostream&, const Options&);
@@ -164,6 +168,15 @@ public:
      * \param result, if not null we store the optmization results in it
      */
     void addFrame(const uint8_t* image, const float* depth_map, const Mat44& T, Result* = nullptr);
+
+//    std::string EnvMapPath;
+//    std::string EnvMapPosePath;
+    DSONL::envLightLookup* EnvLightLookup=NULL;
+
+    Vec3 calcuSpecularity(Vec3& point, DSONL::envLightLookup* EnvLightLookup, Vec3 normal, float roughness);
+
+
+
 
 protected:
     void optimize(Result*);

@@ -4,7 +4,7 @@
 
 #include "ctrlPointSelector.h"
 
-
+using namespace cv;
 namespace DSONL {
 
 //
@@ -33,14 +33,13 @@ namespace DSONL {
 
     DSONL::ctrlPointSelector::ctrlPointSelector(Sophus::SE3d Camera1_extrin, string controlPointPose_path, Mat Image,
                                                 Mat depthImage, Eigen::Matrix<float, 3, 3>& K) {
-
         // constants
         kNearest = 1;
         Sophus::SE3f Camera1_w2c = Camera1_extrin.cast<float>();
         float fx = K(0, 0), cx = K(0, 2), fy = K(1, 1), cy = K(1, 2);
 
 
-        Vec2i boundingBoxUpperLeft( 83, 76);// 83, 76
+        Vec2i boundingBoxUpperLeft(83, 76);// 83, 76
         Vec2i boundingBoxBotRight(240, 320);
 
         pcl::PCDWriter writer;

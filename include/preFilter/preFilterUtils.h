@@ -35,7 +35,7 @@
 
 using namespace std;
 using namespace gsn;
-using namespace cv;
+//using namespace cv;
 
 namespace DSONL {
 

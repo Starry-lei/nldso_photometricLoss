@@ -6,9 +6,11 @@
 #include "calibration.h"
 #include <opencv2/core/core.hpp>
 
-namespace utils {
+#include "dataLoader/PFMReadWrite.h"
+
+namespace pbaUtils {
 class ConfigFile;
-}; // utils
+}; // pbaUtils
 
 enum class DatasetType
 {
@@ -84,56 +86,6 @@ class Dataset
 }; // Dataset
 
 
-class StereoAlgorithm;
-
-class StereoDataset : public Dataset
-{
- public:
-  struct StereoFrame : DatasetFrame
-  {
-    std::string fn;
-    cv::Mat I_orig[2]; //< original stereo images  {left, right}
-    cv::Mat I[2];      //< grayscale {left, right}
-    cv::Mat D;         //< disparity as float
-
-    inline const cv::Mat& image() const { return I[0]; }
-    inline  cv::Mat& depth()  { return D; }
-    inline const cv::Mat& normal() const { return D; }
-    inline const cv::Mat& roughness() const { return D; }
-    inline const cv::Mat& disparity() const { return D; }
-    inline std::string filename() const { return fn; }
-
-    virtual ~StereoFrame() {}
-  }; // StereoFrame
-
- public:
-  StereoDataset(std::string conf_fn);
-  virtual ~StereoDataset();
-
-  virtual Calibration calibration() const = 0;
-  virtual std::string name() const = 0;
-
-  inline DatasetType type() const { return DatasetType::Stereo; }
-  inline ImageSize imageSize() const { return _image_size; }
-
-  UniquePointer<DatasetFrame> getFrame(int f_i) const;
-  std::vector<std::string> getTimestamp() const;
-
-  const StereoAlgorithm* stereo() const;
-
- protected:
-  UniquePointer<StereoAlgorithm> _stereo_alg;
-  ImageSize _image_size;
-
-  UniquePointer<FileLoader> _left_filenames;
-  UniquePointer<FileLoader> _right_filenames;
-
-  int _scale_by = 1;
-
-  virtual bool init(const utils::ConfigFile&);
-}; // StereoDataset
-
-
 class RGBDDataset : public Dataset
 {
 public:
@@ -168,6 +120,9 @@ public:
     UniquePointer<DatasetFrame> getFrame(int f_i) const;
     std::vector<std::string> getTimestamp() const;
 
+    cv::Mat loadNormal(int f_i) const;
+    cv::Mat loadRoughness(int f_i) const;
+
 
 protected:
     ImageSize _image_size;
@@ -180,7 +135,7 @@ protected:
     float _depth_scale= 5000.0f;
     std::vector<std::string> timestamps;
 
-    virtual bool init(const utils::ConfigFile&);
+    virtual bool init(const pbaUtils::ConfigFile&);
 }; // RGBDDataset
 
 class tumRGBDDataset : public RGBDDataset
@@ -196,28 +151,10 @@ public:
 protected:
     Calibration _calib;
 
-    bool init(const utils::ConfigFile&);
+    bool init(const pbaUtils::ConfigFile&);
     bool loadCalibration(std::string calib_fn);
 
 
 }; // tumRGBDDataset
-
-
-class KittiDataset : public StereoDataset
-{
- public:
-  KittiDataset(std::string conf_fn);
-  virtual ~KittiDataset();
-
-  inline std::string name() const { return "kitti"; }
-  inline Calibration calibration() const { return _calib; }
-
- protected:
-  Calibration _calib;
-
-  bool init(const utils::ConfigFile&);
-  bool loadCalibration(std::string calib_fn);
-}; // KittiDataset
-
 
 #endif // PHOTOBUNDLE_DATASET_H

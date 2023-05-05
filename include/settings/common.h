@@ -23,7 +23,6 @@
 
 #include "sophus/se3.hpp"
 
-using namespace cv;
 using namespace std;
 
 namespace DSONL{
