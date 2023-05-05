@@ -445,7 +445,7 @@ struct PhotometricBundleAdjustment::ScenePoint
     VisibilityList _f;
     ZnccPatchType _patch;
     std::vector<double> _descriptor;
-
+    std::unordered_map<uint32_t,Vec3> specularityMap;
     double _saliency  = 0.0;
     bool _was_refined = false;
 
@@ -486,13 +486,15 @@ void ExtractPatch(T* dst, const Image& I, const Vec_<int,2>& uv, int radius)
 
 
 void PhotometricBundleAdjustment::
-addFrame(const uint8_t* I_ptr, const float* Z_ptr, const Mat44& T, Result* result)
+addFrame(const uint8_t* I_ptr, const float* Z_ptr, const Vec3f* N_ptr, const float* R_ptr,  const Mat44& T, Result* result)
 {
 
     _trajectory.push_back(T, _frame_id);
     const Eigen::Isometry3d T_w(_trajectory.back());
     const Eigen::Isometry3d T_c(T_w.inverse());
 
+    int width= _image_size.cols;
+    int height= _image_size.rows;
 
 
     typedef Eigen::Map<const Image_<uint8_t>, Eigen::Aligned> SrcMap;
@@ -503,7 +505,7 @@ addFrame(const uint8_t* I_ptr, const float* Z_ptr, const Mat44& T, Result* resul
     // check the depth map
     DescriptorFrame* frame = DescriptorFrame::Create(_frame_id, I, _options.descriptorType);
     // show the selected points
-//    std::cout<<"number of channels: "<<frame->numChannels()<<std::endl;
+    // std::cout<<"number of channels: "<<frame->numChannels()<<std::endl;
 
 
     int B = std::max(_options.maskBlockRadius, std::max(2, _options.patchRadius));
@@ -539,10 +541,9 @@ addFrame(const uint8_t* I_ptr, const float* Z_ptr, const Mat44& T, Result* resul
                 auto score = pt->patch().score( other_patch );
                 if(score > _options.minScore) {
                     num_updated++;
-
                     // TODO update the patch for the new frame data
                     pt->addFrame(_frame_id);
-
+                    // TODO: calculate specularity
                     //
                     // block an area in the mask to prevent initializing redundant new
                     // scene points
@@ -554,10 +555,8 @@ addFrame(const uint8_t* I_ptr, const float* Z_ptr, const Mat44& T, Result* resul
             }
         }
     }
-
-
     //
-    // Add new scene points
+    // Add new scene points using new frame
     //
     decltype(_scene_points) new_scene_points;
     new_scene_points.reserve( max_rows * max_cols * 0.5 );
@@ -611,18 +610,39 @@ addFrame(const uint8_t* I_ptr, const float* Z_ptr, const Mat44& T, Result* resul
     }
 
     //
-    // show the filtered selected points and calculate the specularity value for selected points
+    // calculate the specularity value for selected points
     //
 
-    for (int i = 0; i < new_scene_points.size(); ++i) {
-        cmuSelectedPointMask2.at<uchar>(new_scene_points[i]->_x[1],new_scene_points[i]->_x[0])= 255;
 
-         new_scene_points[i]->X();// point at world coordinate
-//         new_scene_points[i].
+    // TODO: calcualte specularity for new frame selected points
+    for(size_t i = 0; i < new_scene_points.size(); ++i) {
+        const auto& pt = new_scene_points[i];
 
 
+        int r= pt->_x[1], c= pt->_x[0];                    // pixel: row, col
+        Eigen::Vector3f point_w= pt->X().cast<float>();    // point: at world coordinate
+        Eigen::Vector3f point_c= (T_c * pt->X()).cast<float>();  // point: at camera coordinate
+        const Vec3f& normal_pixel = N_ptr[r * width + c];
+        Vec3f normal =normalize(normal_pixel);              // normal
+        const float roughness_pixel= R_ptr[r * width + c]; // roughness
+        float reflectance = 1.0f;                          // reflectance
+        int num_K = 6;                                     // K nearest neighbor search
+        float image_metallic=1e-3;                         // metallic
+        Eigen::Matrix<float, 3, 1> beta= -point_c;
 
     }
+//
+
+
+//    for (int i = 0; i < new_scene_points.size(); ++i) {
+//        cmuSelectedPointMask2.at<uchar>(new_scene_points[i]->_x[1],new_scene_points[i]->_x[0])= 255;
+//
+//         new_scene_points[i]->X();// point at world coordinate
+//         new_scene_points[i].
+//
+//
+//
+//    }
 //    imshow("cmuSelectedPointMask2", cmuSelectedPointMask2);
 //    cv::imwrite("cmuSelectedPointMask2"+std::to_string(_frame_id)+".png", cmuSelectedPointMask2);
 //    cv::waitKey(0);
@@ -850,12 +870,6 @@ void PhotometricBundleAdjustment::optimize(Result* result)
     for(auto& pt : _scene_points) {
         // it is enough to check the visibility list length, because we will remove
         // points as soon as they leave the optimization window
-
-//        int checkpointer=pt->visibilityList().size();
-//        int checkpointer2=pt->numFrames();
-//        int checkpointer3=pt->refFrameId();
-//        int checkpointer4=frame_id_start;
-
         if(pt->numFrames() >= 3 && pt->refFrameId() >= frame_id_start) {
             num_selected_points++;
 
@@ -1004,3 +1018,5 @@ Vec3 PhotometricBundleAdjustment::calcuSpecularity(Vec3 &point, DSONL::envLightL
 //     cv::waitKey(0);
 //    int num_selected = cv::countNonZero(cmuSelectedPointMask);
 //    std::cout<<"num_nonZero_selected: "<<num_selected<<std::endl;
+
+//      std::cerr<<"show normal_pixel:"<<normal_pixel<<"at:"<<r<<"and:"<<c<<endl;

@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <random>
 #include <map>
+#include <unordered_map>
 
 #include <boost/program_options.hpp>
 #include <boost/mpl/range_c.hpp>

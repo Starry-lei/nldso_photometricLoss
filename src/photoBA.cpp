@@ -69,7 +69,10 @@ int main(int argc, char** argv)
         printf("Frame %05d\n", f_i);
         const uint8_t* I = frame->image().ptr<const uint8_t>();
         float* Z =frame->depth().ptr<float>();
-        photoba.addFrame(I, Z, T_init[f_i],  &result);
+        const Vec3f* N = frame->normal().ptr<Vec3f>();
+        const float* R= frame->roughness().ptr<float>();
+
+        photoba.addFrame(I, Z, N, R, T_init[f_i],  &result);
         if(!result.refinedPoints.empty()) {
             for (size_t i = 0; i < result.refinedPoints.size(); ++i) {
                 pcl::PointXYZ p(result.refinedPoints[i].x(),result.refinedPoints[i].y(),result.refinedPoints[i].z());

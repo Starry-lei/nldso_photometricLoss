@@ -167,7 +167,7 @@ public:
      * \param T pose initialization for this frame
      * \param result, if not null we store the optmization results in it
      */
-    void addFrame(const uint8_t* image, const float* depth_map, const Mat44& T, Result* = nullptr);
+    void addFrame(const uint8_t* image, const float* depth_map, const Vec3f* N_ptr, const float* R_ptr, const Mat44& T, Result* = nullptr);
 
 //    std::string EnvMapPath;
 //    std::string EnvMapPosePath;
