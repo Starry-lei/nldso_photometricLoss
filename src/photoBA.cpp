@@ -20,6 +20,29 @@
 #include <pcl/io/pcd_io.h>
 #include <pcl/point_types.h>
 
+void readCtrlPointPoseData(string fileName, vector<Sophus::SE3f, Eigen::aligned_allocator<Sophus::SE3f>>& pose) {
+
+    ifstream trajectory(fileName);
+    if (!trajectory.is_open()) {
+        cout << "No controlPointPose data!" << fileName << endl;
+        return;
+    }
+
+    float  qw, qx, qy, qz, tx, ty, tz;
+    string line;
+    while (getline(trajectory, line)) {
+        stringstream lineStream(line);
+        lineStream >> qw >> qx >> qy >> qz>> tx >> ty >> tz;
+
+        Eigen::Vector3f t(tx, ty, tz);
+        Eigen::Quaternionf q = Eigen::Quaternionf(qw, qx, qy, qz).normalized();
+        Sophus::SE3f SE3_qt(q, t);
+        pose.push_back(SE3_qt);
+    }
+
+}
+
+
 
 bool gStop = false;
 bool show_gui = true;
@@ -48,15 +71,19 @@ int main(int argc, char** argv)
     std::string EnvMapPath=cf.get<std::string>("EnvMapPath");
     std::string EnvMapPosePath=cf.get<std::string>("EnvMapPosePath");
 
-
-
+    // convert environment light pose the coordinate system of the first camera in PBA sequence
+    std::vector<Sophus::SE3f, Eigen::aligned_allocator<Sophus::SE3f>> trajectoryPoses;
+    string fileName = "/home/lei/Documents/Dataset/dataSetPBA/sequences/02/poses.txt";
+    readCtrlPointPoseData(fileName, trajectoryPoses);
+    cout<<"trajectoryPoses size: "<<trajectoryPoses.size()<<endl;
+    Sophus::SE3f frontCamPose_w (trajectoryPoses[0]);
 
 
     PhotometricBundleAdjustment::Result result;
     PhotometricBundleAdjustment photoba(dataset->calibration(), dataset->imageSize(), {cf});
-//    photoba.EnvMapPath=EnvMapPath;
+    photoba.EnvMapPath=EnvMapPath;
 //    photoba.EnvMapPosePath=EnvMapPosePath;
-    DSONL::envLightLookup  *EnvLightLookup= new DSONL::envLightLookup(argc, argv, EnvMapPath,EnvMapPosePath);
+    PBANL::envLightLookup  *EnvLightLookup= new PBANL::envLightLookup(argc, argv, EnvMapPath,EnvMapPosePath,frontCamPose_w);
     photoba.EnvLightLookup= EnvLightLookup;
 
     EigenAlignedContainer_<Mat44> T_opt;
@@ -81,7 +108,7 @@ int main(int argc, char** argv)
         }
     }
 
-    auto output_fn = options.get<std::string>("output");
+    string output_fn = options.get<std::string>("output");
     Info("Writing refined poses to %s\n", output_fn.c_str());
     writePosesTumRGBDFormat(output_fn, result.poses, dataset->getTimestamp());
     // save the point cloud

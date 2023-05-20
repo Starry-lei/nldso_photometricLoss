@@ -18,6 +18,7 @@
 #include <opencv2/highgui.hpp>
 #include <boost/circular_buffer.hpp>
 #include "envLightPreProcessing.h"
+#include "deltaCompution.h"
 
 
 
@@ -169,11 +170,11 @@ public:
      */
     void addFrame(const uint8_t* image, const float* depth_map, const Vec3f* N_ptr, const float* R_ptr, const Mat44& T, Result* = nullptr);
 
-//    std::string EnvMapPath;
-//    std::string EnvMapPosePath;
-    DSONL::envLightLookup* EnvLightLookup=NULL;
+    std::string EnvMapPath;
+    // std::string EnvMapPosePath;
+    PBANL::envLightLookup* EnvLightLookup=NULL;
 
-    Vec3 calcuSpecularity(Vec3& point, DSONL::envLightLookup* EnvLightLookup, Vec3 normal, float roughness);
+    Vec3 calcuSpecularity(Vec3& point, PBANL::envLightLookup* EnvLightLookup, Vec3 normal, float roughness);
 
 
 

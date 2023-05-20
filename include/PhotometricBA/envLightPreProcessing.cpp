@@ -13,7 +13,7 @@ using namespace std;
 using namespace gsn;
 
 
-namespace DSONL {
+namespace PBANL {
 
 
     void GetFileNames(string path,vector<string>& filenames)
@@ -32,7 +32,7 @@ namespace DSONL {
         closedir(pDir);
     }
 
-    void readCtrlPointPoseData(string fileName, vector<Sophus::SE3f, Eigen::aligned_allocator<Sophus::SE3f>>& pose) {
+    void readCtrlPointPoseData(string fileName, vector<Sophus::SE3f, Eigen::aligned_allocator<Sophus::SE3f>>& pose,Sophus::SE3f frontCamPose) {
 
         ifstream trajectory(fileName);
         if (!trajectory.is_open()) {
@@ -49,13 +49,17 @@ namespace DSONL {
             Eigen::Vector3f t(tx, ty, tz);
             Eigen::Quaternionf q = Eigen::Quaternionf(qw, qx, qy, qz).normalized();
             Sophus::SE3f SE3_qt(q, t);
+
+            // convert envLightPose to frontCamPose
+            SE3_qt = frontCamPose.inverse() * SE3_qt;
+
             pose.push_back(SE3_qt);
         }
 
     }
 
     envLightLookup::envLightLookup( int argc, char **argv,
-                                   string envMap_Folder, string controlPointPose_path) {
+                                   string envMap_Folder, string controlPointPose_path,Sophus::SE3f frontCamPose) {
 
 
         pcl::PCDWriter writer;
@@ -64,13 +68,20 @@ namespace DSONL {
         std::cout<<" \n Show fileNames.size():"<<fileNames.size()<< std::endl;
 
         std::vector<Sophus::SE3f, Eigen::aligned_allocator<Sophus::SE3f>> controlPointPoses;
-        readCtrlPointPoseData(controlPointPose_path,controlPointPoses);
+        readCtrlPointPoseData(controlPointPose_path,controlPointPoses, frontCamPose);
         std::cout<<" \n Show controlPointPoses.size():"<<controlPointPoses.size()<< std::endl;
+
+//        assert(fileNames.size()=controlPointPoses.size())
+
+        // save all the translation of control points as pcl point cloud
+//        pcl::PointCloud<pcl::PointXYZ>::Ptr ControlpointCloud (new pcl::PointCloud<pcl::PointXYZ>());
+//        std::map<Vec3f, int> envLightIdxMap;
+
 
 
         //brdf(Red&Green Table)
         string brdfIntegrationMap_path = "../include/brdfIntegrationMap/brdfIntegrationMap.pfm";
-        brdfIntegrationMap *brdfIntegrationMap= new DSONL::brdfIntegrationMap(brdfIntegrationMap_path);
+        DSONL::brdfIntegrationMap *brdfIntegrationMap= new DSONL::brdfIntegrationMap(brdfIntegrationMap_path);
         brdfIntegrationMap->makebrdfIntegrationMap(brdfSampler);
         delete brdfIntegrationMap;
         ControlpointCloud.reset(new pcl::PointCloud<pcl::PointXYZ>());
@@ -94,8 +105,8 @@ namespace DSONL {
                         ControlpointCloud->push_back(pcl::PointXYZ(pEnv.pointBase.x, pEnv.pointBase.y, pEnv.pointBase.z));
                         envLightIdxMap.insert(make_pair(pEnv.pointBase, static_cast<int>(i)));
                         counter += 1;
-                        cout << "\n show current envMap index: " << i << endl;
-                        cout << "\n show number of envMap added: " << counter << endl;
+//                        cout << "\n show current envMap index: " << i << endl;
+//                        cout << "\n show number of envMap added: " << counter << endl;
                     }
                 });
 
@@ -146,6 +157,10 @@ namespace DSONL {
 
         if (ControlpointCloud->empty()){std::cerr<<"\n Wrong Control-pointCloud!"<< endl;}
         kdtree.setInputCloud(ControlpointCloud);
+
+
+        // save ControlpointCloud
+        writer.write("ControlpointCloud_afterTransformation.pcd",*ControlpointCloud, false);
 
         // ======================serialization============================
     }

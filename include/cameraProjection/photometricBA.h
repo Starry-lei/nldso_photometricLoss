@@ -217,7 +217,7 @@ namespace DSONL {
         compute_interpolation.reset(new ceres::BiCubicInterpolator<ceres::Grid2D<double, 1> >(*image_grid));
         compute_weight_interpolation.reset(new ceres::BiCubicInterpolator<ceres::Grid2D<double,1> >(*image_weight_grid));
 
-//    std::vector<cv::Point3f> points3D;
+        // std::vector<cv::Point3f> points3D;
 
         std::unordered_map<int, int> inliers_filter;
         inliers_filter.emplace(250,250);

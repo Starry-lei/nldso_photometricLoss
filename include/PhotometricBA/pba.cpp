@@ -441,11 +441,11 @@ struct PhotometricBundleAdjustment::ScenePoint
 
     Vec3 _X;
     Vec3 _X_original;
-    Vec3 specularity;
+//    Vec3 specularity;
     VisibilityList _f;
     ZnccPatchType _patch;
     std::vector<double> _descriptor;
-    std::unordered_map<uint32_t,Vec3> specularityMap;
+    std::map<uint32_t,Vec3> specularitySequence;
     double _saliency  = 0.0;
     bool _was_refined = false;
 
@@ -484,9 +484,8 @@ void ExtractPatch(T* dst, const Image& I, const Vec_<int,2>& uv, int radius)
     }
 }
 
-
-void PhotometricBundleAdjustment::
-addFrame(const uint8_t* I_ptr, const float* Z_ptr, const Vec3f* N_ptr, const float* R_ptr,  const Mat44& T, Result* result)
+// after selecting some new points,we calculate specularity for them firstly. When the new frame comes, we calculate the specularity for all scene points onto their visible frames.
+void PhotometricBundleAdjustment::addFrame(const uint8_t* I_ptr, const float* Z_ptr, const Vec3f* N_ptr, const float* R_ptr,  const Mat44& T, Result* result)
 {
 
     _trajectory.push_back(T, _frame_id);
@@ -495,6 +494,7 @@ addFrame(const uint8_t* I_ptr, const float* Z_ptr, const Vec3f* N_ptr, const flo
 
     int width= _image_size.cols;
     int height= _image_size.rows;
+    PBANL::IBL_Radiance *ibl_Radiance = new PBANL::IBL_Radiance;
 
 
     typedef Eigen::Map<const Image_<uint8_t>, Eigen::Aligned> SrcMap;
@@ -505,7 +505,7 @@ addFrame(const uint8_t* I_ptr, const float* Z_ptr, const Vec3f* N_ptr, const flo
     // check the depth map
     DescriptorFrame* frame = DescriptorFrame::Create(_frame_id, I, _options.descriptorType);
     // show the selected points
-    // std::cout<<"number of channels: "<<frame->numChannels()<<std::endl;
+    // std::cout <<"number of channels:" << frame->numChannels()<<std::endl;
 
 
     int B = std::max(_options.maskBlockRadius, std::max(2, _options.patchRadius));
@@ -544,6 +544,164 @@ addFrame(const uint8_t* I_ptr, const float* Z_ptr, const Vec3f* N_ptr, const flo
                     // TODO update the patch for the new frame data
                     pt->addFrame(_frame_id);
                     // TODO: calculate specularity
+
+                    Eigen::Vector3f point_w= pt->X().cast<float>();             // point: at world coordinate
+                    Eigen::Vector3f point_c= (T_c * pt->X()).cast<float>();     // point: at camera coordinate
+                    const Vec3f& normal_pixel = N_ptr[r * width + c];
+                    Vec3f normal =normalize(normal_pixel);                      // normal
+                    const float roughness_pixel= R_ptr[r * width + c];          // roughness
+                    float reflectance = 1.0f;                                   // reflectance
+                    int num_K = 6;                                              // K nearest neighbor search
+                    std::unordered_map<int, PBANL::pointEnvlight> envLightMap_cur;// maintain envMaps of current frame here
+                    float image_metallic=1e-3;                                  // metallic
+                    Eigen::Matrix<float, 3, 1> beta= -point_c;
+                    Vec3f baseColor(0.0, 0.0, 0.0);                             //base color
+                    Vec3f N_(normal(0), normal(1), normal(2));
+                    Vec3f View_beta(beta(0), beta(1), beta(2));
+                    std::string renderedEnvLight_path=EnvMapPath;
+
+                    // ===================================search for Env Light from control points===================
+                    pcl::PointXYZ searchPoint(point_w.x(), point_w.y(), point_w.z());
+                    std::vector<int> pointIdxKNNSearch(num_K);
+                    std::vector<float> pointKNNSquaredDistance(num_K);
+                    Vec3f key4Search;
+                    if ( EnvLightLookup->kdtree.nearestKSearch(searchPoint, num_K, pointIdxKNNSearch, pointKNNSquaredDistance) > 0) {
+
+                        float disPoint2Env_min= 10.0f;
+                        int targetEnvMapIdx=-1;
+                        Vec3f targetEnvMapVal;
+
+                        // find the closest control point which domain contains the current point
+                        for (std::size_t i = 0; i < pointIdxKNNSearch.size (); ++i)
+                        {
+                            Vec3f envMap_point((*(EnvLightLookup->ControlpointCloud))[ pointIdxKNNSearch[i] ].x,
+                                               (*(EnvLightLookup->ControlpointCloud))[ pointIdxKNNSearch[i] ].y,
+                                               (*(EnvLightLookup->ControlpointCloud))[ pointIdxKNNSearch[i] ].z);
+
+//                        std::cout << "\n------"<<envMap_point.val[0]<< " " << envMap_point.val[1]<< " " << envMap_point.val[2]
+//                                  << " (squared distance: " << pointKNNSquaredDistance[i] << ")" << std::endl;
+                            // 0.004367 is the squared distance of the closest control point
+                            if (pointKNNSquaredDistance[i]>0.004367){continue;}
+
+
+                            // calculate control point normal
+                            // transform envMap_point to camera coordinate system
+                            Eigen::Vector3f envMap_point_c1 = T_c.cast<float>() * Eigen::Vector3f(envMap_point.val[0], envMap_point.val[1], envMap_point.val[2]);
+                            // project envMap_point to image plane
+//                float pixel_x = (fx * envMap_point_c1.x()) / envMap_point_c1.z() + cx;
+//                float pixel_y = (fy * envMap_point_c1.y()) / envMap_point_c1.z() + cy;
+
+                            Vec2 uv = _calib.project(envMap_point_c1.cast<double>());
+                            int r_n = std::round(uv[1]), c_n = std::round(uv[0]);
+
+                            Vec3f ctrlPointNormal =  N_ptr[r_n * width + c_n];//newNormalMap.at<Vec3f>(r, c);
+                            ctrlPointNormal=cv::normalize(ctrlPointNormal);
+
+                            float angle_consine = ctrlPointNormal.dot(N_);
+                            if (angle_consine<0.9962){ continue;} // 0.9848 is the cos(10 degree), 0.9962 is the cos(5 degree)
+
+                            // calculate the euclidean distance between shader point and envMap point
+                            //float disPoint2EnvPoint_squa= powf(envMap_point.val[0]-p_c1_w.x(),2)+powf(envMap_point.val[1]-p_c1_w.y(),2)+powf(envMap_point.val[2]-p_c1_w.z(),2);
+
+                            float disPoint2Env=  pointKNNSquaredDistance[i]/(ctrlPointNormal.dot(N_));
+                            if (disPoint2Env<disPoint2Env_min){
+                                disPoint2Env_min=disPoint2Env;
+                                targetEnvMapIdx=i;
+                                targetEnvMapVal=envMap_point;
+                            }
+
+//
+//                        Eigen::Vector3f ctrlPointNormal_w_ = Camera1_extrin.rotationMatrix()* ctrlPointNormal_c;
+//                        Vec3f ctrlPointNormal_w(ctrlPointNormal_w_.x(), ctrlPointNormal_w_.y(), ctrlPointNormal_w_.z());
+//                        // normalize normal vector
+//                        ctrlPointNormal_w = cv::normalize(ctrlPointNormal_w);
+//                        std::cout << "ctrlPointNormal_w: " << ctrlPointNormal_w << std::endl;
+//
+//                        // calculate normal distance
+//                        Vec3f vector_point2Env(searchPoint.x-envMap_point.val[0], searchPoint.y-envMap_point.val[1],
+//                                               searchPoint.z-envMap_point.val[2]);
+//                        vector_point2Env=cv::normalize(vector_point2Env);
+//                        std::cout << "vector_point2Env: " << vector_point2Env << std::endl;
+//                        std::cout << "ctrlPointNormal_w.dot(vector_point2Env): " << ctrlPointNormal_w.dot(vector_point2Env) << std::endl;
+//
+//                        // calculate angle between ctrlPointNormal_w and vector_point2Env
+//                        float angle_cos_val = ctrlPointNormal_w.dot(vector_point2Env);
+//
+//
+//                        // cosine(100/180*PI) = -0.173648
+//                        cout<<"-------------->check idx:"<<i<<" and check angle:"<<angle_cos_val<<endl;
+//
+//                        if (angle_cos_val>=-0.173648 && angle_cos_val<=1.0){
+//                            key4Search.val[0] = envMap_point.val[0];
+//                            key4Search.val[1] = envMap_point.val[1];
+//                            key4Search.val[2] = envMap_point.val[2];
+//                            break;
+//                        }
+
+//                        if (vector_point2Env.dot(N_)>=0){
+//                            key4Search.val[0] = envMap_point.val[0];
+//                            key4Search.val[1] = envMap_point.val[1];
+//                            key4Search.val[2] = envMap_point.val[2];
+//                            break;
+//                        }
+
+                        }
+
+                        if (targetEnvMapIdx!=-1){
+                            key4Search.val[0] = targetEnvMapVal.val[0];
+                            key4Search.val[1] = targetEnvMapVal.val[1];
+                            key4Search.val[2] = targetEnvMapVal.val[2];
+                        }
+
+                    }
+                    // if no envMap point is found, skip this point
+                    if (key4Search.dot(key4Search)==0){ continue;}
+                    int ctrlIndex= EnvLightLookup->envLightIdxMap[key4Search];
+                    if ( EnvLightLookup->envLightIdxMap.size()==0){std::cerr<<"Error in EnvLight->envLightIdxMap! "<<endl;}
+
+                    if (envLightMap_cur.count(ctrlIndex)==0){
+                        stringstream ss;
+                        string img_idx_str;
+                        ss << ctrlIndex;
+                        ss >> img_idx_str;
+                        string name_prefix = "/envMap";
+
+                        string renderedEnvLightfolder =renderedEnvLight_path + "/envMap" + img_idx_str + "/renderedEnvLight";
+                        string renderedEnvLightDiffuse =renderedEnvLight_path + "/envMap" + img_idx_str + "/renderedEnvLightDiffuse";
+                        string envMapDiffuse = renderedEnvLightDiffuse + "/envMapDiffuse_" + img_idx_str + ".pfm";
+
+                        PBANL::pointEnvlight pEnv;
+
+                        DSONL::EnvMapLookup *EnvMapLookup = new DSONL::EnvMapLookup();
+                        EnvMapLookup->makeMipMap(pEnv.EnvmapSampler,renderedEnvLightfolder); // index_0: prefiltered Env light
+                        delete EnvMapLookup;
+
+//            diffuseMap *diffuseMap = new DSONL::diffuseMap;
+//            diffuseMap->makeDiffuseMap(pEnv.EnvmapSampler, envMapDiffuse); // index_1: diffuse
+//            delete diffuseMap;
+
+                        envLightMap_cur.insert(make_pair(ctrlIndex, pEnv));
+//                    cout<<"show size of envLightMap_cur:"<<envLightMap_cur.size()<<endl;
+                    }
+
+                    DSONL::prefilteredEnvmapSampler= & ( envLightMap_cur[ctrlIndex].EnvmapSampler[0]);
+                    DSONL::brdfSampler_ = & (EnvLightLookup->brdfSampler[0]);
+                    //diffuseSampler = & (envLightMap_cur[ctrlIndex].EnvmapSampler[1]);
+                    // ===================================RADIANCE-COMPUTATION====================================
+                    //PBANL::IBL_Radiance *ibl_Radiance = new PBANL::IBL_Radiance;
+                    Sophus::SO3f enterPanoroma;
+                    Sophus::SE3d T_c2w(T_w.rotation(), T_w.translation());
+                    // TODO: convert the envmap to current "world coordinate" in advance !!!!!!
+                    Vec3f radiance_beta = ibl_Radiance->solveForRadiance(View_beta, N_, roughness_pixel, image_metallic,
+                                                                         reflectance, baseColor, T_c2w.rotationMatrix(),
+                                                                         enterPanoroma.inverse());
+
+                    Vec3 radiance_beta_(radiance_beta[0],radiance_beta[1],radiance_beta[2]);
+
+                    pt->specularitySequence[_frame_id]=radiance_beta_;
+
+
+
                     //
                     // block an area in the mask to prevent initializing redundant new
                     // scene points
@@ -556,7 +714,7 @@ addFrame(const uint8_t* I_ptr, const float* Z_ptr, const Vec3f* N_ptr, const flo
         }
     }
     //
-    // Add new scene points using new frame
+    // ==================================Add new scene points using new frame=============================================
     //
     decltype(_scene_points) new_scene_points;
     new_scene_points.reserve( max_rows * max_cols * 0.5 );
@@ -576,11 +734,11 @@ addFrame(const uint8_t* I_ptr, const float* Z_ptr, const Vec3f* N_ptr, const flo
 
     for(int y = B; y < max_rows; ++y) {
         for(int x = B; x < max_cols; ++x) {
-            double z = Z(y,x);// maybe use inverse depth later
+            double z = Z(y,x);// TODO:maybe use inverse depth later
             if(z >= _options.minValidDepth && z <= _options.maxValidDepth) {
                 if(is_local_max(y, x)) {
-                    Vec3 X = T_w * (z * _K_inv * Vec3(x, y, 1.0)); // X in the world frame
-                    std::unique_ptr<ScenePoint> p = std::make_unique<ScenePoint>(X, _frame_id);// associate a new scene point with its frame id
+                    Vec3 X = T_w * (z * _K_inv * Vec3(x, y, 1.0)); // unproject the uv to 3D space  , X in the world frame, to project it on the current frame record the frame id if it is visible
+                    std::unique_ptr<ScenePoint> p = std::make_unique<ScenePoint>(X, _frame_id);// associate a new scene point with its visible frame id
                     Vec_<int,2> xy(x, y);
                     p->setZnccPach( I, xy );
                     p->descriptor().resize(descriptor_dim);
@@ -589,7 +747,6 @@ addFrame(const uint8_t* I_ptr, const float* Z_ptr, const Vec3f* N_ptr, const flo
 
                     cmuSelectedPointMask.at<uchar>(y,x)= 255;
                     new_scene_points.push_back(std::move(p));
-
                 }
             }
         }
@@ -613,36 +770,170 @@ addFrame(const uint8_t* I_ptr, const float* Z_ptr, const Vec3f* N_ptr, const flo
     // calculate the specularity value for selected points
     //
 
-
-    // TODO: calcualte specularity for new frame selected points
+    // TODO: calcualte specularity for new frame selected scene points
     for(size_t i = 0; i < new_scene_points.size(); ++i) {
+
         const auto& pt = new_scene_points[i];
 
-
-        int r= pt->_x[1], c= pt->_x[0];                    // pixel: row, col
-        Eigen::Vector3f point_w= pt->X().cast<float>();    // point: at world coordinate
-        Eigen::Vector3f point_c= (T_c * pt->X()).cast<float>();  // point: at camera coordinate
+        int r= pt->_x[1], c= pt->_x[0];                             // pixel: row, col
+        Eigen::Vector3f point_w= pt->X().cast<float>();             // point: at world coordinate
+        Eigen::Vector3f point_c= (T_c * pt->X()).cast<float>();     // point: at camera coordinate
         const Vec3f& normal_pixel = N_ptr[r * width + c];
-        Vec3f normal =normalize(normal_pixel);              // normal
-        const float roughness_pixel= R_ptr[r * width + c]; // roughness
-        float reflectance = 1.0f;                          // reflectance
-        int num_K = 6;                                     // K nearest neighbor search
-        float image_metallic=1e-3;                         // metallic
+        Vec3f normal =normalize(normal_pixel);                      // normal
+        const float roughness_pixel= R_ptr[r * width + c];          // roughness
+        float reflectance = 1.0f;                                   // reflectance
+        int num_K = 6;                                              // K nearest neighbor search
+        std::unordered_map<int, PBANL::pointEnvlight> envLightMap_cur;// maintain envMaps of current frame here
+        float image_metallic=1e-3;                                  // metallic
         Eigen::Matrix<float, 3, 1> beta= -point_c;
+        Vec3f baseColor(0.0, 0.0, 0.0);                             //base color
+        Vec3f N_(normal(0), normal(1), normal(2));
+        Vec3f View_beta(beta(0), beta(1), beta(2));
+        std::string renderedEnvLight_path=EnvMapPath;
+
+        // ===================================search for Env Light from control points===================
+        pcl::PointXYZ searchPoint(point_w.x(), point_w.y(), point_w.z());
+        std::vector<int> pointIdxKNNSearch(num_K);
+        std::vector<float> pointKNNSquaredDistance(num_K);
+        Vec3f key4Search;
+        if ( EnvLightLookup->kdtree.nearestKSearch(searchPoint, num_K, pointIdxKNNSearch, pointKNNSquaredDistance) > 0) {
+
+            float disPoint2Env_min= 10.0f;
+            int targetEnvMapIdx=-1;
+            Vec3f targetEnvMapVal;
+
+            // find the closest control point which domain contains the current point
+            for (std::size_t i = 0; i < pointIdxKNNSearch.size (); ++i)
+            {
+                Vec3f envMap_point((*(EnvLightLookup->ControlpointCloud))[ pointIdxKNNSearch[i] ].x,
+                                   (*(EnvLightLookup->ControlpointCloud))[ pointIdxKNNSearch[i] ].y,
+                                   (*(EnvLightLookup->ControlpointCloud))[ pointIdxKNNSearch[i] ].z);
+
+//                        std::cout << "\n------"<<envMap_point.val[0]<< " " << envMap_point.val[1]<< " " << envMap_point.val[2]
+//                                  << " (squared distance: " << pointKNNSquaredDistance[i] << ")" << std::endl;
+                // 0.004367 is the squared distance of the closest control point
+                if (pointKNNSquaredDistance[i]>0.004367){continue;}
+
+
+                // calculate control point normal
+                // transform envMap_point to camera coordinate system
+                Eigen::Vector3f envMap_point_c1 = T_c.cast<float>() * Eigen::Vector3f(envMap_point.val[0], envMap_point.val[1], envMap_point.val[2]);
+                // project envMap_point to image plane
+//                float pixel_x = (fx * envMap_point_c1.x()) / envMap_point_c1.z() + cx;
+//                float pixel_y = (fy * envMap_point_c1.y()) / envMap_point_c1.z() + cy;
+
+                Vec2 uv = _calib.project(envMap_point_c1.cast<double>());
+                int r_n = std::round(uv[1]), c_n = std::round(uv[0]);
+
+                Vec3f ctrlPointNormal =  N_ptr[r_n * width + c_n];//newNormalMap.at<Vec3f>(r, c);
+                ctrlPointNormal=cv::normalize(ctrlPointNormal);
+
+                float angle_consine = ctrlPointNormal.dot(N_);
+                if (angle_consine<0.9962){ continue;} // 0.9848 is the cos(10 degree), 0.9962 is the cos(5 degree)
+
+                // calculate the euclidean distance between shader point and envMap point
+                //float disPoint2EnvPoint_squa= powf(envMap_point.val[0]-p_c1_w.x(),2)+powf(envMap_point.val[1]-p_c1_w.y(),2)+powf(envMap_point.val[2]-p_c1_w.z(),2);
+
+                float disPoint2Env=  pointKNNSquaredDistance[i]/(ctrlPointNormal.dot(N_));
+                if (disPoint2Env<disPoint2Env_min){
+                    disPoint2Env_min=disPoint2Env;
+                    targetEnvMapIdx=i;
+                    targetEnvMapVal=envMap_point;
+                }
+
+//
+//                        Eigen::Vector3f ctrlPointNormal_w_ = Camera1_extrin.rotationMatrix()* ctrlPointNormal_c;
+//                        Vec3f ctrlPointNormal_w(ctrlPointNormal_w_.x(), ctrlPointNormal_w_.y(), ctrlPointNormal_w_.z());
+//                        // normalize normal vector
+//                        ctrlPointNormal_w = cv::normalize(ctrlPointNormal_w);
+//                        std::cout << "ctrlPointNormal_w: " << ctrlPointNormal_w << std::endl;
+//
+//                        // calculate normal distance
+//                        Vec3f vector_point2Env(searchPoint.x-envMap_point.val[0], searchPoint.y-envMap_point.val[1],
+//                                               searchPoint.z-envMap_point.val[2]);
+//                        vector_point2Env=cv::normalize(vector_point2Env);
+//                        std::cout << "vector_point2Env: " << vector_point2Env << std::endl;
+//                        std::cout << "ctrlPointNormal_w.dot(vector_point2Env): " << ctrlPointNormal_w.dot(vector_point2Env) << std::endl;
+//
+//                        // calculate angle between ctrlPointNormal_w and vector_point2Env
+//                        float angle_cos_val = ctrlPointNormal_w.dot(vector_point2Env);
+//
+//
+//                        // cosine(100/180*PI) = -0.173648
+//                        cout<<"-------------->check idx:"<<i<<" and check angle:"<<angle_cos_val<<endl;
+//
+//                        if (angle_cos_val>=-0.173648 && angle_cos_val<=1.0){
+//                            key4Search.val[0] = envMap_point.val[0];
+//                            key4Search.val[1] = envMap_point.val[1];
+//                            key4Search.val[2] = envMap_point.val[2];
+//                            break;
+//                        }
+
+//                        if (vector_point2Env.dot(N_)>=0){
+//                            key4Search.val[0] = envMap_point.val[0];
+//                            key4Search.val[1] = envMap_point.val[1];
+//                            key4Search.val[2] = envMap_point.val[2];
+//                            break;
+//                        }
+
+            }
+
+            if (targetEnvMapIdx!=-1){
+                key4Search.val[0] = targetEnvMapVal.val[0];
+                key4Search.val[1] = targetEnvMapVal.val[1];
+                key4Search.val[2] = targetEnvMapVal.val[2];
+            }
+
+        }
+        // if no envMap point is found, skip this point
+        if (key4Search.dot(key4Search)==0){ continue;}
+        int ctrlIndex= EnvLightLookup->envLightIdxMap[key4Search];
+        if ( EnvLightLookup->envLightIdxMap.size()==0){std::cerr<<"Error in EnvLight->envLightIdxMap! "<<endl;}
+
+        if (envLightMap_cur.count(ctrlIndex)==0){
+            stringstream ss;
+            string img_idx_str;
+            ss << ctrlIndex;
+            ss >> img_idx_str;
+            string name_prefix = "/envMap";
+
+            string renderedEnvLightfolder =renderedEnvLight_path + "/envMap" + img_idx_str + "/renderedEnvLight";
+            string renderedEnvLightDiffuse =renderedEnvLight_path + "/envMap" + img_idx_str + "/renderedEnvLightDiffuse";
+            string envMapDiffuse = renderedEnvLightDiffuse + "/envMapDiffuse_" + img_idx_str + ".pfm";
+
+            PBANL::pointEnvlight pEnv;
+
+            DSONL::EnvMapLookup *EnvMapLookup = new DSONL::EnvMapLookup();
+            EnvMapLookup->makeMipMap(pEnv.EnvmapSampler,renderedEnvLightfolder); // index_0: prefiltered Env light
+            delete EnvMapLookup;
+
+//            diffuseMap *diffuseMap = new DSONL::diffuseMap;
+//            diffuseMap->makeDiffuseMap(pEnv.EnvmapSampler, envMapDiffuse); // index_1: diffuse
+//            delete diffuseMap;
+
+            envLightMap_cur.insert(make_pair(ctrlIndex, pEnv));
+//                    cout<<"show size of envLightMap_cur:"<<envLightMap_cur.size()<<endl;
+        }
+
+        DSONL::prefilteredEnvmapSampler= & ( envLightMap_cur[ctrlIndex].EnvmapSampler[0]);
+        DSONL::brdfSampler_ = & (EnvLightLookup->brdfSampler[0]);
+        //diffuseSampler = & (envLightMap_cur[ctrlIndex].EnvmapSampler[1]);
+        // ===================================RADIANCE-COMPUTATION====================================
+        //PBANL::IBL_Radiance *ibl_Radiance = new PBANL::IBL_Radiance;
+        Sophus::SO3f enterPanoroma;
+        Sophus::SE3d T_c2w(T_w.rotation(), T_w.translation());
+        // TODO: convert the envmap to current "world coordinate" in advance !!!!!!
+        Vec3f radiance_beta = ibl_Radiance->solveForRadiance(View_beta, N_, roughness_pixel, image_metallic,
+                                                             reflectance, baseColor, T_c2w.rotationMatrix(),
+                                                             enterPanoroma.inverse());
+
+        Vec3 radiance_beta_(radiance_beta[0],radiance_beta[1],radiance_beta[2]);
+        // TODO concatenate the visibility vector  to the specularitySequence
+        pt->specularitySequence[pt->refFrameId()]= radiance_beta_;
 
     }
 //
-
-
-//    for (int i = 0; i < new_scene_points.size(); ++i) {
-//        cmuSelectedPointMask2.at<uchar>(new_scene_points[i]->_x[1],new_scene_points[i]->_x[0])= 255;
-//
-//         new_scene_points[i]->X();// point at world coordinate
-//         new_scene_points[i].
-//
-//
-//
-//    }
+    delete ibl_Radiance;
 //    imshow("cmuSelectedPointMask2", cmuSelectedPointMask2);
 //    cv::imwrite("cmuSelectedPointMask2"+std::to_string(_frame_id)+".png", cmuSelectedPointMask2);
 //    cv::waitKey(0);
@@ -671,22 +962,85 @@ addFrame(const uint8_t* I_ptr, const float* Z_ptr, const Vec3f* N_ptr, const flo
     _frame_buffer.push_back(DescriptorFramePointer(frame));
 
     if(_frame_buffer.full()) {
-//        uint32_t frame_id_start = _frame_buffer.front()->id(),
-//                frame_id_end   = _frame_buffer.back()->id();
-//        int num_selected_points = 0;
-//        for(auto& pt : _scene_points) {
-//            // it is enough to check the visibility list length, because we will remove
-//            // points as soon as they leave the optimization window
+
+
+        // check if visibility has the same length of specularity sequence
+
+        // iterate over all points and update the visibility
+        int countSame=0;
+        int countDiff=0;
+
+        int counter_size_1=0;
+        int counter_size_2=0;
+        int counter_size_3=0;
+        int counter_size_4=0;
+        int counter_size_5=0;
+
+        int counter_specu_size_1=0;
+        int counter_specu_size_2=0;
+        int counter_specu_size_3=0;
+        int counter_specu_size_4=0;
+        int counter_specu_size_5=0;
+        for(auto& pt : _scene_points) {
+            // statistics of the visibilityList size of all point
+            if (pt->visibilityList().size()==1){
+                counter_size_1++;
+            }else if (pt->visibilityList().size()==2){
+                counter_size_2++;
+            }else if (pt->visibilityList().size()==3){
+                counter_size_3++;
+            }else if (pt->visibilityList().size()==4){
+                counter_size_4++;
+            }else if (pt->visibilityList().size()==5){
+                counter_size_5++;
+
+            }
+
+
+
 //
-//            int checkpointer=pt->visibilityList().size();
-//            int checkpointer2=pt->numFrames();
-//            int checkpointer3=pt->refFrameId();
-//            int checkpointer4=frame_id_start;
-//
-//            if(pt->numFrames() >= 3 && pt->refFrameId() >= frame_id_start) {
-//                num_selected_points++;
+//            if (pt->visibilityList().size()==pt->specularitySequence.size()){
+//                countSame++;
+//                Info("\n visibilityList.size()==specularitySequence.size():  %d", pt->visibilityList().size());
+//            }else{
+//                countDiff++;
+//                Info("\n visibilityList.size()!=specularitySequence.size():  %d", pt->visibilityList().size());
 //            }
-//        }
+        }
+
+        for (auto &pt : _scene_points) {
+            if (pt->specularitySequence.size()==1){
+                counter_specu_size_1++;
+            }else if (pt->specularitySequence.size()==2){
+                counter_specu_size_2++;
+            }else if (pt->specularitySequence.size()==3){
+                counter_specu_size_3++;
+            }else if (pt->specularitySequence.size()==4){
+                counter_specu_size_4++;
+            }else if (pt->specularitySequence.size()==5){
+                counter_specu_size_5++;
+
+            }
+        }
+
+
+
+
+
+
+        Info("\n counter_size_1:  %d", counter_size_1);
+        Info("\n counter_size_2:  %d", counter_size_2);
+        Info("\n counter_size_3:  %d", counter_size_3);
+        Info("\n counter_size_4:  %d", counter_size_4);
+        Info("\n counter_size_5:  %d", counter_size_5);
+        Info("\n countSame:  %d", countSame);
+        Info("\n countDiff:  %d", countDiff);
+        Info("\n counter_specu_size_1:  %d", counter_specu_size_1);
+        Info("\n counter_specu_size_2:  %d", counter_specu_size_2);
+        Info("\n counter_specu_size_3:  %d", counter_specu_size_3);
+        Info("\n counter_specu_size_4:  %d", counter_specu_size_4);
+        Info("\n counter_specu_size_5:  %d", counter_specu_size_5);
+
 //
 //        Info("!!! show num_selected_points: %d\n", num_selected_points);
         optimize(result);
@@ -695,8 +1049,7 @@ addFrame(const uint8_t* I_ptr, const float* Z_ptr, const Vec3f* N_ptr, const flo
     ++_frame_id;
 }
 
-static inline std::vector<double>
-MakePatchWeights(int radius, bool do_gaussian, double s_x = 1.0,
+static inline std::vector<double> MakePatchWeights(int radius, bool do_gaussian, double s_x = 1.0,
                  double s_y = 1.0, double a = 1.0)
 {
     int n = (2*radius + 1) * (2*radius + 1);
@@ -723,6 +1076,22 @@ MakePatchWeights(int radius, bool do_gaussian, double s_x = 1.0,
         return std::vector<double>(n, 1.0);
     }
 }
+
+static inline float specularityWeight( Vec3 refSpecularity, Vec3 tarSpecularity)
+{
+    Vec3 deltaSpecularity = (refSpecularity - tarSpecularity).normalized() ; // RGB
+
+    double sumWeight= 0.587* abs(deltaSpecularity.y())+0.114* abs(deltaSpecularity.x())+0.299* abs(deltaSpecularity.z());
+
+    if (sumWeight==0.0f){return -1.0;}
+    else{
+        float y = exp(-15*sumWeight);
+        return y;
+    }
+
+}
+
+
 
 static Vec_<double,6> PoseToParams(const Mat44& T)
 {
@@ -844,11 +1213,8 @@ GetSolverOptions(int num_threads, bool verbose = false, double tol = 1e-6)
 
 void PhotometricBundleAdjustment::optimize(Result* result)
 {
-    uint32_t frame_id_start = _frame_buffer.front()->id(),
-            frame_id_end   = _frame_buffer.back()->id();
-
+    uint32_t frame_id_start = _frame_buffer.front()->id(), frame_id_end   = _frame_buffer.back()->id();
     std::vector<double> patch_weights = MakePatchWeights(_options.patchRadius, _options.doGaussianWeighting);
-
     //
     // collect the camera poses in a single map for easy access
     //
@@ -861,6 +1227,18 @@ void PhotometricBundleAdjustment::optimize(Result* result)
     Info("_trajectory.size() = %d, frame_id_start=  %d", _trajectory.size(), frame_id_start);
     Info("_scene_points.size() = %d", _scene_points.size());
 
+//    for(auto& pt : _scene_points) {
+//        if (pt->specularitySequence.size()==0){
+//            continue;
+//        }
+//        Info("\n show specularitySequence size of point: %d ", pt->specularitySequence.size());
+//
+//        for (auto& specularity : pt->specularitySequence){
+//            Info("\n show specularitySequence of frame id: %d ", specularity.first);
+//            cout<<"\n show specularitySequence of point: "<<specularity.second<<endl;
+//        }
+//    }
+
     //
     // get the points that we *should* optimize. They must have a large enough
     // visibility list
@@ -872,14 +1250,15 @@ void PhotometricBundleAdjustment::optimize(Result* result)
         // points as soon as they leave the optimization window
         if(pt->numFrames() >= 3 && pt->refFrameId() >= frame_id_start) {
             num_selected_points++;
-
             for(auto id : pt->visibilityList()) {
                 if(id >= frame_id_start && id <= frame_id_end) {
                     pt->setRefined(true);
+                    // TODO:assign specularity weight to patch_weights
+                    float specularity_weight = 1.0;
                     auto* camera_ptr = camera_params[id].data();
-                    auto* xyz = pt->X().data();
+                    double * xyz = pt->X().data();
 
-                    const auto huber_t = _options.robustThreshold;
+                    const double huber_t = _options.robustThreshold;
                     auto* loss = huber_t > 0.0 ? new ceres::HuberLoss(huber_t) : nullptr;
 
                     ceres::CostFunction* cost = nullptr;
@@ -996,16 +1375,7 @@ auto PhotometricBundleAdjustment::removePointsAtFrame(uint32_t id) -> ScenePoint
     return points_to_remove;
 }
 
-Vec3 PhotometricBundleAdjustment::calcuSpecularity(Vec3 &point, DSONL::envLightLookup *EnvLightLookup, Vec3 normal,
-                                                   float roughness) {
 
-
-
-
-
-
-    return Vec3();
-}
 
 
 // notes

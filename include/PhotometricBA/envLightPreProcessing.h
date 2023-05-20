@@ -20,9 +20,9 @@
 
 
 
-namespace DSONL{
+namespace PBANL{
 
-    void readCtrlPointPoseData(string fileName, vector<Sophus::SE3f, Eigen::aligned_allocator<Sophus::SE3f>>& pose);
+    void readCtrlPointPoseData(string fileName, vector<Sophus::SE3f, Eigen::aligned_allocator<Sophus::SE3f>>& pose, Sophus::SE3f frontCamPose);
 
 
 
@@ -44,14 +44,14 @@ namespace DSONL{
 
     public:
 
-        envLightLookup(int argc, char **argv, string envMap_Folder, string controlPointPose_path);
+        envLightLookup(int argc, char **argv, string envMap_Folder, string controlPointPose_path, Sophus::SE3f frontCamPose);
         ~envLightLookup();
 
         pcl::PointCloud<pcl::PointXYZ>::Ptr ControlpointCloud;
 
         pcl::KdTreeFLANN<pcl::PointXYZ> kdtree;
 
-        std::unordered_map<cv::Point3f, int, hash3d<cv::Point3f>, equalTo<cv::Point3f>> envLightIdxMap;
+        std::unordered_map<cv::Point3f, int, DSONL::hash3d<cv::Point3f>, DSONL::equalTo<cv::Point3f>> envLightIdxMap;
 
         std::vector<gli::sampler2d<float>> brdfSampler;
 
