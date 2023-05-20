@@ -1023,6 +1023,15 @@ void PhotometricBundleAdjustment::addFrame(const uint8_t* I_ptr, const float* Z_
             }
         }
 
+        // check if visibility has the same length of specularity sequence
+        for(auto& pt : _scene_points) {
+            if (pt->visibilityList().size()==pt->specularitySequence.size()){
+                countSame++;
+            }else{
+                countDiff++;
+            }
+        }
+
 
 
 
@@ -1214,6 +1223,7 @@ GetSolverOptions(int num_threads, bool verbose = false, double tol = 1e-6)
 void PhotometricBundleAdjustment::optimize(Result* result)
 {
     uint32_t frame_id_start = _frame_buffer.front()->id(), frame_id_end   = _frame_buffer.back()->id();
+    _options.doGaussianWeighting = false;
     std::vector<double> patch_weights = MakePatchWeights(_options.patchRadius, _options.doGaussianWeighting);
     //
     // collect the camera poses in a single map for easy access
@@ -1248,16 +1258,25 @@ void PhotometricBundleAdjustment::optimize(Result* result)
     for(auto& pt : _scene_points) {
         // it is enough to check the visibility list length, because we will remove
         // points as soon as they leave the optimization window
-        if(pt->numFrames() >= 3 && pt->refFrameId() >= frame_id_start) {
+        if(pt->numFrames() >= 3 && pt->refFrameId() >= frame_id_start) { // triangle stability
             num_selected_points++;
             for(auto id : pt->visibilityList()) {
                 if(id >= frame_id_start && id <= frame_id_end) {
                     pt->setRefined(true);
                     // TODO:assign specularity weight to patch_weights
                     float specularity_weight = 1.0;
+                    if(pt->specularitySequence.find(id) != pt->specularitySequence.end()){
+                        specularity_weight = specularityWeight(pt->specularitySequence[pt->refFrameId()],pt->specularitySequence[id]);
+                        // repalce the weight of patch_weights
+                        for(int i = 0; i < patch_weights.size(); i++){
+                            patch_weights[i] = specularity_weight;
+                        }
+                    } else {
+                        continue;// if the point has no specularity, continue
+//                        specularity_weight = 1.0;
+                    }
                     auto* camera_ptr = camera_params[id].data();
                     double * xyz = pt->X().data();
-
                     const double huber_t = _options.robustThreshold;
                     auto* loss = huber_t > 0.0 ? new ceres::HuberLoss(huber_t) : nullptr;
 
