@@ -50,18 +50,31 @@ void sigHandler(int) { gStop = true; }
 
 int main(int argc, char** argv)
 {
+
     signal(SIGINT, sigHandler);
 
     pbaUtils::ProgramOptions options;
     options
-            ("output,o", "refined_poses_es.txt", "trajectory output file")
+            ("output,o", "refined_poses_es_150.txt", "trajectory output file")
             ("config,c", "../config/tum_rgbd.cfg", "config file")
             .parse(argc, argv);
 
     pbaUtils::ConfigFile cf(options.get<std::string>("config"));
     UniquePointer<Dataset> dataset = Dataset::Create(options.get<std::string>("config"));
 
+	// check if dataset is empty
+	if(dataset == nullptr) {
+		std::cerr<<"Failed to create dataset\n";
+		return -1;
+	}
+
+	cout<<"dataset created! "<<endl;
+	// print out cf.get<std::string>("trajectory")
+	std::cout<<"trajectory path: "<<cf.get<std::string>("trajectory").c_str()<<std::endl;
+
     PoseList T_init = loadPosesTumRGBDFormat(cf.get<std::string>("trajectory"));
+	// prinnt the size of T_init
+	std::cout<<"T_init size: "<<T_init.size()<<std::endl;
     if(T_init.empty()) {
         std::cerr<<"Failed to load poses from %s\n", cf.get<std::string>("trajectory").c_str();
         return -1;
@@ -75,7 +88,6 @@ int main(int argc, char** argv)
     std::vector<Sophus::SE3f, Eigen::aligned_allocator<Sophus::SE3f>> trajectoryPoses;
     string fileName = "/home/lei/Documents/Dataset/dataSetPBA/sequences/02/poses.txt";
     readCtrlPointPoseData(fileName, trajectoryPoses);
-    cout<<"trajectoryPoses size: "<<trajectoryPoses.size()<<endl;
     Sophus::SE3f frontCamPose_w (trajectoryPoses[0]);
 
 

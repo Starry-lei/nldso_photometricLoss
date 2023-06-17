@@ -16,8 +16,8 @@ static void toGray(const cv::Mat& src, cv::Mat& ret)
   switch( src.type() )
   {
     case CV_8UC1: ret = src; break;
-    case CV_8UC3: { cv::cvtColor(src, ret, CV_BGR2GRAY); } break;
-    case CV_8UC4: { cv::cvtColor(src, ret, CV_BGRA2GRAY); } break;
+	case CV_8UC3: { cv::cvtColor(src, ret, cv::COLOR_BGR2GRAY); } break;
+	case CV_8UC4: { cv::cvtColor(src, ret, cv::COLOR_BGR2GRAY); } break;
     default: THROW_ERROR("unsupported image format");
   }
 }
@@ -40,6 +40,11 @@ UniquePointer<DatasetFrame> RGBDDataset::getFrame(int f_i) const
 
   std::string image_fn = _rgb[f_i];
   MonoFrame frame;
+
+  if (image_fn.empty()){
+	return nullptr;
+  }
+
   frame.I_orig = cv::imread(image_fn, cv::IMREAD_UNCHANGED);
   std::string depth_fn = _depth[f_i];
   frame.D= cv::imread(depth_fn, cv::IMREAD_UNCHANGED);
@@ -269,7 +274,8 @@ UniquePointer<Dataset> Dataset::Create(std::string conf_fn)
 {
   ConfigFile cf(conf_fn);
 
-  auto name = cf.get<std::string>("Dataset");
+  std::string name = cf.get<std::string>("Dataset");
+  std::cout << "Dataset format: " << name << std::endl;
 
   if (icompare("tumRGBD",name))
       return UniquePointer<Dataset>( new tumRGBDDataset(conf_fn) );

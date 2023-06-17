@@ -126,7 +126,7 @@ list(APPEND MY_LIBRARIES ${TBB_LIBRARIES})
 add_definitions(-DWITH_TBB)
 # to use link to target "OpenCV"
 # NOTE: not specifying version, since 2, 3 or 4 is fine
-find_package(OpenCV 3.3 REQUIRED)
+find_package(OpenCV  REQUIRED)
 
 # COMPONENTS core features2d
 message(STATUS "Found OpenCV ${OpenCV_VERSION} headers in: ${OpenCV_INCLUDE_DIRS}")
