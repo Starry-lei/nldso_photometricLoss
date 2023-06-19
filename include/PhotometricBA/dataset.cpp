@@ -13,7 +13,7 @@ using namespace pbaUtils;
 
 static void toGray(const cv::Mat& src, cv::Mat& ret)
 {
-  switch( src.type() )
+  switch( src.type())
   {
     case CV_8UC1: ret = src; break;
 	case CV_8UC3: { cv::cvtColor(src, ret, cv::COLOR_BGR2GRAY); } break;

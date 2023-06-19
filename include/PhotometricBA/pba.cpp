@@ -387,6 +387,8 @@ struct PhotometricBundleAdjustment::ScenePoint
     {
         _f.reserve(8);
         _f.push_back(f_id);
+//		specularitySequence
+
     }
 
     /**
@@ -441,11 +443,10 @@ struct PhotometricBundleAdjustment::ScenePoint
 
     Vec3 _X;
     Vec3 _X_original;
-//    Vec3 specularity;
     VisibilityList _f;
     ZnccPatchType _patch;
     std::vector<double> _descriptor;
-    std::map<uint32_t,Vec3> specularitySequence;
+    std::map<uint32_t,Vec3> specularitySequence={{0,Vec3(0,0,0)}}; //frame number, specularity
     double _saliency  = 0.0;
     bool _was_refined = false;
 
@@ -700,8 +701,6 @@ void PhotometricBundleAdjustment::addFrame(const uint8_t* I_ptr, const float* Z_
                     Vec3 radiance_beta_(radiance_beta[0],radiance_beta[1],radiance_beta[2]);
                     pt->specularitySequence[_frame_id]=radiance_beta_;
 
-
-
                     //
                     // block an area in the mask to prevent initializing redundant new
                     // scene points
@@ -746,7 +745,6 @@ void PhotometricBundleAdjustment::addFrame(const uint8_t* I_ptr, const float* Z_
                     p->descriptor().resize(descriptor_dim);
                     p->setSaliency( _saliency_map(y,x) );
                     p->setFirstProjection(xy);
-
                     cmuSelectedPointMask.at<uchar>(y,x)= 255;
                     new_scene_points.push_back(std::move(p));
                 }
@@ -767,11 +765,9 @@ void PhotometricBundleAdjustment::addFrame(const uint8_t* I_ptr, const float* Z_
     }
 
 	std::cout<<"new scene points size erased : "<<new_scene_points.size()<<std::endl;
-
     //
     // calculate the specularity value for selected points
     //
-
     // TODO: calcualte specularity for new frame selected scene points
     for(size_t i = 0; i < new_scene_points.size(); ++i) {
 
@@ -962,10 +958,7 @@ void PhotometricBundleAdjustment::addFrame(const uint8_t* I_ptr, const float* Z_
     _frame_buffer.push_back(DescriptorFramePointer(frame));
 
     if(_frame_buffer.full()) {
-
-
         // check if visibility has the same length of specularity sequence
-
         // iterate over all points and update the visibility
         int countSame=0;
         int countDiff=0;
@@ -993,22 +986,13 @@ void PhotometricBundleAdjustment::addFrame(const uint8_t* I_ptr, const float* Z_
                 counter_size_4++;
             }else if (pt->visibilityList().size()==5){
                 counter_size_5++;
-
             }
-
-
-
-//
-//            if (pt->visibilityList().size()==pt->specularitySequence.size()){
-//                countSame++;
-//                Info("\n visibilityList.size()==specularitySequence.size():  %d", pt->visibilityList().size());
-//            }else{
-//                countDiff++;
-//                Info("\n visibilityList.size()!=specularitySequence.size():  %d", pt->visibilityList().size());
-//            }
         }
 
         for (auto &pt : _scene_points) {
+			for (int j = 0; j < pt->specularitySequence.size(); j++) {
+							cout<<"show pt->specularitySequence["<<pt->_f[0]<<"]: \n "<<pt->specularitySequence[j]<<endl;
+			}
             if (pt->specularitySequence.size()==1){
                 counter_specu_size_1++;
             }else if (pt->specularitySequence.size()==2){
@@ -1019,7 +1003,6 @@ void PhotometricBundleAdjustment::addFrame(const uint8_t* I_ptr, const float* Z_
                 counter_specu_size_4++;
             }else if (pt->specularitySequence.size()==5){
                 counter_specu_size_5++;
-
             }
         }
 
@@ -1086,11 +1069,13 @@ static inline float specularityWeight( Vec3 refSpecularity, Vec3 tarSpecularity)
 
     double sumWeight= 0.587* abs(deltaSpecularity.y())+0.114* abs(deltaSpecularity.x())+0.299* abs(deltaSpecularity.z());
 
-    if (sumWeight==0.0f){return -1.0;}
+//	Info("CHECKING sumWeight %d\n", sumWeight);
+
+    if (sumWeight==0.0f){
+		return -1.0;}
     else{
-        float y = exp(-15*sumWeight);
-        return y;
-    }
+		float y = exp(-15*sumWeight);
+		return y;}
 
 }
 
@@ -1258,22 +1243,24 @@ void PhotometricBundleAdjustment::optimize(Result* result)
 
                 if(id >= frame_id_start && id <= frame_id_end) {
                     pt->setRefined(true);
-
-
-
-                    // TODO:assign specularity weight to patch_weights
+                    // TODO:assign specularity weight to patch_weights : done
                     float specularity_weight = 1.0;
+
+
+
                     if(pt->specularitySequence.find(id) != pt->specularitySequence.end()){
+//						Info("checking pt->specularitySequence[pt->refFrameId()] x:  %d", pt->specularitySequence[pt->refFrameId()].x());
+//						Info("checking pt->specularitySequence[pt->refFrameId()] y:  %d", pt->specularitySequence[pt->refFrameId()].y());
+//						Info("checking pt->specularitySequence[pt->refFrameId()] z:  %d", pt->specularitySequence[pt->refFrameId()].z());
                         specularity_weight = specularityWeight(pt->specularitySequence[pt->refFrameId()],pt->specularitySequence[id]);
+//						Info("CHECKING specularity_weight %d\n", specularity_weight);
                         // repalce the weight of patch_weights
                         for(int i = 0; i < patch_weights.size(); i++){patch_weights[i] = specularity_weight;}
                     } else {
-//                        continue;// if the point has no specularity, continue
-//								//specularity_weight = 1.0;
+                        continue;
+						// if the point has no specularity, continue
+						//specularity_weight = 1.0;
                     }
-
-
-
 
                     auto* camera_ptr = camera_params[id].data();
                     double * xyz = pt->X().data();

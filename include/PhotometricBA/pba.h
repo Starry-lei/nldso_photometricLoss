@@ -201,7 +201,6 @@ private:
 
 private:
     uint32_t _frame_id = 0;
-
     Calibration _calib;
     ImageSize   _image_size;
     Options     _options;
