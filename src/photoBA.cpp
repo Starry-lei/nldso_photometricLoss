@@ -66,18 +66,18 @@ int main(int argc, char** argv)
 
         const uint8_t* I = frame->image().ptr<const uint8_t>();
         float* Z =frame->depth().ptr<float>();
-        // show frame
-//        imshow("image", frame->image());
-//        cv::waitKey(0);
-//        std::cerr<<"current frame name: "<<frame->filename()<<std::endl;
-//        int num_nonZero_Depth= cv::countNonZero(frame->depth());
-//        std::cout<<"num_nonZero_Depth: "<<num_nonZero_Depth<<std::endl;
+        //         show frame
+		//        imshow("image", frame->image());
+		//        cv::waitKey(0);
+		//        std::cerr<<"current frame name: "<<frame->filename()<<std::endl;
+		//        int num_nonZero_Depth= cv::countNonZero(frame->depth());
+		//        std::cout<<"num_nonZero_Depth: "<<num_nonZero_Depth<<std::endl;
 
-//        imshow("depth", frame->depth());
-//        std::cout<<"depth map type: "<<frame->depth().type()<<std::endl;
-//        double min_v, max_v;
-//        cv::minMaxLoc(frame->depth(), &min_v, &max_v);
-//        std::cout << "\n show depth min, max:\n"<< min_v << "," << max_v <<std::endl;
+		//        imshow("depth", frame->depth());
+		//        std::cout<<"depth map type: "<<frame->depth().type()<<std::endl;
+		//        double min_v, max_v;
+		//        cv::minMaxLoc(frame->depth(), &min_v, &max_v);
+		//        std::cout << "\n show depth min, max:\n"<< min_v << "," << max_v <<std::endl;
         photoba.addFrame(I, Z, T_init[f_i],  &result);
 //        std::cerr<<"show T_init[f_i] matrix"<<T_init[f_i].matrix()<<std::endl;
         if(!result.refinedPoints.empty()) {
