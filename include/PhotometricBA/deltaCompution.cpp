@@ -209,11 +209,11 @@ namespace PBANL{
         //convert from camera to world
         Eigen::Vector3d normal_c(normal.val[0], normal.val[1], normal.val[2]);
         Vec3f normal_w((Camera1_c2w * normal_c).x(), (Camera1_c2w * normal_c).y(), (Camera1_c2w * normal_c).z());
-//        Vec3f diffuse = diffuseIBL(normal_w);
-//        diffusity=diffuse;
+		// Vec3f diffuse = diffuseIBL(normal_w);
+		// diffusity=diffuse;
         // only focus on specular property
         Vec3f diffuse=Vec3f(0.0,0.0,0.0);
-//        cout<<"Checking kD:"<<kD<<endl;
+		//cout<<"Checking kD:"<<kD<<endl;
         // shading front-facing
         Vec3f color = pow(kD.mul(baseColorValue.mul(diffuse)) + specular, 1.0 / 2.2 * One);
 

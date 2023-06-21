@@ -726,6 +726,7 @@ void PhotometricBundleAdjustment::addFrame(const uint8_t* I_ptr, const float* Z_
 
     cv::Mat cmuSelectedPointMask(salientImage.rows,  salientImage.cols, CV_8UC1, cv::Scalar(0));
     cv::Mat cmuSelectedPointMask2(salientImage.rows,  salientImage.cols, CV_8UC1, cv::Scalar(0));
+
     // Display the image using OpenCV
     int count_selectedPoint = 0;
     salientImage.convertTo(salientImage, CV_8UC1);
@@ -764,7 +765,7 @@ void PhotometricBundleAdjustment::addFrame(const uint8_t* I_ptr, const float* Z_
         new_scene_points.erase(nth, new_scene_points.end());
     }
 
-	std::cout<<"new scene points size erased : "<<new_scene_points.size()<<std::endl;
+	std::cout<<"new scene points size erased (real in use) : "<<new_scene_points.size()<<std::endl;
     //
     // calculate the specularity value for selected points
     //
@@ -878,7 +879,6 @@ void PhotometricBundleAdjustment::addFrame(const uint8_t* I_ptr, const float* Z_
 //                        }
 
             }
-
             if (targetEnvMapIdx!=-1){
                 key4Search.val[0] = targetEnvMapVal.val[0];
                 key4Search.val[1] = targetEnvMapVal.val[1];
@@ -897,13 +897,10 @@ void PhotometricBundleAdjustment::addFrame(const uint8_t* I_ptr, const float* Z_
             ss << ctrlIndex;
             ss >> img_idx_str;
             string name_prefix = "/envMap";
-
             string renderedEnvLightfolder =renderedEnvLight_path + "/envMap" + img_idx_str + "/renderedEnvLight";
             string renderedEnvLightDiffuse =renderedEnvLight_path + "/envMap" + img_idx_str + "/renderedEnvLightDiffuse";
             string envMapDiffuse = renderedEnvLightDiffuse + "/envMapDiffuse_" + img_idx_str + ".pfm";
-
             PBANL::pointEnvlight pEnv;
-
             DSONL::EnvMapLookup *EnvMapLookup = new DSONL::EnvMapLookup();
             EnvMapLookup->makeMipMap(pEnv.EnvmapSampler,renderedEnvLightfolder); // index_0: prefiltered Env light
             delete EnvMapLookup;
@@ -911,7 +908,6 @@ void PhotometricBundleAdjustment::addFrame(const uint8_t* I_ptr, const float* Z_
 //            diffuseMap *diffuseMap = new DSONL::diffuseMap;
 //            diffuseMap->makeDiffuseMap(pEnv.EnvmapSampler, envMapDiffuse); // index_1: diffuse
 //            delete diffuseMap;
-
             envLightMap_cur.insert(make_pair(ctrlIndex, pEnv));
 //                    cout<<"show size of envLightMap_cur:"<<envLightMap_cur.size()<<endl;
         }
@@ -927,11 +923,9 @@ void PhotometricBundleAdjustment::addFrame(const uint8_t* I_ptr, const float* Z_
         Vec3f radiance_beta = ibl_Radiance->solveForRadiance(View_beta, N_, roughness_pixel, image_metallic,
                                                              reflectance, baseColor, T_c2w.rotationMatrix(),
                                                              enterPanoroma.inverse());
-
         Vec3 radiance_beta_(radiance_beta[0],radiance_beta[1],radiance_beta[2]);
         // TODO concatenate the visibility vector  to the specularitySequence
         pt->specularitySequence[pt->refFrameId()]= radiance_beta_;
-
     }
     delete ibl_Radiance;
 	//    imshow("cmuSelectedPointMask2", cmuSelectedPointMask2);
@@ -962,13 +956,11 @@ void PhotometricBundleAdjustment::addFrame(const uint8_t* I_ptr, const float* Z_
         // iterate over all points and update the visibility
         int countSame=0;
         int countDiff=0;
-
         int counter_size_1=0;
         int counter_size_2=0;
         int counter_size_3=0;
         int counter_size_4=0;
         int counter_size_5=0;
-
         int counter_specu_size_1=0;
         int counter_specu_size_2=0;
         int counter_specu_size_3=0;
@@ -992,6 +984,17 @@ void PhotometricBundleAdjustment::addFrame(const uint8_t* I_ptr, const float* Z_
         for (auto &pt : _scene_points) {
 			for (int j = 0; j < pt->specularitySequence.size(); j++) {
 							cout<<"show pt->specularitySequence["<<pt->_f[0]<<"]: \n "<<pt->specularitySequence[j]<<endl;
+
+
+//				????????               show pt->specularitySequence[8]:
+//				                       3.67649e+10
+//				                       -0.000371099
+//				                       71.6797
+//				                       show pt->specularitySequence[8]:
+//				                       4.66773e-310
+//				                       4.66773e-310
+//				                       3.16202e-322
+
 			}
             if (pt->specularitySequence.size()==1){
                 counter_specu_size_1++;
@@ -1069,12 +1072,23 @@ static inline float specularityWeight( Vec3 refSpecularity, Vec3 tarSpecularity)
 
     double sumWeight= 0.587* abs(deltaSpecularity.y())+0.114* abs(deltaSpecularity.x())+0.299* abs(deltaSpecularity.z());
 
+//	if (sumWeight<0.5f){
+//		cout<<"sumWeight great than 0.5 !!!: "<<sumWeight<<endl;
+//	}
+
 //	Info("CHECKING sumWeight %d\n", sumWeight);
 
     if (sumWeight==0.0f){
 		return -1.0;}
     else{
-		float y = exp(-15*sumWeight);
+		//float y = exp(-15*sumWeight);
+		float y = exp(-6.0f*sumWeight);
+
+//		if (sumWeight<0.5f){
+//			cout<<"y value !!!: "<<y<<endl;
+//		}
+
+
 		return y;}
 
 }
@@ -1177,17 +1191,13 @@ static inline ceres::Solver::Options
 GetSolverOptions(int num_threads, bool verbose = false, double tol = 1e-6)
 {
     ceres::Solver::Options options;
-
     options.linear_solver_type            = ceres::SPARSE_SCHUR;
-
     options.minimizer_type                = ceres::TRUST_REGION;
     options.trust_region_strategy_type    = ceres::LEVENBERG_MARQUARDT;
-
     options.preconditioner_type           = ceres::CLUSTER_JACOBI;
     options.visibility_clustering_type    = ceres::SINGLE_LINKAGE;
     options.minimizer_progress_to_stdout  = verbose;
     options.max_num_iterations            = 500;
-
     options.num_threads = num_threads;
 //    options.num_linear_solver_threads = options.num_threads;
 
@@ -1246,8 +1256,6 @@ void PhotometricBundleAdjustment::optimize(Result* result)
                     // TODO:assign specularity weight to patch_weights : done
                     float specularity_weight = 1.0;
 
-
-
                     if(pt->specularitySequence.find(id) != pt->specularitySequence.end()){
 //						Info("checking pt->specularitySequence[pt->refFrameId()] x:  %d", pt->specularitySequence[pt->refFrameId()].x());
 //						Info("checking pt->specularitySequence[pt->refFrameId()] y:  %d", pt->specularitySequence[pt->refFrameId()].y());
@@ -1261,12 +1269,10 @@ void PhotometricBundleAdjustment::optimize(Result* result)
 						// if the point has no specularity, continue
 						//specularity_weight = 1.0;
                     }
-
                     auto* camera_ptr = camera_params[id].data();
                     double * xyz = pt->X().data();
                     const double huber_t = _options.robustThreshold;
                     auto* loss = huber_t > 0.0 ? new ceres::HuberLoss(huber_t) : nullptr;
-
                     ceres::CostFunction* cost = nullptr;
                     cost = DescriptorError::Create(_calib, pt->descriptor(), getFrameAtId(id), patch_weights);
                     problem.AddResidualBlock(cost, loss, camera_ptr, xyz);
