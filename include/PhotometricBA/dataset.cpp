@@ -16,8 +16,8 @@ static void toGray(const cv::Mat& src, cv::Mat& ret)
   switch( src.type() )
   {
     case CV_8UC1: ret = src; break;
-    case CV_8UC3: { cv::cvtColor(src, ret, CV_BGR2GRAY); } break;
-    case CV_8UC4: { cv::cvtColor(src, ret, CV_BGRA2GRAY); } break;
+	case CV_8UC3: { cv::cvtColor(src, ret, cv::COLOR_BGR2GRAY); } break;
+	case CV_8UC4: { cv::cvtColor(src, ret, cv::COLOR_BGR2GRAY); } break;
     default: THROW_ERROR("unsupported image format");
   }
 }
