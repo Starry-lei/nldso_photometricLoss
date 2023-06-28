@@ -487,9 +487,6 @@ void ExtractPatch(T* dst, const Image& I, const Vec_<int,2>& uv, int radius)
 void PhotometricBundleAdjustment::
 addFrame(const uint8_t* I_ptr, const float* Z_ptr, const Mat44& T, Result* result)
 {
-
-
-
 //    std::cerr<<"show T in the function addFrame:\n "<<T.matrix()<<std::endl;
 //    _trajectory.push_back(T, _frame_id);
     _trajectory.push_back(T, _frame_id);
@@ -506,15 +503,8 @@ addFrame(const uint8_t* I_ptr, const float* Z_ptr, const Mat44& T, Result* resul
 
     typedef Eigen::Map<const Image_<float>, Eigen::Aligned> SrcDepthMap;
     auto Z = SrcDepthMap(Z_ptr, _image_size.rows, _image_size.cols);
-
     // check the depth map
-
-
-
-
-
-
-    DescriptorFrame* frame = DescriptorFrame::Create(_frame_id, I, _options.descriptorType);
+	DescriptorFrame* frame = DescriptorFrame::Create(_frame_id, I, _options.descriptorType);
     // show the selected points
 //    std::cout<<"number of channels: "<<frame->numChannels()<<std::endl;
 
@@ -586,7 +576,9 @@ addFrame(const uint8_t* I_ptr, const float* Z_ptr, const Mat44& T, Result* resul
 //    }
 
     // Convert the Image_<T> to a cv::Mat
-    cv::Mat salientImage(_saliency_map.rows(), _saliency_map.cols(), CV_32F, _saliency_map.data(), _saliency_map.stride());
+//    cv::Mat salientImage(_saliency_map.rows(), _saliency_map.cols(), CV_32F, _saliency_map.data(), _saliency_map.stride());
+	cv::Mat salientImage(_saliency_map.rows(), _saliency_map.cols(), CV_32F, _saliency_map.data());
+
     cv::Mat cmuSelectedPointMask(salientImage.rows,  salientImage.cols, CV_8UC1, cv::Scalar(0));
     cv::Mat cmuSelectedPointMask2(salientImage.rows,  salientImage.cols, CV_8UC1, cv::Scalar(0));
     // Display the image using OpenCV
@@ -599,8 +591,7 @@ addFrame(const uint8_t* I_ptr, const float* Z_ptr, const Mat44& T, Result* resul
     for(int y = B; y < max_rows; ++y) {
         for(int x = B; x < max_cols; ++x) {
             double z = Z(y,x);
-
-            //std::cout<<"z: "<<z<<std::endl;
+//            std::cout<<"checking depth z (not optimized): "<<z<<std::endl;
             if(z >= _options.minValidDepth && z <= _options.maxValidDepth) {
                 if(is_local_max(y, x)) {
                     Vec3 X = T_w * (z * _K_inv * Vec3(x, y, 1.0)); // X in the world frame
@@ -652,12 +643,12 @@ addFrame(const uint8_t* I_ptr, const float* Z_ptr, const Mat44& T, Result* resul
     for (int i = 0; i < new_scene_points.size(); ++i) {
         cmuSelectedPointMask2.at<uchar>(new_scene_points[i]->_x[1],new_scene_points[i]->_x[0])= 255;
     }
-    imshow("cmuSelectedPointMask2", cmuSelectedPointMask2);
+//    imshow("cmuSelectedPointMask2", cmuSelectedPointMask2);
 //    cv::imwrite("cmuSelectedPointMask2"+std::to_string(_frame_id)+".png", cmuSelectedPointMask2);
 //    cv::waitKey(0);
 //    int num_selected_cmuSelectedPointMask2 = cv::countNonZero(cmuSelectedPointMask2);
 //    std::cout<<"num_nonZero_selected_cmuSelectedPointMask2: "<<num_selected_cmuSelectedPointMask2<<std::endl;
-    cv::waitKey(0);
+//    cv::waitKey(0);
 
     //
     // extract the descriptors
@@ -897,7 +888,6 @@ void PhotometricBundleAdjustment::optimize(Result* result)
 
         if(pt->numFrames() >= 3 && pt->refFrameId() >= frame_id_start) {
             num_selected_points++;
-
             for(auto id : pt->visibilityList()) {
                 if(id >= frame_id_start && id <= frame_id_end) {
                     pt->setRefined(true);

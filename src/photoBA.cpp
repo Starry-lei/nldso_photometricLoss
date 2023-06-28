@@ -23,7 +23,7 @@ int main(int argc, char** argv)
 
     utils::ProgramOptions options;
     options
-            ("output,o", "refined_poses_es.txt", "trajectory output file")
+            ("output,o", "refined_poses_es_tum.txt", "trajectory output file")
             ("config,c", "../config/tum_rgbd.cfg", "config file")
             .parse(argc, argv);
 

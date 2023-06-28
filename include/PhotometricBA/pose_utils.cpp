@@ -55,7 +55,9 @@ PoseList loadPosesTumRGBDFormat(std::string fn)
     std::getline(ifs, line);
 
       std::stringstream lineStream(line);
-      lineStream >> timeStamp >>tx >> ty >> tz >> qw >> qx >> qy >> qz;// tum format : 'timestamp tx ty tz qx qy qz qw'
+//      lineStream >> timeStamp >>tx >> ty >> tz >> qw >> qx >> qy >> qz;// tum format : 'timestamp tx ty tz qx qy qz qw'
+	  lineStream >> timeStamp >>tx >> ty >> tz >> qx >> qy >> qz >> qw ;// tum format : 'timestamp tx ty tz qx qy qz qw'
+
 
       Eigen::Vector3d t(tx, ty, tz);
       Eigen::Quaterniond q = Eigen::Quaterniond(qw, qx, qy, qz).normalized();
