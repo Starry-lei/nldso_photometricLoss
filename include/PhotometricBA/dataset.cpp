@@ -368,16 +368,15 @@ bool tumRGBDDataset::loadCalibration(std::string filename) {
     f.close();
     double fx, fy, cx, cy; // only pinhole model supported
     int num_fields = std::sscanf(l1.c_str(), "%lf %lf %lf %lf", &fx, &fy, &cx, &cy);
-
     _calib.K() = Eigen::Matrix3d::Identity();
-
     _calib.K()(0,0) = fx;
     _calib.K()(1,1) = fy;
     _calib.K()(0,2) = cx;
     _calib.K()(1,2) = cy;
     _calib.K()(2,2) = 1.0f;
-    std::cout<<"show intrinsics:"<<fx<<" "<<fy<<" "<<cx<<" "<<cy<<std::endl;
+    std::cout<<"\n num_fields: "<<num_fields<<" \n show intrinsics:"<<fx<<" "<<fy<<" "<<cx<<" "<<cy<<std::endl;
     return true;
+
 }
 
 UniquePointer<Dataset> Dataset::Create(std::string conf_fn)

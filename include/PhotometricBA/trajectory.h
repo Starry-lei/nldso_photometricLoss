@@ -45,7 +45,7 @@ public:
     //
     // get the last pose in the trajectory
     //
-    inline const Mat44& back() const { return _data.back().pose; }
+    inline const Mat44& back() const {return _data.back().pose;}
 
     // get all camera poses as 4x4 matrices
     EigenAlignedContainer_<Mat44> poses() const;

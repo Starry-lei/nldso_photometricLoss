@@ -1,0 +1,27 @@
+CameraTrajectory_fr3_bad02:
+Ceres Solver Report: Iterations: 47, Initial cost: 2.299647e+04, Final cost: 1.961795e+04, Termination: CONVERGENCE
+
+
+Ceres Solver Report: Iterations: 44, Initial cost: 2.299647e+04, Final cost: 1.961796e+04, Termination: CONVERGENCE
+
+GT_wrong: Ceres Solver Report: Iterations: 43, Initial cost: 3.956982e+04, Final cost: 1.385725e+04, Termination: CONVERGENCE
+
+GT_associated:  Ceres Solver Report: Iterations: 41, Initial cost: 3.274350e+04, Final cost: 9.797063e+03, Termination: CONVERGENCE
+
+
+
+
+01_150: GT
+Ceres Solver Report: Iterations: 15, Initial cost: 5.317355e+04, Final cost: 4.839926e+04, Termination: CONVERGENCE
+Ceres Solver Report: Iterations: 15, Initial cost: 5.317355e+04, Final cost: 4.839926e+04, Termination: CONVERGENCE
+
+
+
+
+01_150: badIntri
+Ceres Solver Report: Iterations: 17, Initial cost: 3.642786e+04, Final cost: 2.323220e+04, Termination: CONVERGENCE
+
+
+
+
+

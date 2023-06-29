@@ -487,8 +487,6 @@ void ExtractPatch(T* dst, const Image& I, const Vec_<int,2>& uv, int radius)
 void PhotometricBundleAdjustment::
 addFrame(const uint8_t* I_ptr, const float* Z_ptr, const Mat44& T, Result* result)
 {
-//    std::cerr<<"show T in the function addFrame:\n "<<T.matrix()<<std::endl;
-//    _trajectory.push_back(T, _frame_id);
     _trajectory.push_back(T, _frame_id);
     const Eigen::Isometry3d T_w(_trajectory.back());
     const Eigen::Isometry3d T_c(T_w.inverse());
@@ -740,6 +738,7 @@ static Vec_<double,6> PoseToParams(const Mat44& T)
     const Mat_<double,3,3> R = T.block<3,3>(0,0);
     ceres::RotationMatrixToAngleAxis(ceres::ColumnMajorAdapter3x3(R.data()), ret.data());
 
+	// translation
     ret[3] = T(0,3);
     ret[4] = T(1,3);
     ret[5] = T(2,3);
@@ -789,7 +788,8 @@ public:
     {
         T xw[3];
         ceres::AngleAxisRotatePoint(camera, point, xw);
-        xw[0] += camera[3];
+
+		xw[0] += camera[3];
         xw[1] += camera[4];
         xw[2] += camera[5];
 
@@ -864,7 +864,9 @@ void PhotometricBundleAdjustment::optimize(Result* result)
     //
     std::map<uint32_t, Vec_<double,6>> camera_params;
     for(uint32_t id = frame_id_start; id <= frame_id_end; ++id) {
-        // NOTE camera parameters are inverted
+
+        // TODO:NOTE camera parameters are inverted
+
         camera_params[id] = PoseToParams(Eigen::Isometry3d(_trajectory.atId(id)).inverse().matrix());
         std::cout<<"before optimize: _trajectory.atId(it.first:"  <<id <<"\n"<<_trajectory.atId(id)<<std::endl;
     }

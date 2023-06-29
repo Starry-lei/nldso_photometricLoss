@@ -10,17 +10,13 @@ Trajectory::Trajectory() {}
 
 void Trajectory::push_back(const Mat44& pose, const Id_t id)
 {
-    assert_unique_id( id );
-
-//    Mat44 T_inv = pose.inverse();
-//    if(!_data.empty())
-//        _data.push_back( {back()*T_inv, id} );
-//    else
-//        _data.push_back( {T_inv, id} );
-
-    _data.push_back( {pose, id} );
-
-
+    assert_unique_id(id);
+	//    Mat44 T_inv = pose.inverse();
+	//    if(!_data.empty())
+	//        _data.push_back( {back()*T_inv, id} );
+	//    else
+	//        _data.push_back( {T_inv, id} );
+    _data.push_back({pose, id});
 }
 
 const Mat44& Trajectory::atId(const Id_t id) const
