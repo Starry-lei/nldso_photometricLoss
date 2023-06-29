@@ -125,8 +125,11 @@ message(STATUS "Found TBB ${TBB_VERSION_MAJOR}.${TBB_VERSION_MINOR} (interface v
 list(APPEND MY_LIBRARIES ${TBB_LIBRARIES})
 add_definitions(-DWITH_TBB)
 # to use link to target "OpenCV"
+
+set(OPENCV_DIR "/home/lei/Documents/Libraries/openCV3.4x/share/OpenCV")
+
 # NOTE: not specifying version, since 2, 3 or 4 is fine
-find_package(OpenCV 3.3 REQUIRED)
+find_package(OpenCV 3 REQUIRED  HINTS ${OPENCV_DIR})
 
 # COMPONENTS core features2d
 message(STATUS "Found OpenCV ${OpenCV_VERSION} headers in: ${OpenCV_INCLUDE_DIRS}")

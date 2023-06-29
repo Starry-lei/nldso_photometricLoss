@@ -23,10 +23,10 @@
 #include "utils.h"
 
 #include  <immintrin.h>
-
+#include <opencv2/opencv.hpp>
 #include <opencv2/core/core.hpp>
-//#include <opencv2/calib3d/calib3d.hpp>
-#include <opencv2/calib3d/calib3d_c.h>
+#include <opencv2/calib3d/calib3d.hpp>
+//#include <opencv2/calib3d/calib3d_c.h>
 
 #include <vector>
 
@@ -280,18 +280,25 @@ struct StereoAlgorithm::Impl
 
   inline void run(const cv::Mat& left, const cv::Mat& right, cv::Mat& dmap)
   {
+
+
     switch(_algorithm)
     {
       case Algorithm::BlockMatching:
         {
+
+
           assert( _state );
-          const CvMat left_ = left;
-          const CvMat right_ = right;
-
+		  // changed by lei
+		  CvMat cMat_left = cvMat(left.rows, left.cols, CV_8UC(left.channels()), left.data);
+          const CvMat left_ = cMat_left;
+		  CvMat cMat_right = cvMat(right.rows, right.cols, CV_8UC(right.channels()), right.data);
+          const CvMat right_ =cMat_right;
           _dmap_buffer.create(left.size(), CV_16SC1);
-          CvMat dmap_ = _dmap_buffer;
-          cvFindStereoCorrespondenceBM(&left_, &right_, &dmap_, _state);
 
+		  // changed by lei
+		  CvMat dmap_ = cvMat(_dmap_buffer.rows, _dmap_buffer.cols, CV_16SC(_dmap_buffer.channels()), _dmap_buffer.data);
+          cvFindStereoCorrespondenceBM(&left_, &right_, &dmap_, _state);
           _dmap_buffer.convertTo(dmap, CV_32FC1, 1.0 / 16.0, 0.0 );
         } break;
 
