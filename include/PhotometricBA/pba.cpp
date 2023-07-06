@@ -493,31 +493,27 @@ void ExtractPatch(T* dst, const Image& I, const Vec_<int,2>& uv, int radius)
 void PhotometricBundleAdjustment::
 addFrame(const uint8_t* I_ptr, const float* Z_ptr, const Mat44& T, const Mat44& T_abs,  Result* result)
 {
+
 	testTrajectory.push_back(T, _frame_id);
+	std::cout << "==================divide=======================: \n"<< std::endl;
 	testTrajectory_abs.push_back(T_abs,_frame_id, _frame_id);
-
-
 	const Eigen::Isometry3d T_w_1(testTrajectory.back());
 	const Eigen::Isometry3d T_w_2(testTrajectory_abs.back());
-
 	// print out T for debugging
-	std::cout << "T: \n" << T_w_1.matrix() << std::endl;
+	std::cout << "T_w_1: \n" << T_w_1.matrix() << std::endl;
 	std::cout << "T_abs: \n" << T_w_2.matrix() << std::endl;
 	// ======================tempory comment out========================
-	std::cout << "ignore---1-------------: \n"<< std::endl;
+	std::cout << "ignore---start-------------: \n"<< std::endl;
     _trajectory.push_back(T, _frame_id);
-	std::cout << "ignore---0-------------: \n"<< std::endl;
-
-
-
+//	testTrajectory_abs.push_back(T_abs, _frame_id, _frame_id);
+	const Eigen::Isometry3d T_w(_trajectory.back());
+//	const Eigen::Isometry3d T_w(testTrajectory_abs.back());
+	// print out T_w for debugging
+	std::cout << "T_w_GT: " << T_w.matrix() << std::endl;
+	std::cout << "ignore---end-------------: \n"<< std::endl;
     // print out T for debugging
     // protected protectedprotectedprotectedprotectedprotectedprotectedprotectedprotectedprotected
-	//    const Eigen::Isometry3d T_w(_trajectory.back());
-	const Eigen::Isometry3d T_w(testTrajectory_abs.back());
-
-
-	// print out T_w for debugging
-//	std::cout << "T_w: " << T_w.matrix() << std::endl;
+//	const Eigen::Isometry3d T_w(_trajectory.back());
 
 
 
@@ -843,16 +839,16 @@ void PhotometricBundleAdjustment::optimize(Result* result)
     std::map<uint32_t, Vec_<double,6>> camera_params;
     for(auto id = frame_id_start; id <= frame_id_end; ++id) {
         // NOTE camera parameters are inverted
-//        camera_params[id] = PoseToParams(Eigen::Isometry3d(_trajectory.atId(id)).inverse().matrix());
-		camera_params[id] = PoseToParams(Eigen::Isometry3d(testTrajectory_abs.atId(id)).inverse().matrix());
+        camera_params[id] = PoseToParams(Eigen::Isometry3d(_trajectory.atId(id)).inverse().matrix());
+//		camera_params[id] = PoseToParams(Eigen::Isometry3d(testTrajectory_abs.atId(id)).inverse().matrix());
 
-//        std::cout<<"before optimize: _trajectory.atId(it.first:\n"<<_trajectory.atId(id)<<std::endl;
-		std::cout<<"before optimize: _trajectory.atId(it.first:\n"<<testTrajectory_abs.atId(id)<<std::endl;
+        std::cout<<"before optimize: _trajectory.atId(it.first:\n"<<_trajectory.atId(id)<<std::endl;
+//		std::cout<<"before optimize: _trajectory.atId(it.first:\n"<<testTrajectory_abs.atId(id)<<std::endl;
 
 
     }
-//    Info("_trajectory.size() = %d, frame_id_start=  %d", _trajectory.size(), frame_id_start);
-	Info("_trajectory.size() = %d, frame_id_start=  %d", testTrajectory_abs.size(), frame_id_start);
+    Info("_trajectory.size() = %d, frame_id_start=  %d", _trajectory.size(), frame_id_start);
+//	Info("_trajectory.size() = %d, frame_id_start=  %d", testTrajectory_abs.size(), frame_id_start);
 
 
     //
@@ -914,17 +910,16 @@ void PhotometricBundleAdjustment::optimize(Result* result)
     //
     // put back the refined camera poses
     //
-//    for(auto& it : camera_params) {
-//        _trajectory.atId(it.first) = Eigen::Isometry3d(
-//                ParamsToPose(it.second.data())).inverse().matrix();
-//        std::cout<<"\"after optimize:_trajectory.atId(it.first:\n"<<_trajectory.atId(it.first)<<std::endl;
-//    }
+    for(auto& it : camera_params) {
+        _trajectory.atId(it.first) = Eigen::Isometry3d(
+                ParamsToPose(it.second.data())).inverse().matrix();
+        std::cout<<"\"after optimize:_trajectory.atId(it.first:\n"<<_trajectory.atId(it.first)<<std::endl;
+    }
 
-	for(auto& it : camera_params) {
-		testTrajectory_abs.atId(it.first) = Eigen::Isometry3d(
-		                                     ParamsToPose(it.second.data())).inverse().matrix();
-		std::cout<<"\"after optimize:testTrajectory_abs.atId(it.first:\n"<<testTrajectory_abs.atId(it.first)<<std::endl;
-	}
+//	for(auto& it : camera_params) {
+//		testTrajectory_abs.atId(it.first) = Eigen::Isometry3d(ParamsToPose(it.second.data())).inverse().matrix();
+//		std::cout<<"\"after optimize:testTrajectory_abs.atId:"<<it.first<<"and its pose:"<<testTrajectory_abs.atId(it.first)<<std::endl;
+//	}
 
 
 
@@ -939,9 +934,8 @@ void PhotometricBundleAdjustment::optimize(Result* result)
     // check if we should return a result to the user
     //
     if(result) {
-//        result->poses = _trajectory.poses();
-
-		result->poses = testTrajectory_abs.poses();
+        result->poses = _trajectory.poses();
+//		result->poses = testTrajectory_abs.poses();
         const auto npts = points_to_remove.size();
         result->refinedPoints.resize(npts);
         result->originalPoints.resize(npts);

@@ -11,12 +11,9 @@ Trajectory::Trajectory() {}
 void Trajectory::push_back(const Mat44& pose, const Id_t id)
 {
     assert_unique_id( id );
-
     Mat44 T_inv = pose.inverse();
 	std::cout<<" \n \n show T_inv() at "<< id<< " val:\n"<< T_inv.matrix()<<std::endl;
-
 	std::cout<<"\n show _data.empty():"<< _data.empty()<<"and !_data.empty():"<<!_data.empty()<<std::endl;
-
 	if(!_data.empty())
 	{
 		std::cout << "show back() at " << id << " val:\n" << back().matrix() << std::endl;
@@ -26,10 +23,6 @@ void Trajectory::push_back(const Mat44& pose, const Id_t id)
 		std::cout<<"\n show empty case: current id:"<< id<< " and T_inv\n "<<T_inv.matrix()<<std::endl;
 		_data.push_back( {T_inv, id} );
 	}
-
-
-
-
 }
 
 void Trajectory::push_back(const Mat44& pose, const Id_t id, const Id_t id2)
