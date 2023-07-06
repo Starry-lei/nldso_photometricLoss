@@ -49,7 +49,7 @@ bool writePosesKittiFormat(std::string fn, const PoseList& T)
   for(size_t i = 0; i < T.size(); ++i) {
     for(int r = 0; r < 3; ++r) {
       for(int c = 0; c < 4; ++c) {
-        ofs << (T[i](r,c)) << " ";
+        ofs << (T[i](r,c)) <<" ";
       }
     }
     ofs << "\n";

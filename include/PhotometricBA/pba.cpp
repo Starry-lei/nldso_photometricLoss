@@ -29,6 +29,11 @@
 #include <algorithm>
 #include <map>
 
+#include <pcl/point_types.h>
+#include <pcl/io/pcd_io.h>
+
+
+
 // this is just for YCM to stop highlighting openmp as error (there is no openmp
 // in clang3.5)
 #define HAS_OPENMP __GNUC__ >= 4 && __clang__ == 0
@@ -486,12 +491,37 @@ void ExtractPatch(T* dst, const Image& I, const Vec_<int,2>& uv, int radius)
 
 
 void PhotometricBundleAdjustment::
-addFrame(const uint8_t* I_ptr, const float* Z_ptr, const Mat44& T, Result* result)
+addFrame(const uint8_t* I_ptr, const float* Z_ptr, const Mat44& T, const Mat44& T_abs,  Result* result)
 {
-    _trajectory.push_back(T, _frame_id);
-    const Eigen::Isometry3d T_w(_trajectory.back());
-    const Eigen::Isometry3d T_c(T_w.inverse());
+	testTrajectory.push_back(T, _frame_id);
+	testTrajectory_abs.push_back(T_abs,_frame_id, _frame_id);
 
+
+	const Eigen::Isometry3d T_w_1(testTrajectory.back());
+	const Eigen::Isometry3d T_w_2(testTrajectory_abs.back());
+
+	// print out T for debugging
+	std::cout << "T: \n" << T_w_1.matrix() << std::endl;
+	std::cout << "T_abs: \n" << T_w_2.matrix() << std::endl;
+	// ======================tempory comment out========================
+	std::cout << "ignore---1-------------: \n"<< std::endl;
+    _trajectory.push_back(T, _frame_id);
+	std::cout << "ignore---0-------------: \n"<< std::endl;
+
+
+
+    // print out T for debugging
+    // protected protectedprotectedprotectedprotectedprotectedprotectedprotectedprotectedprotected
+	//    const Eigen::Isometry3d T_w(_trajectory.back());
+	const Eigen::Isometry3d T_w(testTrajectory_abs.back());
+
+
+	// print out T_w for debugging
+//	std::cout << "T_w: " << T_w.matrix() << std::endl;
+
+
+
+    const Eigen::Isometry3d T_c(T_w.inverse());
     typedef Eigen::Map<const Image_<uint8_t>, Eigen::Aligned> SrcMap;
     auto I = SrcMap(I_ptr, _image_size.rows, _image_size.cols);
 
@@ -546,6 +576,7 @@ addFrame(const uint8_t* I_ptr, const float* Z_ptr, const Mat44& T, Result* resul
             }
         }
     }
+
 
 
     //
@@ -616,11 +647,41 @@ addFrame(const uint8_t* I_ptr, const float* Z_ptr, const Mat44& T, Result* resul
     _frame_buffer.push_back(DescriptorFramePointer(frame));
 
     if(_frame_buffer.full()) {
+
+
+		// pcl save point cloud
+//		pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_save(new pcl::PointCloud<pcl::PointXYZ>);
+//		// traverse all the scene points
+//		for (size_t i = 0; i < _scene_points.size(); ++i) {
+//			const auto& pt = _scene_points[i];
+//			cloud_save->push_back(pcl::PointXYZ(pt->X()[0], pt->X()[1], pt->X()[2]));
+//		}
+//		std::string filename = "SlidingWindowPointCloud_absPose_" + std::to_string(_frame_id) + ".pcd";
+//		pcl::io::savePCDFileASCII(filename, *cloud_save);
+
+
         optimize(result);
     }
 
     ++_frame_id;
 }
+
+void PhotometricBundleAdjustment::
+        addFrame4CheckInputPose(const uint8_t* I_ptr, const float* Z_ptr, const Mat44& T, Result* result)
+{
+	_trajectory.push_back(T, _frame_id);
+	// print out T for debugging
+	std::cout << "T: " << T << std::endl;
+	const Eigen::Isometry3d T_w(_trajectory.back());
+	// print out T_w for debugging
+	std::cout << "T_w: " << T_w.matrix() << std::endl;
+	const Eigen::Isometry3d T_c(T_w.inverse());
+
+
+	++_frame_id;
+}
+
+
 
 static inline std::vector<double>
 MakePatchWeights(int radius, bool do_gaussian, double s_x = 1.0,
@@ -782,10 +843,16 @@ void PhotometricBundleAdjustment::optimize(Result* result)
     std::map<uint32_t, Vec_<double,6>> camera_params;
     for(auto id = frame_id_start; id <= frame_id_end; ++id) {
         // NOTE camera parameters are inverted
-        camera_params[id] = PoseToParams(Eigen::Isometry3d(_trajectory.atId(id)).inverse().matrix());
-        std::cout<<"before optimize: _trajectory.atId(it.first:\n"<<_trajectory.atId(id)<<std::endl;
+//        camera_params[id] = PoseToParams(Eigen::Isometry3d(_trajectory.atId(id)).inverse().matrix());
+		camera_params[id] = PoseToParams(Eigen::Isometry3d(testTrajectory_abs.atId(id)).inverse().matrix());
+
+//        std::cout<<"before optimize: _trajectory.atId(it.first:\n"<<_trajectory.atId(id)<<std::endl;
+		std::cout<<"before optimize: _trajectory.atId(it.first:\n"<<testTrajectory_abs.atId(id)<<std::endl;
+
+
     }
-    Info("_trajectory.size() = %d, frame_id_start=  %d", _trajectory.size(), frame_id_start);
+//    Info("_trajectory.size() = %d, frame_id_start=  %d", _trajectory.size(), frame_id_start);
+	Info("_trajectory.size() = %d, frame_id_start=  %d", testTrajectory_abs.size(), frame_id_start);
 
 
     //
@@ -804,10 +871,8 @@ void PhotometricBundleAdjustment::optimize(Result* result)
                     pt->setRefined(true);
                     auto* camera_ptr = camera_params[id].data();
                     auto* xyz = pt->X().data();
-
                     const auto huber_t = _options.robustThreshold;
                     auto* loss = huber_t > 0.0 ? new ceres::HuberLoss(huber_t) : nullptr;
-
                     ceres::CostFunction* cost = nullptr;
                     cost = DescriptorError::Create(_calib, pt->descriptor(), getFrameAtId(id), patch_weights);
                     problem.AddResidualBlock(cost, loss, camera_ptr, xyz);
@@ -839,22 +904,28 @@ void PhotometricBundleAdjustment::optimize(Result* result)
 
     ceres::Solve(GetSolverOptions(num_threads, _options.verbose), &problem, &summary);
     if(_options.verbose)
-        std::cout << summary.FullReport() << std::endl;
+//        std::cout << summary.FullReport() << std::endl;
+		std::cout << summary.BriefReport() << std::endl;
 
     //
     // TODO: run another optimization pass over residuals with small error
     // (eliminate the outliers)
     //
-
     //
     // put back the refined camera poses
     //
-    for(auto& it : camera_params) {
-        _trajectory.atId(it.first) = Eigen::Isometry3d(
-                ParamsToPose(it.second.data())).inverse().matrix();
+//    for(auto& it : camera_params) {
+//        _trajectory.atId(it.first) = Eigen::Isometry3d(
+//                ParamsToPose(it.second.data())).inverse().matrix();
+//        std::cout<<"\"after optimize:_trajectory.atId(it.first:\n"<<_trajectory.atId(it.first)<<std::endl;
+//    }
 
-        std::cout<<"\"after optimize:_trajectory.atId(it.first:\n"<<_trajectory.atId(it.first)<<std::endl;
-    }
+	for(auto& it : camera_params) {
+		testTrajectory_abs.atId(it.first) = Eigen::Isometry3d(
+		                                     ParamsToPose(it.second.data())).inverse().matrix();
+		std::cout<<"\"after optimize:testTrajectory_abs.atId(it.first:\n"<<testTrajectory_abs.atId(it.first)<<std::endl;
+	}
+
 
 
     //
@@ -868,7 +939,9 @@ void PhotometricBundleAdjustment::optimize(Result* result)
     // check if we should return a result to the user
     //
     if(result) {
-        result->poses = _trajectory.poses();
+//        result->poses = _trajectory.poses();
+
+		result->poses = testTrajectory_abs.poses();
         const auto npts = points_to_remove.size();
         result->refinedPoints.resize(npts);
         result->originalPoints.resize(npts);

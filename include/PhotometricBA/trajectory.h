@@ -8,6 +8,7 @@
 
 #include <vector>
 #include "types.h"
+#include <iostream>
 
 class Trajectory
 {
@@ -28,6 +29,7 @@ public:
     //  T_w_i = T_w_(i-1) * inv(T_i)
     //
     void push_back(const Mat44&, const Id_t id);
+	void push_back(const Mat44&, const Id_t id,const Id_t id2);
 
     //
     // direct element access

@@ -126,10 +126,10 @@ list(APPEND MY_LIBRARIES ${TBB_LIBRARIES})
 add_definitions(-DWITH_TBB)
 # to use link to target "OpenCV"
 
-set(OPENCV_DIR "/home/lei/Documents/Libraries/openCV3.4x/share/OpenCV")
+set(OPENCV_DIR "/home/lei/Documents/Libraries/openCV3.3x/share/OpenCV")
 
 # NOTE: not specifying version, since 2, 3 or 4 is fine
-find_package(OpenCV 3 REQUIRED  HINTS ${OPENCV_DIR})
+find_package(OpenCV REQUIRED  HINTS ${OPENCV_DIR} EXACT 3.3)
 
 # COMPONENTS core features2d
 message(STATUS "Found OpenCV ${OpenCV_VERSION} headers in: ${OpenCV_INCLUDE_DIRS}")
@@ -229,7 +229,6 @@ link_directories( ${Boost_LIBRARY_DIRS})
 #add_definitions(-DWITH_SIMD)
 include_directories(${Boost_INCLUDE_DIRS})
 list(APPEND MY_LIBRARIES ${Boost_LIBRARIES})
-
 message(STATUS "show ${Boost_LIBRARIES} Boost_LIBRARIES: ${Boost_INCLUDE_DIRS}")
 
 add_library(dsonl ${dsonl_SOURCE_FILES})
@@ -259,9 +258,10 @@ add_executable(pba src/photoBA.cpp include/PhotometricBA/pba.cpp include/Photome
 target_link_libraries(pba
         Eigen3::Eigen
         ${Boost_LIBRARIES}
-  Ceres::ceres
-  TBB::tbb
-  OpenCV
+        Ceres::ceres
+        TBB::tbb
+        OpenCV
+        ${PCL_LIBRARIES}
 )
 
 #add_executable(test_functions src/test_functions.cpp)

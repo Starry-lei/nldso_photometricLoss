@@ -2933,7 +2933,7 @@ void census5x5_SSE(uint8* source, uint32* dest, uint32 width, uint32 height)
     /* xor with 0x80, as it is a signed compare */
     __m128i l2_register = _mm_xor_si128(_mm_stream_load_si128( (__m128i*)( i0+2*width )) ,_mm_set1_epi8('\x80'));
     __m128i l3_register = _mm_xor_si128(_mm_stream_load_si128( (__m128i*)( i0+3*width )) ,_mm_set1_epi8('\x80'));
-    __m128i l4_register = _mm_xor_si128(_mm_stream_load_si128( (__m128i*)( i0+4*width )) ,_mm_set1_epi8('\x80'));  
+    __m128i l4_register = _mm_xor_si128(_mm_stream_load_si128( (__m128i*)( i0+4*width )) ,_mm_set1_epi8('\x80'));
     __m128i l1_register = _mm_xor_si128(_mm_stream_load_si128( (__m128i*)( i0+width )) ,_mm_set1_epi8('\x80'));
     __m128i l0_register = _mm_xor_si128(_mm_stream_load_si128( (__m128i*)( i0 )) ,_mm_set1_epi8('\x80'));
 
@@ -2960,10 +2960,10 @@ void census5x5_SSE(uint8* source, uint32* dest, uint32 width, uint32 height)
             /* pixel c */
             __m128i pixelcv = _mm_alignr_epi8(l2_register_next,l2_register, 2);
 
-            /* pixel 0*/ 
+            /* pixel 0*/
             __m128i pixel0h = _mm_cmplt_epi8(l0_register,pixelcv);
-            
-            /* pixel 1*/ 
+
+            /* pixel 1*/
             __m128i pixel1v = _mm_alignr_epi8(l0_register_next,l0_register, 1);
             __m128i pixel1h = _mm_cmplt_epi8(pixel1v,pixelcv);
 
@@ -3021,7 +3021,7 @@ void census5x5_SSE(uint8* source, uint32* dest, uint32 width, uint32 height)
             /* pixel 12 */
             __m128i pixel12v = _mm_alignr_epi8(l2_register_next,l2_register, 3);
             __m128i pixel12h = _mm_cmplt_epi8(pixel12v,pixelcv);
-            
+
             /* pixel 13 */
             __m128i pixel13v = _mm_alignr_epi8(l2_register_next,l2_register, 4);
             __m128i pixel13h = _mm_cmplt_epi8(pixel13v,pixelcv);
@@ -3094,7 +3094,7 @@ void census5x5_SSE(uint8* source, uint32* dest, uint32 width, uint32 height)
             __m128i resultPart1 = _mm_or_si128(resultPart1_1,resultPart1_2);
             __m128i resultPart1_3 = _mm_shuffle_epi8(resultByte3, expandByte3_First4);
             resultPart1 = _mm_or_si128(resultPart1,resultPart1_3);
-            
+
             /* rotate result bytes */
             /* replace by _mm_alignr_epi8 */
             resultByte1 = _mm_shuffle_epi32(resultByte1, _MM_SHUFFLE(0,3,2,1));
@@ -3135,8 +3135,8 @@ void census5x5_SSE(uint8* source, uint32* dest, uint32 width, uint32 height)
             /* shift because of offsets */
             _mm_store_si128((__m128i*)result, _mm_alignr_epi8(resultPart1, lastResult, 8));
             _mm_store_si128((__m128i*)(result+4), _mm_alignr_epi8(resultPart2, resultPart1, 8) );
-            _mm_store_si128((__m128i*)(result+8), _mm_alignr_epi8(resultPart3, resultPart2, 8) ); 
-            _mm_store_si128((__m128i*)(result+12), _mm_alignr_epi8(resultPart4, resultPart3, 8) ); 
+            _mm_store_si128((__m128i*)(result+8), _mm_alignr_epi8(resultPart3, resultPart2, 8) );
+            _mm_store_si128((__m128i*)(result+12), _mm_alignr_epi8(resultPart4, resultPart3, 8) );
 
             result += 16;
             lastResult = resultPart4;
@@ -3163,8 +3163,8 @@ void census5x5_SSE(uint8* source, uint32* dest, uint32 width, uint32 height)
                             value += 1;
                         }
                     }
-                }     
-            } 
+                }
+            }
             *getPixel32(dest,width,j,i) = value;
         }
     }
@@ -3177,7 +3177,7 @@ void census5x5_16bit_SSE(uint16* source, uint32* dest, uint32 width, uint32 heig
 {
     uint32* dst = dest;
     const uint16* src = source;
-    
+
     // memsets just for the upper and lower two lines, not really necessary
     memset(dest, 0, width*2*sizeof(uint32));
     memset(dest+width*(height-2), 0, width*2*sizeof(uint32));
@@ -3208,7 +3208,7 @@ void census5x5_16bit_SSE(uint16* source, uint32* dest, uint32 width, uint32 heig
 
     __m128i l2_register = _mm_stream_load_si128( (__m128i*)( i2 ) );
     __m128i l3_register = _mm_stream_load_si128( (__m128i*)( i3 ) );
-    __m128i l4_register = _mm_stream_load_si128( (__m128i*)( i4 ) );  
+    __m128i l4_register = _mm_stream_load_si128( (__m128i*)( i4 ) );
     __m128i l1_register = _mm_stream_load_si128( (__m128i*)( i1 ) );
     __m128i l0_register = _mm_stream_load_si128( (__m128i*)( i0 ) );
 
@@ -3239,10 +3239,10 @@ void census5x5_16bit_SSE(uint16* source, uint32* dest, uint32 width, uint32 heig
             /* pixel c */
             __m128i pixelcv = _mm_alignr_epi8(l2_register_next,l2_register, 4);
 
-            /* pixel 0*/ 
+            /* pixel 0*/
             __m128i pixel0h = _mm_cmplt_epi16(l0_register,pixelcv);
-            
-            /* pixel 1*/ 
+
+            /* pixel 1*/
             __m128i pixel1v = _mm_alignr_epi8(l0_register_next,l0_register, 2);
             __m128i pixel1h = _mm_cmplt_epi16(pixel1v,pixelcv);
 
@@ -3300,7 +3300,7 @@ void census5x5_16bit_SSE(uint16* source, uint32* dest, uint32 width, uint32 heig
             /* pixel 12 */
             __m128i pixel12v = _mm_alignr_epi8(l2_register_next,l2_register, 6);
             __m128i pixel12h = _mm_cmplt_epi16(pixel12v,pixelcv);
-            
+
             /* pixel 13 */
             __m128i pixel13v = _mm_alignr_epi8(l2_register_next,l2_register, 8);
             __m128i pixel13h = _mm_cmplt_epi16(pixel13v,pixelcv);
@@ -3384,7 +3384,7 @@ void census5x5_16bit_SSE(uint16* source, uint32* dest, uint32 width, uint32 heig
             /* shift because of offsets */
             __m128i c = _mm_alignr_epi8(blendB1B2B3L, lastResultLower, 8);
             _mm_store_si128((__m128i*)result, c);
-            _mm_store_si128((__m128i*)(result+4), _mm_alignr_epi8(blendB1B2B3H, blendB1B2B3L, 8) ); 
+            _mm_store_si128((__m128i*)(result+4), _mm_alignr_epi8(blendB1B2B3H, blendB1B2B3L, 8) );
 
             result += 8;
             lastResultLower = blendB1B2B3H;
@@ -3411,8 +3411,8 @@ void census5x5_16bit_SSE(uint16* source, uint32* dest, uint32 width, uint32 heig
                             value += 1;
                         }
                     }
-                }     
-            } 
+                }
+            }
             *getPixel32(dest,width,j,i) = value;
         }
         *getPixel32(dest,width,width-2,i) = 255;
@@ -3431,7 +3431,7 @@ void median3x3_SSE(float32* source, float32* dest, uint32 width, uint32 height)
 {
     // check width restriction
     assert(width % 4 == 0);
-    
+
     float32* destStart = dest;
     //  lines
     float32* line1 = source;
@@ -3470,7 +3470,7 @@ void median3x3_SSE(float32* source, float32* dest, uint32 width, uint32 height)
         vecSortandSwap(v0, v3) ; vecSortandSwap(v5, v8) ; vecSortandSwap(v4, v7) ;
         vecSortandSwap(v3, v6) ; vecSortandSwap(v1, v4) ; vecSortandSwap(v2, v5) ;
         vecSortandSwap(v4, v7) ; vecSortandSwap(v4, v2) ; vecSortandSwap(v6, v4) ;
-        vecSortandSwap(v4, v2) ; 
+        vecSortandSwap(v4, v2) ;
 
         // comply to alignment restrictions
         const __m128i c = _mm_alignr_epi8(_mm_castps_si128(v4), _mm_castps_si128(lastMedian), 12);

@@ -10,11 +10,8 @@
 #include "types.h"
 #include "trajectory.h"
 #include "calibration.h"
-
 #include <iosfwd>
-
 #include <boost/circular_buffer.hpp>
-
 
 namespace utils {
     class ConfigFile;
@@ -161,7 +158,12 @@ public:
      * \param T pose initialization for this frame
      * \param result, if not null we store the optmization results in it
      */
-    void addFrame(const uint8_t* image, const float* depth_map, const Mat44& T, Result* = nullptr);
+    void addFrame(const uint8_t* image, const float* depth_map, const Mat44& T, const Mat44& T_abs, Result* = nullptr);
+	void addFrame4CheckInputPose(const uint8_t* image, const float* depth_map, const Mat44& T, Result* = nullptr);
+//	Trajectory _trajectory;
+
+
+
 
 protected:
     void optimize(Result*);
@@ -183,6 +185,7 @@ private:
 
     class DescriptorError;
 
+
 private:
     uint32_t _frame_id = 0;
 
@@ -190,6 +193,11 @@ private:
     ImageSize   _image_size;
     Options     _options;
     Trajectory _trajectory;
+
+	Trajectory testTrajectory;
+	Trajectory testTrajectory_abs;
+
+
     DescriptorFrameBuffer _frame_buffer;
     ScenePointPointerList _scene_points;
 
