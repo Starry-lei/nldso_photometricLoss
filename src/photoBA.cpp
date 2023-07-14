@@ -56,10 +56,10 @@ int main(int argc, char** argv)
         auto Z = zmap.ptr<float>();
 
 		// save the RGB-D image data
-		std::string rgb_fn = "../data/kitti_init_poor/rgb/" + std::to_string(f_i) + ".png";
-		std::string depth_fn = "../data/kitti_init_poor/depth/" + std::to_string(f_i) + ".png";
-		cv::imwrite(rgb_fn, frame->image());
-		cv::imwrite(depth_fn, zmap);
+//		std::string rgb_fn = "../data/kitti_init_poor/rgb/" + std::to_string(f_i) + ".png";
+//		std::string depth_fn = "../data/kitti_init_poor/depth/" + std::to_string(f_i) + ".png";
+//		cv::imwrite(rgb_fn, frame->image());
+//		cv::imwrite(depth_fn, zmap);
 
 		// temporary test code
 		// photoba.addFrame4CheckInputPose(I, Z, T_init[f_i],  &result);
