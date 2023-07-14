@@ -31,7 +31,13 @@ int main(int argc, char** argv)
     auto Bf = dataset->calibration().b() * dataset->calibration().fx();
     auto T_init = loadPosesKittiFormat(cf.get<std::string>("trajectory"));
 
+	std::cout <<"show intrinsics"<< std::endl;
+	std::cout<< "fx: " << dataset->calibration().fx()<< std::endl;
+	std::cout<< "fy: " << dataset->calibration().fy()<< std::endl;
+	std::cout<< "cx: " << dataset->calibration().cx()<< std::endl;
+	std::cout<< "cy: " << dataset->calibration().cy()<< std::endl;
 
+	std::cout<< "K: " << dataset->calibration().K()<< std::endl;
 
 
 
