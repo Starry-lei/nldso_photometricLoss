@@ -54,6 +54,13 @@ int main(int argc, char** argv)
         disparityToDepth(frame->disparity(), Bf, zmap);
         auto I = frame->image().ptr<const uint8_t>();
         auto Z = zmap.ptr<float>();
+
+		// save the RGB-D image data
+		std::string rgb_fn = "../data/kitti_init_poor/rgb/" + std::to_string(f_i) + ".png";
+		std::string depth_fn = "../data/kitti_init_poor/depth/" + std::to_string(f_i) + ".png";
+		cv::imwrite(rgb_fn, frame->image());
+		cv::imwrite(depth_fn, zmap);
+
 		// temporary test code
 		// photoba.addFrame4CheckInputPose(I, Z, T_init[f_i],  &result);
 		// protected code:
@@ -61,6 +68,10 @@ int main(int argc, char** argv)
         if(!result.refinedPoints.empty()) {
             // store the refinement points if you'd like
         }
+
+//		if (f_i==500){
+//			break ;
+//		}
     }
 	// protected code:
 	auto output_fn = options.get<std::string>("output");
