@@ -434,3 +434,188 @@ Show optimized rotation:
  falied
  Show Rotational error :5.64606(degree).
  Show translational error :25.6692(%)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Ceres Solver Report: Iterations: 39, Initial cost: 2.302791e+04, Final cost: 1.955473e+04, Termination: CONVERGENCE
+
+Ceres Solver Report: Iterations: 36, Initial cost: 1.085548e+04, Final cost: 9.254472e+03, Termination: CONVERGENCE
+
+Ceres Solver Report: Iterations: 24, Initial cost: 6.446885e+03, Final cost: 5.800841e+03, Termination: CONVERGENCE
+
+Ceres Solver Report: Iterations: 34, Initial cost: 1.008126e+04, Final cost: 6.767683e+03, Termination: CONVERGENCE
+
+Ceres Solver Report: Iterations: 24, Initial cost: 9.772976e+03, Final cost: 8.636334e+03, Termination: CONVERGENCE
+
+Frame 00008
+Ceres Solver Report: Iterations: 25, Initial cost: 1.291107e+04, Final cost: 1.173966e+04, Termination: CONVERGENCE
+
+
+
+
+
+Ceres Solver Report: Iterations: 46, Initial cost: 1.620793e+04, Final cost: 1.244257e+04, Termination: CONVERGENCE
+
+
+
+
+
+
+
+
+
+
+
+
+Frame 00144
+Ceres Solver Report: Iterations: 43, Initial cost: 1.949680e+04, Final cost: 1.557119e+04, Termination: CONVERGENCE
+
+
+
+Frame 00176
+Ceres Solver Report: Iterations: 48, Initial cost: 2.161723e+04, Final cost: 1.682827e+04, Termination: CONVERGENCE
+
+
+
+
+before optimize: _trajectory.atId(it.first:718
+-0.663239 -0.331531   0.67097  -2.19891
+ 0.411274  0.587571  0.696859  -1.63166
+-0.625273  0.738137  -0.25335   3.29436
+        0         0         0         1
+before optimize: _trajectory.atId(it.first:719
+-0.670455 -0.325675  0.666653  -2.19119
+ 0.409677  0.586627  0.698594  -1.63629
+-0.618591  0.741488 -0.259885    3.2996
+        0         0         0         1
+before optimize: _trajectory.atId(it.first:720
+-0.670455 -0.325675  0.666653  -2.19119
+ 0.409677  0.586627  0.698594  -1.63629
+-0.618591  0.741488 -0.259885    3.2996
+        0         0         0         1
+before optimize: _trajectory.atId(it.first:721
+-0.674415 -0.320697   0.66507  -2.18246
+ 0.411679  0.584417  0.699269  -1.63938
+-0.612932  0.745393 -0.262116   3.30469
+        0         0         0         1
+before optimize: _trajectory.atId(it.first:722
+-0.677401 -0.316915  0.663846  -2.17465
+ 0.411697  0.584538  0.699157  -1.63997
+-0.609617  0.746914 -0.265494   3.30932
+        0         0         0         1
+
+
+before optimize: _trajectory.atId(it.first:720
+-0.670705 -0.325198  0.666634  -2.19107
+ 0.409792  0.586675  0.698486  -1.63613
+-0.618244   0.74166 -0.260222   3.29992
+        0         0         0         1
+before optimize: _trajectory.atId(it.first:721
+-0.674565  -0.32033  0.665095  -2.18167
+ 0.412135  0.584056  0.699302  -1.63878
+ -0.61246  0.745833 -0.261964   3.30416
+        0         0         0         1
+before optimize: _trajectory.atId(it.first:722
+-0.677754 -0.317152  0.663373   -2.1715
+ 0.412498  0.582849  0.700094  -1.63914
+-0.608683  0.748132 -0.264203   3.30622
+        0         0         0         1
+before optimize: _trajectory.atId(it.first:723
+-0.680868 -0.315373  0.661029  -2.16117
+ 0.410334  0.583339  0.700957  -1.64052
+-0.606667  0.748502 -0.267769   3.30848
+        0         0         0         1
+before optimize: _trajectory.atId(it.first:724
+ -0.68526 -0.310819  0.658643  -2.15057
+ 0.409871  0.582965   0.70154  -1.64207
+-0.602017  0.750696 -0.272087   3.31323
+        0         0         0         1
+
+
+
+Frame 00213
+show scene point size:16384
+new scene points size: 7078
+[ pba.cpp:0682 ]: updated 7105 [43.37%] max 9890 new 4096
+[ pba.cpp:0734 ]: !!! myfile1 saved and show num_selected_points: 5502
+before optimize: _trajectory.atId(it.first:209
+-0.792034  0.231829 -0.564746  0.418498
+ 0.608363  0.376664 -0.698583   1.50852
+0.0507676 -0.896872 -0.439367   1.46462
+        0         0         0         1
+before optimize: _trajectory.atId(it.first:210
+  -0.7927  0.223072 -0.567331  0.424714
+ 0.607152  0.372415 -0.701907   1.50104
+0.0547068 -0.900858 -0.430652   1.46046
+        0         0         0         1
+before optimize: _trajectory.atId(it.first:211
+-0.794155  0.213731 -0.568891  0.429127
+ 0.604632  0.372056 -0.704269   1.49398
+0.0611353 -0.903268 -0.424699   1.45914
+        0         0         0         1
+before optimize: _trajectory.atId(it.first:212
+-0.792796  0.206398 -0.573476  0.433177
+  0.60572  0.371263 -0.703752   1.48654
+0.0676573 -0.905298 -0.419355   1.45613
+        0         0         0         1
+before optimize: _trajectory.atId(it.first:213
+-0.791733  0.204485 -0.575626  0.438297
+ 0.607406   0.36371 -0.706239   1.48541
+0.0649452 -0.908791 -0.412166   1.44992
+        0         0         0         1
+[ pba.cpp:0962 ]: _trajectory.size() = 214, frame_id_start=  209[ pba.cpp:0963 ]: _scene_points.size() = 20480[ pba.cpp:1002 ]: first camera id 209
+[ pba.cpp:1004 ]: setting first camera constant[ pba.cpp:1011 ]: Using 5502 points (21147 residual blocks) [id start 209]
+iter      cost      cost_change  |gradient|   |step|    tr_ratio  tr_radius  ls_iter  iter_time  total_time
+   0  1.646722e+04    0.00e+00    5.41e+05   0.00e+00   0.00e+00  1.00e+04        0    1.51e-02    2.63e-02
+
+Ceres Solver Report: Iterations: 39, Initial cost: 1.646722e+04, Final cost: 1.230653e+04, Termination: CONVERGENCE
+after optimize: _trajectory.atId(it.first:209
+-0.792034  0.231829 -0.564746  0.418498
+ 0.608363  0.376664 -0.698583   1.50852
+0.0507676 -0.896872 -0.439367   1.46462
+        0         0         0         1
+after optimize: _trajectory.atId(it.first:210
+-0.792776  0.222836 -0.567319   0.42489
+ 0.607012  0.372882  -0.70178   1.50102
+ 0.055161 -0.900724 -0.430876   1.46088
+        0         0         0         1
+after optimize: _trajectory.atId(it.first:211
+-0.794186  0.213274 -0.569019   0.42994
+  0.60449  0.373014 -0.703884   1.49389
+0.0621323 -0.902981 -0.425165    1.4602
+        0         0         0         1
+after optimize: _trajectory.atId(it.first:212
+-0.792864  0.205518 -0.573698  0.434299
+  0.60543  0.372922 -0.703124   1.48618
+0.0694402 -0.904816 -0.420103   1.45766
+        0         0         0         1
+after optimize: _trajectory.atId(it.first:213
+-0.791645  0.203363 -0.576144  0.440442
+ 0.607313  0.365097 -0.705603    1.4843
+0.0668549 -0.908486 -0.412533   1.45092
+        0         0         0         1
+removing 0 old points
+[ pba.cpp:0770 ]: !!! myfile2 saved and show num_selected_points: 11004
+
+
+
+
+
+
+
+
+
+

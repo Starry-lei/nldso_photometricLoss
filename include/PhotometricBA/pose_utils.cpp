@@ -99,7 +99,7 @@ bool writePosesTumRGBDFormat(std::string fn, const PoseList& T,const std::vector
     Eigen::Quaterniond q(T[i].block<3,3>(0,0));
     Eigen::Vector3d t(T[i].block<3,1>(0,3));
 
-    ofs << std::fixed << std::setprecision(6)<<timeStamp[i]<<" "<< t.x() << " "<< t.y()<< " "<<t.z()<<" "<< q.w() << " " << q.x() << " " << q.y() <<" "<< q.z()<< "\n";
+    ofs << std::fixed << std::setprecision(6)<<timeStamp[i]<<" "<< t.x() << " "<< t.y()<< " "<<t.z()<<" "<< q.x() << " " << q.y() <<" "<< q.z()<<" "<< q.w()<< "\n";
   }
   ofs.close();
 

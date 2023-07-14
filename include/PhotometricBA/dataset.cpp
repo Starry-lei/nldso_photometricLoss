@@ -80,6 +80,7 @@ RGBDDataset::~RGBDDataset() {}
 
 UniquePointer<DatasetFrame> RGBDDataset::getFrame(int f_i) const
 {
+
   THROW_ERROR_IF( _rgb.size() == 0 || _depth.size() ==0,
                  "has not been initialized" );
 

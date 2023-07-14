@@ -257,9 +257,10 @@ add_executable(pba src/photoBA.cpp include/PhotometricBA/pba.cpp include/Photome
 target_link_libraries(pba
         Eigen3::Eigen
         ${Boost_LIBRARIES}
-  Ceres::ceres
-  TBB::tbb
-  OpenCV
+        Ceres::ceres
+        TBB::tbb
+        OpenCV
+        pangolin
 )
 
 #add_executable(test_functions src/test_functions.cpp)

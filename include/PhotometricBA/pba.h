@@ -165,6 +165,12 @@ public:
      */
     void addFrame(const uint8_t* image, const float* depth_map, const Mat44& T, Result* = nullptr);
 
+	Trajectory initial_trajectory;
+	class DescriptorFrame;
+	typedef UniquePointer<DescriptorFrame> DescriptorFramePointer ;
+	typedef boost::circular_buffer<DescriptorFramePointer> DescriptorFrameBuffer;
+
+	DescriptorFrameBuffer _frame_buffer;
 protected:
     void optimize(Result*);
 
@@ -176,9 +182,9 @@ private:
     /** removes scene points whose frame id == id */
     ScenePointPointerList removePointsAtFrame(uint32_t id);
 
-    class DescriptorFrame;
-    typedef UniquePointer<DescriptorFrame>                 DescriptorFramePointer;
-    typedef boost::circular_buffer<DescriptorFramePointer> DescriptorFrameBuffer;
+//    class DescriptorFrame;
+//    typedef UniquePointer<DescriptorFrame>                 DescriptorFramePointer;
+//    typedef boost::circular_buffer<DescriptorFramePointer> DescriptorFrameBuffer;
 
     /** \return the frame data at the given id */
     const DescriptorFrame* getFrameAtId(uint32_t id) const;
@@ -187,14 +193,13 @@ private:
 
 private:
     uint32_t _frame_id = 0;
-
     Calibration _calib;
     ImageSize   _image_size;
     Options     _options;
     Trajectory _trajectory;
-    DescriptorFrameBuffer _frame_buffer;
-    ScenePointPointerList _scene_points;
 
+//    DescriptorFrameBuffer _frame_buffer;
+    ScenePointPointerList _scene_points;
     Image_<uint16_t> _mask;
     Image_<float> _saliency_map;
 

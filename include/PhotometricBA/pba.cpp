@@ -8,6 +8,14 @@
 #include <ceres/ceres.h>
 #include <ceres/rotation.h>
 
+#include <ostream>
+#include <iostream>
+#include <iomanip>
+#include <fstream>
+
+#include <string>
+#include <vector>
+#include <map>
 #include "debug.h"
 #include "types.h"
 #include "imgproc.h"
@@ -483,6 +491,30 @@ void ExtractPatch(T* dst, const Image& I, const Vec_<int,2>& uv, int radius)
     }
 }
 
+static Vec_<double,6> PoseToParams_test(const Mat44& T)
+{
+	Vec_<double,6> ret;
+	const Mat_<double,3,3> R = T.block<3,3>(0,0);
+	ceres::RotationMatrixToAngleAxis(ceres::ColumnMajorAdapter3x3(R.data()), ret.data());
+
+	// translation
+	ret[3] = T(0,3);
+	ret[4] = T(1,3);
+	ret[5] = T(2,3);
+	return ret;
+}
+
+static Mat_<double,4,4> ParamsToPose_test(const double* p)
+{
+	Mat_<double,3,3> R;
+	ceres::AngleAxisToRotationMatrix(p, ceres::ColumnMajorAdapter3x3(R.data()));
+
+	Mat_<double,4,4> ret(Mat_<double,4,4>::Identity());
+	ret.block<3,3>(0,0) = R;
+	ret.block<3,1>(0,3) = Vec_<double,3>(p[3], p[4], p[5]);
+	return ret;
+}
+
 
 void PhotometricBundleAdjustment::
 addFrame(const uint8_t* I_ptr, const float* Z_ptr, const Mat44& T, Result* result)
@@ -492,9 +524,9 @@ addFrame(const uint8_t* I_ptr, const float* Z_ptr, const Mat44& T, Result* resul
     const Eigen::Isometry3d T_c(T_w.inverse());
 
     // output the size of _trajectory
-//    std::cerr<<"_trajectory size: "<<_trajectory.size()<<std::endl;
-//    // output the T_w
-//    std::cerr<<"T_w: "<<T_w.matrix()<<std::endl;
+	//    std::cerr<<"_trajectory size: "<<_trajectory.size()<<std::endl;
+	//    // output the T_w
+	//    std::cerr<<"T_w: "<<T_w.matrix()<<std::endl;
 
     typedef Eigen::Map<const Image_<uint8_t>, Eigen::Aligned> SrcMap;
     auto I = SrcMap(I_ptr, _image_size.rows, _image_size.cols);
@@ -520,9 +552,7 @@ addFrame(const uint8_t* I_ptr, const float* Z_ptr, const Mat44& T, Result* resul
     // computation
     //
     _mask.setOnes();
-
     std::cout<<"show scene point size:"<<_scene_points.size() <<std::endl;
-
     int num_updated = 0, max_num_to_update = 0;
     for(size_t i = 0; i < _scene_points.size(); ++i) {
         const auto& pt = _scene_points[i];
@@ -565,20 +595,9 @@ addFrame(const uint8_t* I_ptr, const float* Z_ptr, const Mat44& T, Result* resul
     frame->computeSaliencyMap(_saliency_map);
 
     // print the saliency map
-//    for (int i = 0; i < _saliency_map.rows(); ++i) {
-//        for (int j = 0; j < _saliency_map.cols(); ++j) {
-//            std::cout<<_saliency_map(i,j)<<" ";
-//        }
-//        std::cout<<std::endl;
-//
-//    }
 
-    // Convert the Image_<T> to a cv::Mat
-//    cv::Mat salientImage(_saliency_map.rows(), _saliency_map.cols(), CV_32F, _saliency_map.data(), _saliency_map.stride());
 	cv::Mat salientImage(_saliency_map.rows(), _saliency_map.cols(), CV_32F, _saliency_map.data());
 
-    cv::Mat cmuSelectedPointMask(salientImage.rows,  salientImage.cols, CV_8UC1, cv::Scalar(0));
-    cv::Mat cmuSelectedPointMask2(salientImage.rows,  salientImage.cols, CV_8UC1, cv::Scalar(0));
     // Display the image using OpenCV
     int count_selectedPoint = 0;
     salientImage.convertTo(salientImage, CV_8UC1);
@@ -601,13 +620,6 @@ addFrame(const uint8_t* I_ptr, const float* Z_ptr, const Mat44& T, Result* resul
                     p->setSaliency( _saliency_map(y,x) );
                     p->setFirstProjection(xy);
 
-                   // show the visibility of the point
-//                    std::cout<<"show the visibility size of the point:"<<p->visibilityList().size()<<std::endl;
-//                    for (int i = 0; i < p->visibilityList().size(); ++i) {
-//                        std::cout<<p->visibilityList()[i]<<" ";
-//                    }
-                    // draw the first round selected points
-                    cmuSelectedPointMask.at<uchar>(y,x)= 255;
                     new_scene_points.push_back(std::move(p));
 
                 }
@@ -616,17 +628,7 @@ addFrame(const uint8_t* I_ptr, const float* Z_ptr, const Mat44& T, Result* resul
     }
 
     std::cout<<"new scene points size: "<<new_scene_points.size()<<std::endl;
-//    std::cout<<"count_selectedPoint: "<<count_selectedPoint<<std::endl;
-//    imshow("saliency_map_drawed", salientImage);
-//    imshow("cmuSelectedPointMask", cmuSelectedPointMask);
-////    cv::imshow("saliency_map", salientImage);
-//    cv::imwrite("cmuSelectedPointMask"+std::to_string(_frame_id)+".png", cmuSelectedPointMask);
-//     cv::waitKey(0);
-//    int num_selected = cv::countNonZero(cmuSelectedPointMask);
-//    std::cout<<"num_nonZero_selected: "<<num_selected<<std::endl;
-//
-// keep the best N points
-//
+	// keep the best N points
     if(new_scene_points.size() > (size_t) _options.maxNumPoints) {
         auto nth = new_scene_points.begin() + _options.maxNumPoints;
         std::nth_element(new_scene_points.begin(), nth, new_scene_points.end(),
@@ -636,28 +638,14 @@ addFrame(const uint8_t* I_ptr, const float* Z_ptr, const Mat44& T, Result* resul
         new_scene_points.erase(nth, new_scene_points.end());
     }
 
-    // show the filtered selected points
-
-    for (int i = 0; i < new_scene_points.size(); ++i) {
-        cmuSelectedPointMask2.at<uchar>(new_scene_points[i]->_x[1],new_scene_points[i]->_x[0])= 255;
-    }
-//    imshow("cmuSelectedPointMask2", cmuSelectedPointMask2);
-//    cv::imwrite("cmuSelectedPointMask2"+std::to_string(_frame_id)+".png", cmuSelectedPointMask2);
-//    cv::waitKey(0);
-//    int num_selected_cmuSelectedPointMask2 = cv::countNonZero(cmuSelectedPointMask2);
-//    std::cout<<"num_nonZero_selected_cmuSelectedPointMask2: "<<num_selected_cmuSelectedPointMask2<<std::endl;
-//    cv::waitKey(0);
-
     //
     // extract the descriptors
     //
     const int num_channels = frame->numChannels(),
             num_new_points = (int) new_scene_points.size();
-
     Info("updated %d [%0.2f%%] max %d new %d\n",
          num_updated, 100.0 * num_updated / _scene_points.size(),
          max_num_to_update, num_new_points);
-
     for(int k = 0; k < num_channels; ++k) {
         const auto& channel = frame->getChannel(k);
         for(int i = 0; i < num_new_points; ++i) {
@@ -665,39 +653,90 @@ addFrame(const uint8_t* I_ptr, const float* Z_ptr, const Mat44& T, Result* resul
             ExtractPatch(ptr, channel, new_scene_points[i]->getFirstProjection(), radius);
         }
     }
-
     _scene_points.reserve(_scene_points.size() + new_scene_points.size());
     std::move(new_scene_points.begin(), new_scene_points.end(), std::back_inserter(_scene_points));
     _frame_buffer.push_back(DescriptorFramePointer(frame));
 
     if(_frame_buffer.full()) {
 
-
+//		// define a file to save the optimized points and corresponding pixel values
+//		std::ofstream myfile;
+//		std::string filename = "optimized_points" +std::to_string(_frame_id) +".txt";
+//		myfile.open (filename);
 //        uint32_t frame_id_start = _frame_buffer.front()->id(),
 //                frame_id_end   = _frame_buffer.back()->id();
+//
 //        int num_selected_points = 0;
+//		std::map<uint32_t, Vec_<double,6>> camera_params_test;
+//		for(uint32_t id = frame_id_start; id <= frame_id_end; ++id) {
+//			camera_params_test[id] =PoseToParams_test(Eigen::Isometry3d(_trajectory.atId(id)).inverse().matrix());
+//		}
+//
 //        for(auto& pt : _scene_points) {
 //            // it is enough to check the visibility list length, because we will remove
 //            // points as soon as they leave the optimization window
-//
-//            int checkpointer=pt->visibilityList().size();
-//            int checkpointer2=pt->numFrames();
-//            int checkpointer3=pt->refFrameId();
-//            int checkpointer4=frame_id_start;
-//
 //            if(pt->numFrames() >= 3 && pt->refFrameId() >= frame_id_start) {
 //                num_selected_points++;
+//				for(auto id : pt->visibilityList()) {
+//					if(id >= frame_id_start && id <= frame_id_end) {
+//						auto camera_pose = camera_params_test[id].data();
+//						// convert camera pose to Eigen::Isometry3d
+//						Mat44 camera_pose_eigen = ParamsToPose_test(camera_pose);
+//						Vec3 xyz = pt->X();
+//						// transform the point from world coordinate to camera coordinate using block matrix multiplication
+//						Vec3 xyz_cam = camera_pose_eigen.block<3,3>(0,0)*xyz + camera_pose_eigen.block<3,1>(0,3);
+//						Vec2 uv = _calib.project(xyz_cam);
+//						// save the optimized points and corresponding pixel values
+//						myfile << pt->refFrameId()<<" "<<pt->_x[0]<<" "<<pt->_x[1]<<" "<<id<<" "<<std::round(uv[0])<<" "<<std::round(uv[1])<<std::endl;
+//					}
+//				}
 //            }
 //        }
-//
-//        Info("!!! show num_selected_points: %d\n", num_selected_points);
-
-
-
-
-
+//		myfile.close();
+//        Info("!!! myfile1 saved and show num_selected_points: %d\n", num_selected_points);
 
         optimize(result);
+
+
+//		// save the optimized points and corresponding pixel values
+//		std::ofstream myfile2;
+//		std::string filename2 = "optimized_points" +std::to_string(_frame_id) +"_after_optimization.txt";
+//		myfile2.open (filename2);
+//		std::map<uint32_t, Vec_<double,6>> camera_params_after_optimization;
+//		for(uint32_t id = frame_id_start; id <= frame_id_end; ++id) {
+//			camera_params_after_optimization[id] =PoseToParams_test(Eigen::Isometry3d(_trajectory.atId(id)).inverse().matrix());
+//		}
+//
+//		// project the refined points to the image plane
+//
+//		for(auto& pt : _scene_points) {
+//
+//			if(pt->numFrames() >= 3 && pt->refFrameId() >= frame_id_start) {
+//				num_selected_points++;
+//				for(auto id : pt->visibilityList()) {
+//					if(id >= frame_id_start && id <= frame_id_end) {
+//						auto camera_pose = camera_params_after_optimization[id].data();
+//						// convert camera pose to Eigen::Isometry3d
+//						Mat44 camera_pose_eigen = ParamsToPose_test(camera_pose);
+//						Vec3 xyz = pt->X();
+//						Vec3 xyz_cam = camera_pose_eigen.block<3,3>(0,0)*xyz + camera_pose_eigen.block<3,1>(0,3);
+//						Vec2 uv = _calib.project(xyz_cam);
+//						// save the optimized points and corresponding pixel values
+//						myfile2 << pt->refFrameId()<<" "<<pt->_x[0]<<" "<<pt->_x[1]<<" "<<id<<" "<<std::round(uv[0])<<" "<<std::round(uv[1])<<std::endl;
+//					}
+//				}
+//			}
+//		}
+//
+//		myfile2.close();
+//		Info("!!! myfile2 saved and show num_selected_points: %d\n", num_selected_points);
+
+
+
+
+
+
+
     }
 
     ++_frame_id;
@@ -879,20 +918,17 @@ void PhotometricBundleAdjustment::optimize(Result* result)
     //
     ceres::Problem problem;
     int num_selected_points = 0;
+
     for(auto& pt : _scene_points) {
         // it is enough to check the visibility list length, because we will remove
         // points as soon as they leave the optimization window
-
-        int checkpointer=pt->visibilityList().size();
-        int checkpointer2=pt->numFrames();
-        int checkpointer3=pt->refFrameId();
-        int checkpointer4=frame_id_start;
-
         if(pt->numFrames() >= 3 && pt->refFrameId() >= frame_id_start) {
             num_selected_points++;
             for(auto id : pt->visibilityList()) {
                 if(id >= frame_id_start && id <= frame_id_end) {
                     pt->setRefined(true);
+
+
                     auto* camera_ptr = camera_params[id].data();
                     auto* xyz = pt->X().data();
 
@@ -932,8 +968,8 @@ void PhotometricBundleAdjustment::optimize(Result* result)
 
     ceres::Solve(GetSolverOptions(num_threads, _options.verbose), &problem, &summary);
     if(_options.verbose)
-//        std::cout << summary.FullReport() << std::endl;
-        std::cout << summary.BriefReport() << std::endl;
+	// std::cout << summary.FullReport() << std::endl;
+	std::cout << summary.BriefReport() << std::endl;
 
     //
     // TODO: run another optimization pass over residuals with small error
@@ -946,17 +982,17 @@ void PhotometricBundleAdjustment::optimize(Result* result)
     for(auto& it : camera_params) {
         _trajectory.atId(it.first) = Eigen::Isometry3d(
                 ParamsToPose(it.second.data())).inverse().matrix();
-
         std::cout<<"after optimize: _trajectory.atId(it.first:"  <<it.first <<"\n"<<_trajectory.atId(it.first)<<std::endl;
     }
 
-
-
-
-    //
     // set a side the old points. Since we are doing a sliding window, all points
     // at frame_id_start should go out
     //
+	//	ScenePointPointerList points_to_remove;
+	//	if (_frame_id!=213){
+	//		 points_to_remove = removePointsAtFrame(frame_id_start);
+	//	}
+
     auto points_to_remove = removePointsAtFrame(frame_id_start);
     printf("removing %zu old points\n", points_to_remove.size());
 
@@ -972,7 +1008,6 @@ void PhotometricBundleAdjustment::optimize(Result* result)
             result->refinedPoints[i] = points_to_remove[i]->X();
             result->originalPoints[i] = points_to_remove[i]->getOriginalPoint();
         }
-
         result->initialCost = summary.initial_cost;
         result->finalCost   = summary.final_cost;
         result->fixedCost   = summary.fixed_cost;
@@ -982,6 +1017,8 @@ void PhotometricBundleAdjustment::optimize(Result* result)
         result->message = std::string(summary.message);
         result->iterationSummary = summary.iterations;
     }
+
+
 }
 
 auto PhotometricBundleAdjustment::getFrameAtId(uint32_t id) const -> const DescriptorFrame*
