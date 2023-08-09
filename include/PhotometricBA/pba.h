@@ -22,6 +22,8 @@ namespace utils {
     class ConfigFile;
 };  // utils
 
+extern bool  optimizeSignal;
+
 class PhotometricBundleAdjustment
 {
 public:
@@ -32,13 +34,13 @@ public:
     struct Options
     {
         /** maximum number of points to intialize from a new frame */
-        int maxNumPoints = 4096;
+        int maxNumPoints =4096 ;// 4096;
 
         /** number of frames in the sliding window */
-        int slidingWindowSize = 5;
+        int slidingWindowSize = 5;//7; //5;
 
         /** radius of the image patch */
-        int patchRadius = 2;
+        int patchRadius = 2;//4;//2;
 
         /** radius (side length) of an area to prevent intializing new points when a
          * new frame is added */
@@ -58,16 +60,16 @@ public:
 
         /** minimum score to verify if a scene point exists in a new frame. This is
          * the ZNCC score which is [-1, 1] */
-        double minScore = 0.60; // 0.75
+        double minScore =  0.75; // 0.60; // 0.75
 
         /** threshold to use for a HuberLoss (if > 0) */
-        double robustThreshold = 0.05;
+        double robustThreshold = 0.05; //0.05;
 
         /** minimum depth to use */
         double minValidDepth = 0.01;
 
         /** maximum depth to use */
-        double maxValidDepth = 1000.0;
+        double maxValidDepth = 50.0;
 
         /** non-maxima suppression radius for pixel selection */
         int nonMaxSuppRadius = 1;

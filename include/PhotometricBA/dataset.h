@@ -178,6 +178,7 @@ protected:
     std::vector<std::string>  _roughness;
 
     float _depth_scale= 5000.0f;
+//	float _depth_scale= 1.0f;
     std::vector<std::string> timestamps;
 
     virtual bool init(const utils::ConfigFile&);

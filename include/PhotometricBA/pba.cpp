@@ -47,6 +47,8 @@
 
 #include <Eigen/Geometry>
 
+bool optimizeSignal = false;
+
 static PhotometricBundleAdjustment::Options::DescriptorType
 DescriptorTypeFromString(std::string s)
 {
@@ -659,7 +661,7 @@ addFrame(const uint8_t* I_ptr, const float* Z_ptr, const Mat44& T, Result* resul
 
     if(_frame_buffer.full()) {
 
-//		// define a file to save the optimized points and corresponding pixel values
+		// define a file to save the optimized points and corresponding pixel values
 //		std::ofstream myfile;
 //		std::string filename = "optimized_points" +std::to_string(_frame_id) +".txt";
 //		myfile.open (filename);
@@ -675,7 +677,7 @@ addFrame(const uint8_t* I_ptr, const float* Z_ptr, const Mat44& T, Result* resul
 //        for(auto& pt : _scene_points) {
 //            // it is enough to check the visibility list length, because we will remove
 //            // points as soon as they leave the optimization window
-//            if(pt->numFrames() >= 3 && pt->refFrameId() >= frame_id_start) {
+//            if(pt->numFrames() >= 2 && pt->refFrameId() >= frame_id_start) {
 //                num_selected_points++;
 //				for(auto id : pt->visibilityList()) {
 //					if(id >= frame_id_start && id <= frame_id_end) {
@@ -693,12 +695,12 @@ addFrame(const uint8_t* I_ptr, const float* Z_ptr, const Mat44& T, Result* resul
 //            }
 //        }
 //		myfile.close();
-//        Info("!!! myfile1 saved and show num_selected_points: %d\n", num_selected_points);
-
+//      Info("!!! myfile1 saved and show num_selected_points: %d\n", num_selected_points);
+//		optimizeSignal=false;
         optimize(result);
+		optimizeSignal=true;
 
-
-//		// save the optimized points and corresponding pixel values
+		// save the optimized points and corresponding pixel values
 //		std::ofstream myfile2;
 //		std::string filename2 = "optimized_points" +std::to_string(_frame_id) +"_after_optimization.txt";
 //		myfile2.open (filename2);
@@ -710,8 +712,7 @@ addFrame(const uint8_t* I_ptr, const float* Z_ptr, const Mat44& T, Result* resul
 //		// project the refined points to the image plane
 //
 //		for(auto& pt : _scene_points) {
-//
-//			if(pt->numFrames() >= 3 && pt->refFrameId() >= frame_id_start) {
+//			if(pt->numFrames() >= 2 && pt->refFrameId() >= frame_id_start) {
 //				num_selected_points++;
 //				for(auto id : pt->visibilityList()) {
 //					if(id >= frame_id_start && id <= frame_id_end) {
@@ -730,11 +731,6 @@ addFrame(const uint8_t* I_ptr, const float* Z_ptr, const Mat44& T, Result* resul
 //
 //		myfile2.close();
 //		Info("!!! myfile2 saved and show num_selected_points: %d\n", num_selected_points);
-
-
-
-
-
 
 
     }
@@ -988,10 +984,10 @@ void PhotometricBundleAdjustment::optimize(Result* result)
     // set a side the old points. Since we are doing a sliding window, all points
     // at frame_id_start should go out
     //
-	//	ScenePointPointerList points_to_remove;
-	//	if (_frame_id!=213){
-	//		 points_to_remove = removePointsAtFrame(frame_id_start);
-	//	}
+//		ScenePointPointerList points_to_remove;
+//		if (_frame_id!=1){
+//			 points_to_remove = removePointsAtFrame(frame_id_start);
+//		}
 
     auto points_to_remove = removePointsAtFrame(frame_id_start);
     printf("removing %zu old points\n", points_to_remove.size());
