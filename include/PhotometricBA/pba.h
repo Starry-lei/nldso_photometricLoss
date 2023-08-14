@@ -69,7 +69,7 @@ public:
         double minValidDepth = 0.01;
 
         /** maximum depth to use */
-        double maxValidDepth = 50.0;
+        double maxValidDepth = 20.0;
 
         /** non-maxima suppression radius for pixel selection */
         int nonMaxSuppRadius = 1;

@@ -75,12 +75,12 @@ int main(int argc, char** argv)
 	//	T_init = loadPosesKittiFormat(cf.get<std::string>("trajectory"));
 	//// load GT trajectory
 	//	std::string abs_pose= "../data/dataSetPBA_init_poor/Kitti_GT_00.txt";
-//	std::string abs_pose= "../data/dataSetPBA_init_poor/GT_pose_list_fr3_nearFar.txt";
-	std::string abs_pose= "../data/dataSetPBA_init_poor/01_150.txt";
+	std::string abs_pose= "../data/dataSetPBA_init_poor/GT_pose_list_fr3.txt";
+	//	std::string abs_pose= "../data/dataSetPBA_init_poor/01_150.txt";
 
 	T_init_abs_pose = loadPosesTumRGBDFormat(abs_pose);
 
-//	T_init_abs_pose = loadPosesKittiFormat(abs_pose);
+	//	T_init_abs_pose = loadPosesKittiFormat(abs_pose);
 	std::cout<<"trajectory: "<<cf.get<std::string>("trajectory")<<std::endl;
     if(T_init.empty()) {
         std::cerr<<("Failed to load poses from %s\n", cf.get<std::string>("trajectory").c_str());
@@ -100,7 +100,6 @@ int main(int argc, char** argv)
 		cv::Mat_<float> zmap;
 		UniquePointer<DatasetFrame> frame;
 	if (show_gui) {
-
 			pangolin::CreateWindowAndBind("Main", 1800, 1000);
 			glEnable(GL_DEPTH_TEST);
 			// main parent display for images and 3d viewer

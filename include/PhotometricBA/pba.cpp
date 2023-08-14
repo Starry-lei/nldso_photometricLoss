@@ -525,11 +525,6 @@ addFrame(const uint8_t* I_ptr, const float* Z_ptr, const Mat44& T, Result* resul
     const Eigen::Isometry3d T_w(_trajectory.back());
     const Eigen::Isometry3d T_c(T_w.inverse());
 
-    // output the size of _trajectory
-	//    std::cerr<<"_trajectory size: "<<_trajectory.size()<<std::endl;
-	//    // output the T_w
-	//    std::cerr<<"T_w: "<<T_w.matrix()<<std::endl;
-
     typedef Eigen::Map<const Image_<uint8_t>, Eigen::Aligned> SrcMap;
     auto I = SrcMap(I_ptr, _image_size.rows, _image_size.cols);
 
@@ -537,9 +532,6 @@ addFrame(const uint8_t* I_ptr, const float* Z_ptr, const Mat44& T, Result* resul
     auto Z = SrcDepthMap(Z_ptr, _image_size.rows, _image_size.cols);
     // check the depth map
 	DescriptorFrame* frame = DescriptorFrame::Create(_frame_id, I, _options.descriptorType);
-    // show the selected points
-//    std::cout<<"number of channels: "<<frame->numChannels()<<std::endl;
-
 
     int B = std::max(_options.maskBlockRadius, std::max(2, _options.patchRadius));
     int max_rows = (int) I.rows() - B - 1,
@@ -662,75 +654,78 @@ addFrame(const uint8_t* I_ptr, const float* Z_ptr, const Mat44& T, Result* resul
     if(_frame_buffer.full()) {
 
 		// define a file to save the optimized points and corresponding pixel values
-//		std::ofstream myfile;
-//		std::string filename = "optimized_points" +std::to_string(_frame_id) +".txt";
-//		myfile.open (filename);
-//        uint32_t frame_id_start = _frame_buffer.front()->id(),
-//                frame_id_end   = _frame_buffer.back()->id();
-//
-//        int num_selected_points = 0;
-//		std::map<uint32_t, Vec_<double,6>> camera_params_test;
-//		for(uint32_t id = frame_id_start; id <= frame_id_end; ++id) {
-//			camera_params_test[id] =PoseToParams_test(Eigen::Isometry3d(_trajectory.atId(id)).inverse().matrix());
-//		}
-//
-//        for(auto& pt : _scene_points) {
-//            // it is enough to check the visibility list length, because we will remove
-//            // points as soon as they leave the optimization window
-//            if(pt->numFrames() >= 2 && pt->refFrameId() >= frame_id_start) {
-//                num_selected_points++;
-//				for(auto id : pt->visibilityList()) {
-//					if(id >= frame_id_start && id <= frame_id_end) {
-//						auto camera_pose = camera_params_test[id].data();
-//						// convert camera pose to Eigen::Isometry3d
-//						Mat44 camera_pose_eigen = ParamsToPose_test(camera_pose);
-//						Vec3 xyz = pt->X();
-//						// transform the point from world coordinate to camera coordinate using block matrix multiplication
-//						Vec3 xyz_cam = camera_pose_eigen.block<3,3>(0,0)*xyz + camera_pose_eigen.block<3,1>(0,3);
-//						Vec2 uv = _calib.project(xyz_cam);
-//						// save the optimized points and corresponding pixel values
-//						myfile << pt->refFrameId()<<" "<<pt->_x[0]<<" "<<pt->_x[1]<<" "<<id<<" "<<std::round(uv[0])<<" "<<std::round(uv[1])<<std::endl;
-//					}
-//				}
-//            }
-//        }
-//		myfile.close();
-//      Info("!!! myfile1 saved and show num_selected_points: %d\n", num_selected_points);
-//		optimizeSignal=false;
+		std::ofstream myfile;
+		std::string filename = "optimized_points" +std::to_string(_frame_id) +".txt";
+		myfile.open (filename);
+        uint32_t frame_id_start = _frame_buffer.front()->id(),
+                frame_id_end   = _frame_buffer.back()->id();
+
+        int num_selected_points = 0;
+		std::map<uint32_t, Vec_<double,6>> camera_params_test;
+		for(uint32_t id = frame_id_start; id <= frame_id_end; ++id) {
+			camera_params_test[id] =PoseToParams_test(Eigen::Isometry3d(_trajectory.atId(id)).inverse().matrix());
+		}
+
+        for(auto& pt : _scene_points) {
+            // it is enough to check the visibility list length, because we will remove
+            // points as soon as they leave the optimization window
+            if(pt->numFrames() >= 3 && pt->refFrameId() >= frame_id_start) {
+                num_selected_points++;
+				for(auto id : pt->visibilityList()) {
+					if(id >= frame_id_start && id <= frame_id_end) {
+						auto camera_pose = camera_params_test[id].data();
+						// convert camera pose to Eigen::Isometry3d
+						Mat44 camera_pose_eigen = ParamsToPose_test(camera_pose);
+						Vec3 xyz = pt->X();
+						// transform the point from world coordinate to camera coordinate using block matrix multiplication
+						Vec3 xyz_cam = camera_pose_eigen.block<3,3>(0,0)*xyz + camera_pose_eigen.block<3,1>(0,3);
+						Vec2 uv = _calib.project(xyz_cam);
+						// save the optimized points and corresponding pixel values
+						myfile << pt->refFrameId()<<" "<<pt->_x[0]<<" "<<pt->_x[1]<<" "<<id<<" "<<std::round(uv[0])<<" "<<std::round(uv[1])<<std::endl;
+					}
+				}
+            }
+        }
+		myfile.close();
+      Info("!!! myfile1 saved and show num_selected_points: %d\n", num_selected_points);
+
+
+		// use image pyramid to optimize the points
+
         optimize(result);
 		optimizeSignal=true;
 
 		// save the optimized points and corresponding pixel values
-//		std::ofstream myfile2;
-//		std::string filename2 = "optimized_points" +std::to_string(_frame_id) +"_after_optimization.txt";
-//		myfile2.open (filename2);
-//		std::map<uint32_t, Vec_<double,6>> camera_params_after_optimization;
-//		for(uint32_t id = frame_id_start; id <= frame_id_end; ++id) {
-//			camera_params_after_optimization[id] =PoseToParams_test(Eigen::Isometry3d(_trajectory.atId(id)).inverse().matrix());
-//		}
-//
-//		// project the refined points to the image plane
-//
-//		for(auto& pt : _scene_points) {
-//			if(pt->numFrames() >= 2 && pt->refFrameId() >= frame_id_start) {
-//				num_selected_points++;
-//				for(auto id : pt->visibilityList()) {
-//					if(id >= frame_id_start && id <= frame_id_end) {
-//						auto camera_pose = camera_params_after_optimization[id].data();
-//						// convert camera pose to Eigen::Isometry3d
-//						Mat44 camera_pose_eigen = ParamsToPose_test(camera_pose);
-//						Vec3 xyz = pt->X();
-//						Vec3 xyz_cam = camera_pose_eigen.block<3,3>(0,0)*xyz + camera_pose_eigen.block<3,1>(0,3);
-//						Vec2 uv = _calib.project(xyz_cam);
-//						// save the optimized points and corresponding pixel values
-//						myfile2 << pt->refFrameId()<<" "<<pt->_x[0]<<" "<<pt->_x[1]<<" "<<id<<" "<<std::round(uv[0])<<" "<<std::round(uv[1])<<std::endl;
-//					}
-//				}
-//			}
-//		}
-//
-//		myfile2.close();
-//		Info("!!! myfile2 saved and show num_selected_points: %d\n", num_selected_points);
+		//		std::ofstream myfile2;
+		//		std::string filename2 = "optimized_points" +std::to_string(_frame_id) +"_after_optimization.txt";
+		//		myfile2.open (filename2);
+		//		std::map<uint32_t, Vec_<double,6>> camera_params_after_optimization;
+		//		for(uint32_t id = frame_id_start; id <= frame_id_end; ++id) {
+		//			camera_params_after_optimization[id] =PoseToParams_test(Eigen::Isometry3d(_trajectory.atId(id)).inverse().matrix());
+		//		}
+		//
+		//		// project the refined points to the image plane
+		//
+		//		for(auto& pt : _scene_points) {
+		//			if(pt->numFrames() >= 2 && pt->refFrameId() >= frame_id_start) {
+		//				num_selected_points++;
+		//				for(auto id : pt->visibilityList()) {
+		//					if(id >= frame_id_start && id <= frame_id_end) {
+		//						auto camera_pose = camera_params_after_optimization[id].data();
+		//						// convert camera pose to Eigen::Isometry3d
+		//						Mat44 camera_pose_eigen = ParamsToPose_test(camera_pose);
+		//						Vec3 xyz = pt->X();
+		//						Vec3 xyz_cam = camera_pose_eigen.block<3,3>(0,0)*xyz + camera_pose_eigen.block<3,1>(0,3);
+		//						Vec2 uv = _calib.project(xyz_cam);
+		//						// save the optimized points and corresponding pixel values
+		//						myfile2 << pt->refFrameId()<<" "<<pt->_x[0]<<" "<<pt->_x[1]<<" "<<id<<" "<<std::round(uv[0])<<" "<<std::round(uv[1])<<std::endl;
+		//					}
+		//				}
+		//			}
+		//		}
+		//
+		//		myfile2.close();
+		//		Info("!!! myfile2 saved and show num_selected_points: %d\n", num_selected_points);
 
 
     }
@@ -861,6 +856,24 @@ private:
     const double* const _patch_weights;
 }; // DescriptorError
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 static inline ceres::Solver::Options
 GetSolverOptions(int num_threads, bool verbose = false, double tol = 1e-6)
 {
@@ -901,7 +914,6 @@ void PhotometricBundleAdjustment::optimize(Result* result)
     for(uint32_t id = frame_id_start; id <= frame_id_end; ++id) {
 
         // TODO:NOTE camera parameters are inverted
-
         camera_params[id] = PoseToParams(Eigen::Isometry3d(_trajectory.atId(id)).inverse().matrix());
         std::cout<<"before optimize: _trajectory.atId(it.first:"  <<id <<"\n"<<_trajectory.atId(id)<<std::endl;
     }
@@ -915,7 +927,7 @@ void PhotometricBundleAdjustment::optimize(Result* result)
     ceres::Problem problem;
     int num_selected_points = 0;
 
-    for(auto& pt : _scene_points) {
+	for(auto& pt : _scene_points) {
         // it is enough to check the visibility list length, because we will remove
         // points as soon as they leave the optimization window
         if(pt->numFrames() >= 3 && pt->refFrameId() >= frame_id_start) {
@@ -923,8 +935,6 @@ void PhotometricBundleAdjustment::optimize(Result* result)
             for(auto id : pt->visibilityList()) {
                 if(id >= frame_id_start && id <= frame_id_end) {
                     pt->setRefined(true);
-
-
                     auto* camera_ptr = camera_params[id].data();
                     auto* xyz = pt->X().data();
 
