@@ -56,7 +56,7 @@ public:
         bool doGaussianWeighting = false;
 
         /** print information about the optimization */
-        bool verbose = true;
+        bool verbose = false;
 
         /** minimum score to verify if a scene point exists in a new frame. This is
          * the ZNCC score which is [-1, 1] */
