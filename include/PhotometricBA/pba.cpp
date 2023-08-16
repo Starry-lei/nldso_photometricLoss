@@ -849,6 +849,11 @@ public:
 
 		ref_camera = refCameraPose;
 
+
+		// print the ref camera pose
+//		std::cout<<"ref camera pose: "<<ref_camera[0]<<" "<<ref_camera[1]<<" "<<ref_camera[2]<<" "<<ref_camera[3]<<" "<<ref_camera[4]<<" "<<ref_camera[5]<<" "<<ref_camera[6]<<std::endl;
+
+
 		if (mean_patch_value == 0.0){
 			mean_patch_value = 1.0;
 		}
@@ -885,10 +890,17 @@ public:
     template <class T> inline
     bool operator()(const T* const camera, const T* const pidepth, T* presiduals) const
     {
+		uint32_t cur_frame= _frame->id();
+
 		Eigen::Map<Eigen::Array<T, PATTERN_SIZE, 1>> residuals(presiduals);
 		T quaternion[4] = {camera[0], camera[1], camera[2], camera[3]};
 		T quaternion_ref_camera[4] = { T(ref_camera[0]), T(ref_camera[1]), T(ref_camera[2]), T(ref_camera[3])};
-		const T& idepth(*pidepth);
+		const T& depth(*pidepth);
+
+//		if (cur_frame==4){
+//			T marker[3];
+//		}
+
 		Eigen::Array<T, PATTERN_SIZE, 1> patch_values_target;
 		// define R
 		Eigen::Matrix<T, 3, 3> R, R_ref2W;
@@ -900,6 +912,12 @@ public:
 		t_ref2W.z() = -T(ref_camera[6]);
 		t_ref2W= R_ref2W * t_ref2W;
 
+//		T p_c[3];
+//		ceres::UnitQuaternionRotatePoint(quaternion_ref_camera, point, p_c);
+//		p_c[0] += ref_camera[4];
+//		p_c[1] += ref_camera[5];
+//		p_c[2] += ref_camera[6]; // depth of the point in the reference frame
+
 
 		for (size_t i = 0; i < PATTERN_SIZE; i++){
 			int du = PATTERN_OFFSETS[i][0];
@@ -910,27 +928,39 @@ public:
 			p_host_normalized[1] += T(dv * 1.0 / _calib.fy());
 			// apply ref_camera to transform the point to the target frame
 			Eigen::Matrix<T, 3, 1> p_ref_normalized;
-			p_ref_normalized.x() = idepth * p_host_normalized[0];
-			p_ref_normalized.y() = idepth * p_host_normalized[1];
-			p_ref_normalized.z() = idepth * p_host_normalized[2];
+//			T p_ref_normalized[3];
+//			p_ref_normalized[0] = depth * p_host_normalized[0];
+//			p_ref_normalized[1] = depth * p_host_normalized[1];
+//			p_ref_normalized[2] = depth * p_host_normalized[2];
+//
+			p_ref_normalized.x() =  depth *p_host_normalized[0];
+			p_ref_normalized.y() =  depth * p_host_normalized[1];
+			p_ref_normalized.z() =  depth *p_host_normalized[2];
 			p_ref_normalized = R_ref2W * p_ref_normalized + t_ref2W;
+
+
 			T p_ref_normalized_array[3] = {p_ref_normalized.x(), p_ref_normalized.y(), p_ref_normalized.z()};
+//			T t_ref2W_array[3] = {t_ref2W.x(), t_ref2W.y(), t_ref2W.z()};
+
+
+
+
+
+
 
 
 			T p[3];
 			ceres::UnitQuaternionRotatePoint(quaternion, p_ref_normalized_array, p);
-			// cam[4-6] represent translation idepth
-			p[0] += camera[4] ;
-			p[1] += camera[5] ;
-			p[2] += camera[6] ;
+
+			p[0] += (camera[4]);
+			p[1] += (camera[5]);
+			p[2] += (camera[6]);
 
 			T u = T(_calib.fx())*(p[0] / p[2]) + T(_calib.cx());
 			T v = T(_calib.fy())*(p[1] / p[2]) + T(_calib.cy());
 
 			compute_interpolation->Evaluate(v, u, &patch_values_target[i]);
 		}
-
-		uint32_t cur_frame= _frame->id();
 
 //		for (size_t i = 0; i < PATTERN_SIZE; i++){
 //			int du = PATTERN_OFFSETS[i][0];
@@ -1063,14 +1093,22 @@ void PhotometricBundleAdjustment::optimize(Result* result)
 
 //		if (pt->_x[0] != 80 || pt->_x[1]!= 12){continue ;}
 
-		//		0 80 12 0 80 12
-		//		0 80 12 1 80 11
-		//		0 80 12 2 80 10
-		//		0 80 12 3 80 12
-		//		0 80 12 4 80 11
+//				0 80 12 0 80 12
+//				0 80 12 1 80 11
+//				0 80 12 2 80 10
+//				0 80 12 3 80 12
+//				0 80 12 4 80 11
+
+//		        1 463 233 1 463 233
+//		        1 463 233 2 463 232
+//		        1 463 233 3 463 234
+//		        1 463 233 4 462 234
+
+
 //		std::cout<<"pt->_x[0] : "<<pt->_x[0] << "and pt->_x[1]:"<<pt->_x[1] <<std::endl;
 //		std::cout <<"show point coordinates: "<<pt->X()<<std::endl;
 //		std::cout <<"show point ref id"<< pt->refFrameId()<<std::endl;
+//		std::cout <<"show point depth"<< pt->ori_depth<<std::endl;
 
 
 
@@ -1116,13 +1154,31 @@ void PhotometricBundleAdjustment::optimize(Result* result)
 			// world coordinate is not accurate enough, because it is calcualate using the abs camera pose. Hence we decide to optimize the depth and
 			// estimated abs camera pose
 
+			// the key is to use projected patch to calculate the residual
+
             for(auto id : pt->visibilityList()) {
                 if(id >= frame_id_start && id <= frame_id_end) {
 
+					// print out id
+//					std::cout<<"show id in visibilityList: "<<id<<std::endl;
+
 					double * depth_ptr = & pt->ori_depth;
 					double * ref_camera_ptr = camera_params[pt->refFrameId()].data();
-					float x_norm = (pt->_x[0] - _calib.cx()) / _calib.fx();
-					float y_norm = (pt->_x[1] - _calib.cy()) / _calib.fy();
+
+					// print ref_camera_ptr
+
+//					if (id!=0){
+//						std::cout<<"show ref_camera_ptr: "<<std::endl;
+//						for (int i = 0; i < 6; ++i) {
+//							std::cout<<ref_camera_ptr[i]<<" ";
+//						}
+//						std::cout<<std::endl;
+//					}
+
+
+
+					double x_norm = (pt->_x[0] - _calib.cx()) / _calib.fx();
+					double y_norm = (pt->_x[1] - _calib.cy()) / _calib.fy();
 
                     pt->setRefined(true);
                     double * camera_ptr = camera_params[id].data();
@@ -1139,15 +1195,15 @@ void PhotometricBundleAdjustment::optimize(Result* result)
                     ceres::CostFunction* cost = nullptr;
                     cost = DescriptorError::Create(_calib, pt->descriptor(), getFrameAtId(id), patch_weights, size_t(_image_size.cols), size_t(_image_size.rows),
 					                                mean_patch_value, patch, x_norm, y_norm,ref_camera_ptr);
-					ceres::CostFunction* cost_orig= nullptr;
-					cost_orig = DescriptorError::Create(_calib, pt->descriptor(), getFrameAtId(pt->refFrameId()), patch_weights, size_t(_image_size.cols), size_t(_image_size.rows),
-					                                mean_patch_value, patch, x_norm, y_norm,ref_camera_ptr);
+//					ceres::CostFunction* cost_orig= nullptr;
+//					cost_orig = DescriptorError::Create(_calib, pt->descriptor(), getFrameAtId(pt->refFrameId()), patch_weights, size_t(_image_size.cols), size_t(_image_size.rows),
+//					                                mean_patch_value, patch, x_norm, y_norm,ref_camera_ptr);
 
 
 
 //                    problem.AddResidualBlock(cost, loss, camera_ptr, xyz);
 					problem.AddResidualBlock(cost, loss,camera_ptr, depth_ptr);
-					problem.AddResidualBlock(cost, loss,ref_camera_ptr, depth_ptr);
+//					problem.AddResidualBlock(cost, loss,ref_camera_ptr, depth_ptr);
 
 
 //					problem.SetParameterLowerBound(xyz, 2, 0);

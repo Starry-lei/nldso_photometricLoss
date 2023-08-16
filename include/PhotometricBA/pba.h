@@ -63,7 +63,7 @@ public:
         double minScore =  0.75; // 0.60; // 0.75
 
         /** threshold to use for a HuberLoss (if > 0) */
-        double robustThreshold = 20; //0.05;
+        double robustThreshold = 40; //0.05;
 
         /** minimum depth to use */
         double minValidDepth = 0.01;
