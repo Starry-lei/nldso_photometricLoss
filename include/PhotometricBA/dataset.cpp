@@ -95,6 +95,7 @@ UniquePointer<DatasetFrame> RGBDDataset::getFrame(int f_i) const
   frame.D.convertTo(frame.D, CV_32FC1);  // scale depth by factor 5000.0f
   frame.D = frame.D/this->_depth_scale;
 
+
   // read normal and roughness later
 
 //  imshow("frame.I_orig", frame.I_orig);

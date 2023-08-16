@@ -63,7 +63,7 @@ public:
         double minScore =  0.75; // 0.60; // 0.75
 
         /** threshold to use for a HuberLoss (if > 0) */
-        double robustThreshold = 0.05; //0.05;
+        double robustThreshold = 20; //0.05;
 
         /** minimum depth to use */
         double minValidDepth = 0.01;
@@ -173,6 +173,10 @@ public:
 	typedef boost::circular_buffer<DescriptorFramePointer> DescriptorFrameBuffer;
 
 	DescriptorFrameBuffer _frame_buffer;
+
+	ImageSize   _image_size;
+
+
 protected:
     void optimize(Result*);
 
@@ -196,7 +200,7 @@ private:
 private:
     uint32_t _frame_id = 0;
     Calibration _calib;
-    ImageSize   _image_size;
+//    ImageSize   _image_size;
     Options     _options;
     Trajectory _trajectory;
 
