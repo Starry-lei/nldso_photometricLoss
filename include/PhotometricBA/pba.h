@@ -16,7 +16,7 @@
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
 #include <boost/circular_buffer.hpp>
-
+#include <map>
 
 namespace utils {
     class ConfigFile;
@@ -60,10 +60,10 @@ public:
 
         /** minimum score to verify if a scene point exists in a new frame. This is
          * the ZNCC score which is [-1, 1] */
-        double minScore =  0.75; // 0.60; // 0.75
+        double minScore =  0.70; // 0.60; // 0.75
 
         /** threshold to use for a HuberLoss (if > 0) */
-        double robustThreshold = 40; //0.05;
+        double robustThreshold = 20; //0.05;
 
         /** minimum depth to use */
         double minValidDepth = 0.01;
@@ -171,8 +171,18 @@ public:
 	class DescriptorFrame;
 	typedef UniquePointer<DescriptorFrame> DescriptorFramePointer ;
 	typedef boost::circular_buffer<DescriptorFramePointer> DescriptorFrameBuffer;
-
 	DescriptorFrameBuffer _frame_buffer;
+
+
+
+	class ImageSrcMap;
+	typedef UniquePointer<ImageSrcMap> ImageSrcMapPointer;
+	typedef boost::circular_buffer<ImageSrcMapPointer> ImageSrcMapBuffer;
+	ImageSrcMapBuffer _image_src_map_buffer;
+
+
+
+	static std::map<uint32_t, Eigen::Map<const Image_<uint8_t>, Eigen::Aligned>> _image_buffer;
 
 	ImageSize   _image_size;
 
@@ -194,6 +204,7 @@ private:
 
     /** \return the frame data at the given id */
     const DescriptorFrame* getFrameAtId(uint32_t id) const;
+	const ImageSrcMap* getSrcImageAtId(uint32_t id) const;
 
     class DescriptorError;
 
@@ -203,6 +214,7 @@ private:
 //    ImageSize   _image_size;
     Options     _options;
     Trajectory _trajectory;
+	std::map<uint32_t, const uint8_t*> I_ptr_map;
 
 //    DescriptorFrameBuffer _frame_buffer;
     ScenePointPointerList _scene_points;

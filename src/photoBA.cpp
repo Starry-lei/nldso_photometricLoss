@@ -73,11 +73,10 @@ int main(int argc, char** argv)
 	//// load initial trajectory
 	T_init = loadPosesTumRGBDFormat(cf.get<std::string>("trajectory"));
 	//	T_init = loadPosesKittiFormat(cf.get<std::string>("trajectory"));
-	//// load GT trajectory
+	// load GT trajectory
 	//	std::string abs_pose= "../data/dataSetPBA_init_poor/Kitti_GT_00.txt";
-	std::string abs_pose= "../data/dataSetPBA_init_poor/GT_pose_list_fr3.txt";
-	//	std::string abs_pose= "../data/dataSetPBA_init_poor/01_150.txt";
-
+	//	std::string abs_pose= "../data/dataSetPBA_init_poor/GT_pose_list_fr3.txt";
+	std::string abs_pose= "../data/dataSetPBA_init_poor/01_150.txt";
 	T_init_abs_pose = loadPosesTumRGBDFormat(abs_pose);
 
 	//	T_init_abs_pose = loadPosesKittiFormat(abs_pose);
@@ -188,21 +187,24 @@ void draw_scene( PhotometricBundleAdjustment::Result & res,  EigenAlignedContain
 	if (show_cameras3d) {
 		for (const auto& cam : GTtraj_data) {
 			if (cam.id==0){visnav::render_camera(cam.pose.matrix(), 2.0f, color_camera_right,0.1f);}
-//			if (cam.id % 3 == 0) {
 			visnav::render_camera(cam.pose.matrix(), 3.0f, color_camera_right,0.1f);
-//			}
 		}
 
-//		for (const auto& camId : Init_traj_data_from_relativePose) {
-//			if (camId.id==0){visnav::render_camera(camId.pose.matrix(), 2.0f, color_selected_both,0.1f);}
-//			if (camId.id % 3 == 0) {
-//			visnav::render_camera(camId.pose.matrix(), 3.0f, color_camera_current,0.1f);}
-//		}
+		glLineWidth(2);
+		glBegin(GL_LINE_STRIP);
+		glColor3f(0.0, 1.0, 0.0);
+		for (size_t i = 0; i < GTtraj_data.size(); i++) {
+			Eigen::Vector3d pose_translation= GTtraj_data[i].pose.block<3,1>(0,3);
+			pangolin::glVertex(pose_translation);
+		}
+		glEnd();
+
+
 		// render Init_traj_data_from_relativePose trajectory
 		if (show_trajectory && Init_traj_data_from_relativePose.size() > 0) {
 			glLineWidth(2);
 			glBegin(GL_LINE_STRIP);
-			glColor3f(0.0, 1.0, 0.0);
+			glColor3f(1.0, 1.0, 0.0);
 			for (size_t i = 0; i < Init_traj_data_from_relativePose.size(); i++) {
 				// Eigen::Vector3d point = Eigen::Vector3d::Identity();
 				Eigen::Vector3d pose_translation= Init_traj_data_from_relativePose[i].pose.block<3,1>(0,3);
@@ -223,30 +225,22 @@ void draw_scene( PhotometricBundleAdjustment::Result & res,  EigenAlignedContain
 			glBegin(GL_LINE_STRIP);
 			glColor3f(0.0, 0.0, 1.0);
 			for (size_t i = 0; i < res.poses.size(); i++) {
-			// Eigen::Vector3d point = Eigen::Vector3d::Identity();
 			Eigen::Vector3d pose_translation= res.poses[i].block<3,1>(0,3);
 			pangolin::glVertex(pose_translation);
 			}
 			glEnd();
 			for (int i_int = 0; i_int < res.poses.size(); i_int++) {
-//				if (i_int==0){visnav::render_camera(res.poses[i_int].matrix(), 2.0f, color_selected_both,0.1f);}
 				visnav::render_camera(res.poses[i_int].matrix(), 3.0f, color_outlier_observation,0.1f);
 			}
 		}
-
-
-
 		// render the GT trajectory
 		// render 3D map points --------------anchor-------------------------
-
 		if (show_points3d && res.refinedPoints.size() > 0) {
 			glPointSize(3.0);
 			glBegin(GL_POINTS);
 			for (const auto& kv_lm : res.refinedPoints) {
-
 				allRefinedPoints.push_back(kv_lm);
 				glColor3ubv(color_points);
-
 				pangolin::glVertex(kv_lm);
 			}
 
@@ -272,7 +266,7 @@ bool next_step( ){
 	cv::Mat_<float> zmap;
 	UniquePointer<DatasetFrame> frame;
 	for(; (frame = dataset->getFrame(fid)) && !gStop; ++fid ){
-		if (fid==T_init.size()-2) {
+		if (fid==T_init.size()-5) {
 			std::cout <<"End of dataset reached\n";
 			auto output_fn = "refined_poses_es_tum_abs_pose.txt";
 			writePosesTumRGBDFormat(output_fn, result.poses, dataset->getTimestamp());
