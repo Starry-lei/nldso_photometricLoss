@@ -58,8 +58,12 @@ PhotometricBundleAdjustment* photoba=nullptr;
 EigenAlignedContainer_<Vec3> allRefinedPoints;
 int fid=0; // start frame id
 
+typedef UniquePointer<DatasetFrame> DatasetFramePointer;
+typedef boost::circular_buffer<DatasetFramePointer> DatasetFrameBuffer;
+DatasetFrameBuffer datasetFrameBuffer(5);
 int main(int argc, char** argv)
 {
+
 	bool show_gui = true;
     signal(SIGINT, sigHandler);
     utils::ProgramOptions options;
@@ -70,6 +74,11 @@ int main(int argc, char** argv)
 
     utils::ConfigFile cf(options.get<std::string>("config"));
 	dataset = Dataset::Create(options.get<std::string>("config"));
+
+
+
+
+
 	//// load initial trajectory
 	T_init = loadPosesTumRGBDFormat(cf.get<std::string>("trajectory"));
 	//	T_init = loadPosesKittiFormat(cf.get<std::string>("trajectory"));
@@ -102,28 +111,19 @@ int main(int argc, char** argv)
 			pangolin::CreateWindowAndBind("Main", 1800, 1000);
 			glEnable(GL_DEPTH_TEST);
 			// main parent display for images and 3d viewer
-			pangolin::View& main_view = pangolin::Display("main")
-		                                        .SetBounds(0.0, 1.0, pangolin::Attach::Pix(UI_WIDTH), 1.0)
-												.SetLayout(pangolin::LayoutEqualVertical);
-			pangolin::View& img_view_display =
-					pangolin::Display("images").SetLayout(pangolin::LayoutEqual);
+			pangolin::View& main_view = pangolin::Display("main").SetBounds(0.0, 1.0, pangolin::Attach::Pix(UI_WIDTH), 1.0).SetLayout(pangolin::LayoutEqualVertical);
+			pangolin::View& img_view_display = pangolin::Display("images").SetLayout(pangolin::LayoutEqual);
 			main_view.AddDisplay(img_view_display);
-
 			// main ui panel
-			pangolin::CreatePanel("ui").SetBounds(0.0, 1.0, 0.0,
-												  pangolin::Attach::Pix(UI_WIDTH));
-
+			pangolin::CreatePanel("ui").SetBounds(0.0, 1.0, 0.0,pangolin::Attach::Pix(UI_WIDTH));
 			// extra options panel
-			pangolin::View& hidden_panel = pangolin::CreatePanel("hidden").SetBounds(
-					0.0, 1.0, pangolin::Attach::Pix(UI_WIDTH),
-					pangolin::Attach::Pix(2 * UI_WIDTH));
+			pangolin::View& hidden_panel = pangolin::CreatePanel("hidden").SetBounds(0.0, 1.0, pangolin::Attach::Pix(UI_WIDTH),pangolin::Attach::Pix(2 * UI_WIDTH));
 			ui_show_hidden.Meta().gui_changed = true;
 			// 3D visualization (initial camera view optimized to see full map)
-			pangolin::OpenGlRenderState camera(pangolin::ProjectionMatrix(640, 480, 400, 400, 320, 240, 0.001, 10000),
-					pangolin::ModelViewLookAt(-3.4, -3.7, -8.3, 2.1, 0.6, 0.2,pangolin::AxisNegY));
-
+			pangolin::OpenGlRenderState camera(pangolin::ProjectionMatrix(640, 480, 400, 400, 320, 240, 0.001, 10000),pangolin::ModelViewLookAt(-3.4, -3.7, -8.3, 2.1, 0.6, 0.2,pangolin::AxisNegY));
 			pangolin::View& display3D =pangolin::Display("scene").SetAspect(-640 / 480.0).SetHandler(new pangolin::Handler3D(camera));
 			main_view.AddDisplay(display3D);
+
 			while (!pangolin::ShouldQuit()) {
 				glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 				if (ui_show_hidden.GuiChanged()) {
@@ -133,15 +133,12 @@ int main(int argc, char** argv)
 				}
 				display3D.Activate(camera);
 				glClearColor(0.95f, 0.95f, 0.95f, 1.0f);// light gray background
-
 				draw_scene(result, Init_traj_data,Init_traj_data_from_relativePose);
 			    optimizeSignal = false;
 				img_view_display.Activate();
 				pangolin::FinishFrame();
 				if (continue_next && ! optimizeSignal) {
 							continue_next = next_step();
-//				            if (optimizeSignal){ continue ;}
-
 				} else {
 							std::this_thread::sleep_for(std::chrono::milliseconds(5));
 				}
@@ -261,10 +258,13 @@ void draw_scene( PhotometricBundleAdjustment::Result & res,  EigenAlignedContain
 	}
 }
 
-bool next_step( ){
+bool next_step(   ){
+
+
 	EigenAlignedContainer_<Mat44> T_opt;
 	cv::Mat_<float> zmap;
 	UniquePointer<DatasetFrame> frame;
+
 	for(; (frame = dataset->getFrame(fid)) && !gStop; ++fid ){
 		if (fid==T_init.size()-5) {
 			std::cout <<"End of dataset reached\n";
@@ -273,8 +273,22 @@ bool next_step( ){
 			return false;
 		}
 		printf("Frame %05d\n", fid);
+
+
+		// build a window pyramid of images here
+		//		datasetFrameBuffer.push_back( std::move(frame));
+		//		if (datasetFrameBuffer.full()){
+		//
+		//			// iterate over datasetFrameBuffer
+		//			 for (auto& frame : datasetFrameBuffer) {
+		//
+		//				 	}
+		//		}
+
+
+
 		const uint8_t* I = frame->image().ptr<const uint8_t>();
-		float* Z =frame->depth().ptr<float>();
+		float* Z = frame->depth().ptr<float>();
 		photoba->addFrame(I, Z, T_init[fid],  &result);
 
 		if(optimizeSignal) {
@@ -283,13 +297,11 @@ bool next_step( ){
 			return true;
 		}
 
-		// return false before the last frame
-//		if (fid==T_init.size()-10) {
-//			auto output_fn = "refined_poses_es_tum_abs_pose.txt";
-//			writePosesTumRGBDFormat(output_fn, result.poses, dataset->getTimestamp());
-//			std::cout <<"End of dataset reached\n";
-//			return false;
-//		}
+
+
+
+
+
 
 	}
 }

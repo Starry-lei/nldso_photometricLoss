@@ -650,6 +650,7 @@ namespace DSONL {
                 0, 0, 1;
         pyrDown(image, image_d, Size(image.cols / 2, image.rows / 2));
         pyrDown(depth, depth_d, Size(depth.cols / 2, depth.rows / 2));
+
         // remove negative gray values
         image_d = cv::max(image_d, 0.0);
         // set all nan zero

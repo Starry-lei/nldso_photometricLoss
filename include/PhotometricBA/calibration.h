@@ -60,18 +60,74 @@ public:
     {
         auto fx = p[0], fy = p[1], cx = p[2], cy = p[3];
         _K <<
-           fx, 0.0, cx,
+		        fx, 0.0, cx,
                 0.0, fy, cy,
                 0.0, 0.0, 1.0;
     }
 
-    inline void scale(double s)
+	inline void setKforImpyramid(int lvl)
+	{
+		_K=_K_orig;
+		if (lvl<=1){
+			_K=_K_orig;
+			return ;
+		}
+		else{
+			for (int i=0;i<lvl-1;i++){
+				_K(0,0)=_K(0,0)/2;
+				_K(1,1)=_K(1,1)/2;
+				_K(0,2)=_K(0,2)/2;
+				_K(1,2)=_K(1,2)/2;
+			}
+		}
+	}
+
+//	inline void downscale (Mat &image, const Mat &depth, Eigen::Matrix3f &K, int &level, Mat &image_d, Mat &depth_d,
+//	               Eigen::Matrix3f &K_d) {
+//
+//		if (level <= 1) {
+//			image_d = image;
+//			// remove negative gray values
+//			image_d = cv::max(image_d, 0.0);
+//			depth_d = depth;
+//			// set all nan zero
+//			Mat mask = Mat(depth_d != depth_d);
+//			depth_d.setTo(0.0, mask);
+//			K_d = K;
+//			return;
+//		}
+//
+//		// downscale camera intrinsics
+//
+//		K_d << K(0, 0) / 2.0, 0, (K(0, 2) + 0.5) / 2.0 - 0.5,
+//		        0, K(1, 1) / 2.0, (K(1, 2) + 0.5) / 2 - 0.5,
+//		        0, 0, 1;
+//		pyrDown(image, image_d, Size(image.cols / 2, image.rows / 2));
+//		pyrDown(depth, depth_d, Size(depth.cols / 2, depth.rows / 2));
+//
+//		// remove negative gray values
+//		image_d = cv::max(image_d, 0.0);
+//		// set all nan zero
+//		Mat mask = Mat(depth_d != depth_d);
+//		depth_d.setTo(0.0, mask);
+//
+//		level -= 1;
+//		downscale(image_d, depth_d, K_d, level, image_d, depth_d, K_d);
+//	}
+
+
+
+
+
+	inline void scale(double s)
     {
         if(s > 1.0) {
             _K *= (1.0 / s); _K(2,2) = 1.0;
             _baseline *= s;
         }
     }
+
+
 
     inline Calibration pyrDown() const
     {
@@ -82,9 +138,11 @@ public:
     }
 
 
+	Mat33 _K_orig;
+
 private:
     Mat33 _K;
-    double _baseline;
+	double _baseline;
 }; // Calibration
 
 #endif //NLDSO_PHOTOMETRICLOSS_CALIBRATION_H

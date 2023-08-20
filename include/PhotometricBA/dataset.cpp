@@ -112,6 +112,14 @@ UniquePointer<DatasetFrame> RGBDDataset::getFrame(int f_i) const
 
   toGray(frame.I_orig, frame.I);
 
+
+  cv::pyrDown(frame.I, frame.I_lvl_2 ,cv::Size(frame.I.cols / 2, frame.I.rows / 2));
+  cv::pyrDown(frame.D, frame.D_lvl_2 ,cv::Size(frame.I.cols / 2, frame.I.rows / 2));
+
+//  cv::resize(frame.D,frame.D_lvl_2,  cv::Size(), 0.5, 0.5, cv::INTER_NEAREST);
+
+
+
   if(_scale_by > 1) {
     double s = 1.0 / _scale_by;
     cv::resize(frame.I, frame.I, cv::Size(), s, s);
@@ -320,6 +328,7 @@ bool tumRGBDDataset::init(const utils::ConfigFile &cf) {
         THROW_ERROR_IF( nullptr == frame, "failed to load frame" );
         this->_image_size = Dataset::GetImageSize(frame.get());
 
+
         return loadCalibration(strCalibFilename);
 
     } catch(std::exception& ex)
@@ -371,11 +380,16 @@ bool tumRGBDDataset::loadCalibration(std::string filename) {
     double fx, fy, cx, cy; // only pinhole model supported
     int num_fields = std::sscanf(l1.c_str(), "%lf %lf %lf %lf", &fx, &fy, &cx, &cy);
     _calib.K() = Eigen::Matrix3d::Identity();
-    _calib.K()(0,0) = fx;
+	_calib._K_orig = Eigen::Matrix3d::Identity();
+
+	_calib.K()(0,0) = fx;
     _calib.K()(1,1) = fy;
     _calib.K()(0,2) = cx;
     _calib.K()(1,2) = cy;
     _calib.K()(2,2) = 1.0f;
+
+	_calib._K_orig = _calib.K();
+
     std::cout<<"\n num_fields: "<<num_fields<<" \n show intrinsics:"<<fx<<" "<<fy<<" "<<cx<<" "<<cy<<std::endl;
     return true;
 

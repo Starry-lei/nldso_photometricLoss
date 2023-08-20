@@ -23,6 +23,7 @@ namespace utils {
 };  // utils
 
 extern bool  optimizeSignal;
+extern int   image_pyramid;
 
 class PhotometricBundleAdjustment
 {
@@ -174,7 +175,6 @@ public:
 	DescriptorFrameBuffer _frame_buffer;
 
 
-
 	class ImageSrcMap;
 	typedef UniquePointer<ImageSrcMap> ImageSrcMapPointer;
 	typedef boost::circular_buffer<ImageSrcMapPointer> ImageSrcMapBuffer;
@@ -185,10 +185,14 @@ public:
 	static std::map<uint32_t, Eigen::Map<const Image_<uint8_t>, Eigen::Aligned>> _image_buffer;
 
 	ImageSize   _image_size;
+	ImageSize   _image_size_orig;
+
+	void setImage_size(int lvl);
+
 
 
 protected:
-    void optimize(Result*);
+    void optimize(int lvl,Result*);
 
 private:
     struct ScenePoint;

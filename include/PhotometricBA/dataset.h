@@ -152,6 +152,11 @@ public:
         inline const cv::Mat& roughness() const { return R; }
         inline std::string filename() const { return fn; }
 
+		cv::Mat I_lvl_2;      //< grayscale image
+		cv::Mat D_lvl_2;      //< depth as float
+
+
+
         virtual ~MonoFrame() {}
     }; // singleFrame
 
