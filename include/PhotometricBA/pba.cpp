@@ -513,12 +513,12 @@ struct PhotometricBundleAdjustment::ScenePoint
 }; // ScenePoint
 
 
-PhotometricBundleAdjustment::PhotometricBundleAdjustment(
-        const Calibration& calib, const ImageSize& image_size, const Options& options)
+PhotometricBundleAdjustment::PhotometricBundleAdjustment(const Calibration& calib, const ImageSize& image_size, const Options& options)
         : _calib(calib), _image_size(image_size), _options(options),
           _frame_buffer(options.slidingWindowSize),_image_src_map_buffer(options.slidingWindowSize)
 {
-
+	_calib._K_orig=_calib.K();
+	_image_size_orig=_image_size;
     _mask.resize(_image_size.rows, _image_size.cols);
     _saliency_map.resize(_image_size.rows, _image_size.cols);
     _K_inv = calib.K().inverse();
@@ -573,9 +573,25 @@ static Mat_<double,4,4> ParamsToPose_test(const double* p)
 void PhotometricBundleAdjustment::
 addFrame(const uint8_t* I_ptr, const float* Z_ptr, const Mat44& T, Result* result)
 {
+
+//	Eigen::Isometry3d T_w;
+//	Eigen::Isometry3d T_c;
+//
+//	if (lvl!=0){
+//		_trajectory.push_back(T, _frame_id);
+//		T_w=(_trajectory.back());
+//		T_c=(T_w.inverse());
+//
+//	}else{
+//		T_w=_trajectory.atId(_frame_id).matrix();
+//		T_c=T_w.inverse();
+//	}
+
+
     _trajectory.push_back(T, _frame_id);
     const Eigen::Isometry3d T_w(_trajectory.back());
-    const Eigen::Isometry3d T_c(T_w.inverse());
+	const Eigen::Isometry3d T_c(T_w.inverse());
+
 
     typedef Eigen::Map<const Image_<uint8_t>, Eigen::Aligned> SrcMap;
     auto I = SrcMap(I_ptr, _image_size.rows, _image_size.cols);
@@ -640,37 +656,43 @@ addFrame(const uint8_t* I_ptr, const float* Z_ptr, const Mat44& T, Result* resul
 
 			// back projection on previous frames, check and add previous frame to visualization frame list added by lei
 			// note: Image_<uint8_t>& image
-			uint32_t frame_id_start = _frame_buffer.front()->id(),frame_id_end=_frame_id;
-			for(uint32_t id = frame_id_start; id <frame_id_end; ++id) {
-				if (id==pt->refFrameId()){continue;} // skip the point itself
-//				std::cout<<"show and check the id: "<<id<<std::endl;
-				Eigen::Isometry3d T_c_id(Eigen::Isometry3d(_trajectory.atId(id)).inverse().matrix());
-				Vec2 uv = _calib.project(T_c_id * pt->X());
-				int r = std::round(uv[1]), c = std::round(uv[0]);
-				if(r >= B && r < max_rows && c >= B && c <= max_cols) {
+//			uint32_t frame_id_start = _frame_buffer.front()->id(),frame_id_end=_frame_id;
+//			for(uint32_t id = frame_id_start; id <frame_id_end; ++id) {
+//				if (id==pt->refFrameId()){continue;} // skip the point itself
+////				std::cout<<"show and check the id: "<<id<<std::endl;
+//				Eigen::Isometry3d T_c_id(Eigen::Isometry3d(_trajectory.atId(id)).inverse().matrix());
+//				Vec2 uv = _calib.project(T_c_id * pt->X());
+//				int r = std::round(uv[1]), c = std::round(uv[0]);
+//				if(r >= B && r < max_rows && c >= B && c <= max_cols) {
+//
+//
+//					typedef Eigen::Map<const Image_<uint8_t>, Eigen::Aligned> SrcMap;
+//					auto I_prev = SrcMap(I_ptr_map[id], _image_size.rows, _image_size.cols);
+//
+//					typename ScenePoint::ZnccPatchType other_patch(I_prev, uv);
+//					float score = pt->patch().score( other_patch );
+//
+//
+//					if(score > _options.minScore) {
+//
+//											// check if the id is already in the visibility list: pt->visibilityList(), which is of type std::vector<uint32_t>
+//						// if not, add it to the visibility list
+//						auto it = std::find(pt->visibilityList().begin(), pt->visibilityList().end(), id);
+//						if (it == pt->visibilityList().end()) {
+//							pt->addFrame(id);
+//						}
+//
+//
+//
+//					}
+//				}
+//			}
+//
+//
 
 
-					typedef Eigen::Map<const Image_<uint8_t>, Eigen::Aligned> SrcMap;
-					auto I_prev = SrcMap(I_ptr_map[id], _image_size.rows, _image_size.cols);
-
-					typename ScenePoint::ZnccPatchType other_patch(I_prev, uv);
-					float score = pt->patch().score( other_patch );
 
 
-					if(score > _options.minScore) {
-
-											// check if the id is already in the visibility list: pt->visibilityList(), which is of type std::vector<uint32_t>
-						// if not, add it to the visibility list
-						auto it = std::find(pt->visibilityList().begin(), pt->visibilityList().end(), id);
-						if (it == pt->visibilityList().end()) {
-							pt->addFrame(id);
-						}
-
-
-
-					}
-				}
-			}
 
 		}
     }
@@ -689,6 +711,10 @@ addFrame(const uint8_t* I_ptr, const float* Z_ptr, const Mat44& T, Result* resul
     // Display the image using OpenCV
     int count_selectedPoint = 0;
     salientImage.convertTo(salientImage, CV_8UC1);
+
+//	imshow("saliency map", salientImage);
+//	std::cout<<"check _K_inv in addFrame"<< _K_inv.matrix()<<std::endl;
+//	cv::waitKey(0);
 
     typedef IsLocalMax_<decltype(_saliency_map), decltype(_mask)> IsLocalMax;
     const IsLocalMax is_local_max(_saliency_map, _mask, _options.nonMaxSuppRadius);
@@ -750,17 +776,16 @@ addFrame(const uint8_t* I_ptr, const float* Z_ptr, const Mat44& T, Result* resul
 
 
     if(_frame_buffer.full()) {
-
-
 		std::cout<<"show Scene point size in current round of optimiation : "<<_scene_points.size()<<std::endl;
-
-
 		// define a file to save the optimized points and corresponding pixel values
 		std::ofstream myfile;
 		std::string filename = "optimized_points" +std::to_string(_frame_id) +".txt";
 		myfile.open (filename);
         uint32_t frame_id_start = _frame_buffer.front()->id(),
                 frame_id_end   = _frame_buffer.back()->id();
+
+		std::cout<<"show frame_id_start:"<<frame_id_start<<"show frame_id_end"<<frame_id_end<<std::endl;
+
         int num_selected_points = 0;
 		std::map<uint32_t, Vec_<double,6>> camera_params_test;
 		for(uint32_t id = frame_id_start; id <= frame_id_end; ++id) {
@@ -783,6 +808,13 @@ addFrame(const uint8_t* I_ptr, const float* Z_ptr, const Mat44& T, Result* resul
 		int counter_frame4 = 0;
 		int counter_frame5 = 0;
 		for(auto& pt : _scene_points) {
+
+//			std::cout<<"\n pt->visibilityList().size()(): "<<pt->visibilityList().size()<<std::endl;
+//			// print the visibility list of each point
+//			for(auto& vis : pt->visibilityList()) {
+//				std::cout<<"vis: "<<vis<<std::endl;
+//			}
+
 
 			if(pt->numFrames() >= 3 && pt->refFrameId() >= frame_id_start) {
 
@@ -1188,7 +1220,7 @@ void PhotometricBundleAdjustment::optimize(Result* result)
     //
     std::map<uint32_t, Vec_<double,7>> camera_params;
     for(uint32_t id = frame_id_start; id <= frame_id_end; ++id) {
-        // TODO:NOTE camera parameters are inverted
+
         camera_params[id] = PoseToParams(Eigen::Isometry3d(_trajectory.atId(id)).inverse().matrix());
         std::cout<<"before optimize: _trajectory.atId(it.first:"  <<id <<"\n"<<_trajectory.atId(id)<<std::endl;
     }
@@ -1205,13 +1237,8 @@ void PhotometricBundleAdjustment::optimize(Result* result)
 	ceres::LocalParameterization* camera_parameterization = new ceres::ProductParameterization(new ceres::QuaternionParameterization(),
 	                                                                                           new ceres::IdentityParameterization(3));
 
-
-
     int num_selected_points = 0;
-
-
 	int depth_counter=0;
-
 	for(auto& pt : _scene_points) {
 
 //		if (pt->_x[0] != 80 || pt->_x[1]!= 12){continue ;}
@@ -1472,5 +1499,20 @@ auto PhotometricBundleAdjustment::removePointsAtFrame(uint32_t id) -> ScenePoint
     _scene_points.swap(points_to_keep);
     return points_to_remove;
 }
+void PhotometricBundleAdjustment::setImage_size(int lvl) {
 
+	_image_size=_image_size_orig;
 
+	if (lvl==0){
+		return ;
+	}else if (lvl==1){
+		_image_size.rows = _image_size.rows/2;
+		_image_size.cols = _image_size.cols/2;
+	}else if (lvl==2){
+		_image_size.rows = _image_size.rows/4;
+		_image_size.cols = _image_size.cols/4;
+	}else if (lvl==3){
+		_image_size.rows = _image_size.rows/8;
+		_image_size.cols = _image_size.cols/8;
+	}
+}

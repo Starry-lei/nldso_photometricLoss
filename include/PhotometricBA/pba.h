@@ -171,7 +171,10 @@ public:
 	class DescriptorFrame;
 	typedef UniquePointer<DescriptorFrame> DescriptorFramePointer ;
 	typedef boost::circular_buffer<DescriptorFramePointer> DescriptorFrameBuffer;
+	DescriptorFrameBuffer _frame_buffer_lvl_0;
 	DescriptorFrameBuffer _frame_buffer;
+	DescriptorFrameBuffer _frame_buffer_lvl_1;
+
 
 
 
@@ -185,6 +188,17 @@ public:
 	static std::map<uint32_t, Eigen::Map<const Image_<uint8_t>, Eigen::Aligned>> _image_buffer;
 
 	ImageSize   _image_size;
+	ImageSize   _image_size_orig;
+
+	void setImage_size(int lvl);
+
+	Calibration _calib;
+	Image_<uint16_t> _mask;
+	Image_<float> _saliency_map;
+	Mat33 _K_inv;
+	Trajectory _trajectory;
+	int lvl;
+	uint32_t _frame_id = 0;
 
 
 protected:
@@ -208,20 +222,27 @@ private:
 
     class DescriptorError;
 
+
+public:
+	ScenePointPointerList _scene_points_lvl_0;
+	ScenePointPointerList _scene_points;
+	ScenePointPointerList _scene_points_lvl_1;
+
+
+
 private:
-    uint32_t _frame_id = 0;
-    Calibration _calib;
+//    uint32_t _frame_id = 0;
+//    Calibration _calib;
 //    ImageSize   _image_size;
     Options     _options;
-    Trajectory _trajectory;
+//    Trajectory _trajectory;
 	std::map<uint32_t, const uint8_t*> I_ptr_map;
 
 //    DescriptorFrameBuffer _frame_buffer;
-    ScenePointPointerList _scene_points;
-    Image_<uint16_t> _mask;
-    Image_<float> _saliency_map;
-
-    Mat33 _K_inv;
+//    ScenePointPointerList _scene_points;
+//    Image_<uint16_t> _mask;
+//    Image_<float> _saliency_map;
+//    Mat33 _K_inv;
 }; // PhotometricBundleAdjustment
 
 

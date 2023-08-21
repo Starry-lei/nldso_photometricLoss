@@ -78,7 +78,7 @@ RGBDDataset::~RGBDDataset() {}
 //  return UniquePointer<DatasetFrame>(new StereoFrame(frame));
 //}
 
-UniquePointer<DatasetFrame> RGBDDataset::getFrame(int f_i) const
+UniquePointer<DatasetFrame> RGBDDataset::getFrame(int f_i, int lvl) const
 {
 
   THROW_ERROR_IF( _rgb.size() == 0 || _depth.size() ==0,
@@ -95,7 +95,7 @@ UniquePointer<DatasetFrame> RGBDDataset::getFrame(int f_i) const
   frame.D.convertTo(frame.D, CV_32FC1);  // scale depth by factor 5000.0f
   frame.D = frame.D/this->_depth_scale;
 
-
+  frame._lvl=lvl;
   // read normal and roughness later
 
 //  imshow("frame.I_orig", frame.I_orig);
@@ -111,6 +111,14 @@ UniquePointer<DatasetFrame> RGBDDataset::getFrame(int f_i) const
   }
 
   toGray(frame.I_orig, frame.I);
+
+  cv::pyrDown(frame.I, frame.I_lvl_1,cv::Size(frame.I.cols / 2, frame.I.rows / 2));
+  cv::pyrDown(frame.D, frame.D_lvl_1 ,cv::Size(frame.I.cols / 2, frame.I.rows / 2));
+
+
+//	imshow("frame.I_lvl_1", frame.I_lvl_1);
+//	imshow("frame.D.I_lvl_1", frame.D_lvl_1);
+//	cv::waitKey(0);
 
   if(_scale_by > 1) {
     double s = 1.0 / _scale_by;
@@ -215,7 +223,7 @@ bool RGBDDataset::init(const utils::ConfigFile & cf) {
                 //                roughnessfiles.push_back(sRoughness);
             }
         }
-        auto frame = this->getFrame(0);
+        auto frame = this->getFrame(0, 0);
         THROW_ERROR_IF( nullptr == frame, "failed to load frame" );
         _image_size = Dataset::GetImageSize(frame.get());
 
@@ -316,7 +324,7 @@ bool tumRGBDDataset::init(const utils::ConfigFile &cf) {
         std::string strCalibFilename = sequenceFolder + Format("/calibration.txt");
         printf("loading calibration from %s!\n", strCalibFilename.c_str());
 
-        auto frame = this->getFrame(0);
+        auto frame = this->getFrame(0,0);
         THROW_ERROR_IF( nullptr == frame, "failed to load frame" );
         this->_image_size = Dataset::GetImageSize(frame.get());
 

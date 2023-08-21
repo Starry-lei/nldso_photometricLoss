@@ -37,7 +37,7 @@ class Dataset
   /**
    * Get the i-th frame
    */
-  virtual UniquePointer<DatasetFrame> getFrame(int f_i) const = 0;
+  virtual UniquePointer<DatasetFrame> getFrame(int f_i, int lvl) const = 0;
 
     /**
      * Get the timestamp of the i-th frameme
@@ -146,8 +146,29 @@ public:
         cv::Mat N;      //< normal as float
         cv::Mat R;      //< roughness as float
 
-        inline const cv::Mat& image() const { return I; }
-        inline cv::Mat& depth()  { return D; }
+		cv::Mat I_lvl_1;      //< grayscale image
+		cv::Mat D_lvl_1;      //< depth as float
+
+		int _lvl = 0;
+
+        inline const cv::Mat& image() const {
+			if (_lvl==1)
+				return I_lvl_1;
+			else if (_lvl==0)
+				return I;
+
+
+//			return I;
+		}
+        inline cv::Mat& depth()  {
+
+			if (_lvl==1)
+				return D_lvl_1;
+			else if (_lvl==0)
+				return D;
+
+//			return D;
+		}
         inline const cv::Mat& normal() const { return N; }
         inline const cv::Mat& roughness() const { return R; }
         inline std::string filename() const { return fn; }
@@ -165,7 +186,7 @@ public:
     inline DatasetType type() const { return DatasetType::Depth; }
     inline ImageSize imageSize() const { return _image_size; }
 
-    UniquePointer<DatasetFrame> getFrame(int f_i) const;
+    UniquePointer<DatasetFrame> getFrame(int f_i, int lvl) const;
     std::vector<std::string> getTimestamp() const;
 
 

@@ -5,7 +5,8 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/calib3d/calib3d.hpp>
 
-#include "PhotometricBA/pba.h"
+//#include "PhotometricBA/pba.h"
+#include "PhotometricBA/pba.cpp"
 #include "PhotometricBA/utils.h"
 #include "PhotometricBA/debug.h"
 #include "PhotometricBA/dataset.h"
@@ -58,6 +59,8 @@ PhotometricBundleAdjustment* photoba=nullptr;
 EigenAlignedContainer_<Vec3> allRefinedPoints;
 int fid=0; // start frame id
 
+int image_pyramid= 1;
+
 int main(int argc, char** argv)
 {
 	bool show_gui = true;
@@ -72,11 +75,14 @@ int main(int argc, char** argv)
 	dataset = Dataset::Create(options.get<std::string>("config"));
 	//// load initial trajectory
 	T_init = loadPosesTumRGBDFormat(cf.get<std::string>("trajectory"));
+
+
+
 	//	T_init = loadPosesKittiFormat(cf.get<std::string>("trajectory"));
 	// load GT trajectory
 	//	std::string abs_pose= "../data/dataSetPBA_init_poor/Kitti_GT_00.txt";
-	//	std::string abs_pose= "../data/dataSetPBA_init_poor/GT_pose_list_fr3.txt";
-	std::string abs_pose= "../data/dataSetPBA_init_poor/01_150.txt";
+		std::string abs_pose= "../data/dataSetPBA_init_poor/GT_pose_list_fr3.txt";
+//	std::string abs_pose= "../data/dataSetPBA_init_poor/01_150.txt";
 	T_init_abs_pose = loadPosesTumRGBDFormat(abs_pose);
 
 	//	T_init_abs_pose = loadPosesKittiFormat(abs_pose);
@@ -265,32 +271,133 @@ bool next_step( ){
 	EigenAlignedContainer_<Mat44> T_opt;
 	cv::Mat_<float> zmap;
 	UniquePointer<DatasetFrame> frame;
-	for(; (frame = dataset->getFrame(fid)) && !gStop; ++fid ){
-		if (fid==T_init.size()-5) {
-			std::cout <<"End of dataset reached\n";
-			auto output_fn = "refined_poses_es_tum_abs_pose.txt";
-			writePosesTumRGBDFormat(output_fn, result.poses, dataset->getTimestamp());
-			return false;
-		}
-		printf("Frame %05d\n", fid);
-		const uint8_t* I = frame->image().ptr<const uint8_t>();
-		float* Z =frame->depth().ptr<float>();
-		photoba->addFrame(I, Z, T_init[fid],  &result);
 
-		if(optimizeSignal) {
-			optimizeSignal=false;
-			++fid;
-			return true;
-		}
+	for (int lvl = image_pyramid; lvl >= 1; lvl--){
 
-		// return false before the last frame
-//		if (fid==T_init.size()-10) {
-//			auto output_fn = "refined_poses_es_tum_abs_pose.txt";
-//			writePosesTumRGBDFormat(output_fn, result.poses, dataset->getTimestamp());
-//			std::cout <<"End of dataset reached\n";
-//			return false;
+
+		photoba->lvl = lvl;
+		photoba->_calib.setKforImpyramid(lvl);
+		photoba->setImage_size(lvl);
+		photoba->_mask.resize(photoba->_image_size.rows, photoba->_image_size.cols);
+		photoba->_saliency_map.resize(photoba->_image_size.rows, photoba->_image_size.cols);
+		std::cout<<"show photoba->_calib._K_orig()\n "<<photoba->_calib._K_orig.matrix()<<std::endl;
+		std::cout<<"show new photoba->_calib.K():\n "<<photoba->_calib.K().matrix()<<std::endl;
+		std::cout<<"check _K_inv outside addFrame"<< photoba->_calib.K().matrix().inverse()<<std::endl;
+
+		std::cout <<"show image size: "<<photoba->_image_size.rows<<" "<<photoba->_image_size.cols<<std::endl;
+		photoba->_K_inv = photoba->_calib.K().matrix().inverse().matrix();
+
+			for(; (frame = dataset->getFrame(fid,lvl)) && !gStop; ++fid ){
+				if (fid==T_init.size()-5) {
+					std::cout <<"End of dataset reached\n";
+					auto output_fn = "refined_poses_es_tum_abs_pose.txt";
+					writePosesTumRGBDFormat(output_fn, result.poses, dataset->getTimestamp());
+					return false;
+				}
+				printf("Frame %05d\n", fid);
+				const uint8_t* I = frame->image().ptr<const uint8_t>();
+				float* Z =frame->depth().ptr<float>();
+				photoba->addFrame(I, Z, T_init[fid],  &result);
+
+				if(optimizeSignal) {
+					optimizeSignal=false;
+					++fid;
+					return true;
+				}
+
+			}
+
+
+//		for(; (frame = dataset->getFrame(fid,lvl)) && !gStop; ++fid ){
+//			if (fid==T_init.size()-5) {
+//				std::cout <<"End of dataset reached\n";
+//				auto output_fn = "refined_poses_es_tum_abs_pose.txt";
+//				writePosesTumRGBDFormat(output_fn, result.poses, dataset->getTimestamp());
+//				return false;
+//			}
+//			printf("Frame %05d\n", fid);
+//			const uint8_t* I = frame->image().ptr<const uint8_t>();
+//			float* Z =frame->depth().ptr<float>();
+//
+//			photoba->addFrame(I, Z, T_init[fid],  &result);
+//
+//
+//
+//			if(optimizeSignal) {
+//
+//				if (lvl!=0){
+//
+//					fid-=4;
+//					photoba->_frame_id=fid;
+//					photoba->_frame_buffer.clear();
+//					photoba->_scene_points.clear();
+//					optimizeSignal= false;
+//
+//
+//					break ;
+//				}
+//				optimizeSignal=false;
+//				++fid;
+//
+//
+//
+//				// switch to lvl1 again
+//				fid-=4;
+//				photoba->_frame_id=fid;
+//				photoba->_frame_buffer.clear();
+//				photoba->_scene_points.clear();
+//
+//				return true;
+//			}
+//
+//			// return false before the last frame
+//			//		if (fid==T_init.size()-10) {
+//			//			auto output_fn = "refined_poses_es_tum_abs_pose.txt";
+//			//			writePosesTumRGBDFormat(output_fn, result.poses, dataset->getTimestamp());
+//			//			std::cout <<"End of dataset reached\n";
+//			//			return false;
+//			//		}
+//
 //		}
+//
+
 
 	}
+
+
+
+
+//	for(; (frame = dataset->getFrame(fid,0)) && !gStop; ++fid ){
+//		if (fid==T_init.size()-5) {
+//			std::cout <<"End of dataset reached\n";
+//			auto output_fn = "refined_poses_es_tum_abs_pose.txt";
+//			writePosesTumRGBDFormat(output_fn, result.poses, dataset->getTimestamp());
+//			return false;
+//		}
+//		printf("Frame %05d\n", fid);
+//		const uint8_t* I = frame->image().ptr<const uint8_t>();
+//		float* Z =frame->depth().ptr<float>();
+//		photoba->addFrame(I, Z, T_init[fid],  &result);
+//
+//		if(optimizeSignal) {
+//			optimizeSignal=false;
+//			++fid;
+//			return true;
+//		}
+//
+//															// return false before the last frame
+//															//		if (fid==T_init.size()-10) {
+//															//			auto output_fn = "refined_poses_es_tum_abs_pose.txt";
+//															//			writePosesTumRGBDFormat(output_fn, result.poses, dataset->getTimestamp());
+//															//			std::cout <<"End of dataset reached\n";
+//															//			return false;
+//															//		}
+//
+//	}
+//
+
+
+
+
 }
 

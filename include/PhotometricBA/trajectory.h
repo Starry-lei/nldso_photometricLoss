@@ -29,6 +29,8 @@ public:
     //
     void push_back(const Mat44&, const Id_t id);
 
+	void pop_back();
+
     //
     // direct element access
     //

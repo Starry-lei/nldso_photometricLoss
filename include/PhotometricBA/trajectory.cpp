@@ -62,5 +62,6 @@ EigenAlignedContainer_<Vec3> Trajectory::cameraPositions() const
 
     return ret;
 }
-
-
+void Trajectory::pop_back() {
+    _data.pop_back();
+}
