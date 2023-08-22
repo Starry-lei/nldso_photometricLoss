@@ -22,7 +22,7 @@
 #include <vector>
 #include <map>
 #include "debug.h"
-#include "types.h"
+//#include "types.h"
 #include "imgproc.h"
 #include "sample_eigen.h"
 #include "utils.h"
@@ -61,11 +61,11 @@ const int PATTERN_OFFSETS[PATTERN_SIZE][2] = {{0, 0}, {1, -1}, {-1, 1}, {-1, -1}
 static PhotometricBundleAdjustment::Options::DescriptorType
 DescriptorTypeFromString(std::string s)
 {
-    if(utils::icompare("Intensity", s))
+    if(pbaUtils::icompare("Intensity", s))
         return PhotometricBundleAdjustment::Options::DescriptorType::Intensity;
-    else if(utils::icompare("IntensityAndGradient", s))
+    else if(pbaUtils::icompare("IntensityAndGradient", s))
         return PhotometricBundleAdjustment::Options::DescriptorType::IntensityAndGradient;
-    else if(utils::icompare("BitPlanes", s))
+    else if(pbaUtils::icompare("BitPlanes", s))
         return PhotometricBundleAdjustment::Options::DescriptorType::BitPlanes;
     else {
         Warn("Unknown descriptorType '%s'\n", s.c_str());
@@ -104,13 +104,13 @@ bool PhotometricBundleAdjustment::Result::Writer::add(const Result& result)
     ret = true;
   }
 #else
-    utils::UNUSED(result);
+    pbaUtils::UNUSED(result);
 #endif
 
     return ret;
 }
 
-PhotometricBundleAdjustment::Options::Options(const utils::ConfigFile& cf)
+PhotometricBundleAdjustment::Options::Options(const pbaUtils::ConfigFile& cf)
         : maxNumPoints(cf.get<int>("maxNumPoints", 4096)),
           slidingWindowSize(cf.get<int>("slidingWindowSize", 5)),
           patchRadius(cf.get<int>("patchRadius", 2)),
@@ -503,6 +503,9 @@ struct PhotometricBundleAdjustment::ScenePoint
     ZnccPatchType _patch;
     std::vector<double> _descriptor;
 
+	std::map<uint32_t,Vec3> specularitySequence; //frame number, specularity ={{0,Vec3(0,0,0)}}
+
+
     double _saliency  = 0.0;
     bool _was_refined = false;
 
@@ -549,47 +552,198 @@ void ExtractPatch(T* dst, const Image& I, const Vec_<int,2>& uv, int radius)
     }
 }
 
-static Vec_<double,6> PoseToParams_test(const Mat44& T)
-{
-	Vec_<double,6> ret;
-	const Mat_<double,3,3> R = T.block<3,3>(0,0);
-	ceres::RotationMatrixToAngleAxis(ceres::ColumnMajorAdapter3x3(R.data()), ret.data());
+//static Vec_<double,6> PoseToParams_test(const Mat44& T)
+//{
+//	Vec_<double,6> ret;
+//	const Mat_<double,3,3> R = T.block<3,3>(0,0);
+//	ceres::RotationMatrixToAngleAxis(ceres::ColumnMajorAdapter3x3(R.data()), ret.data());
+//
+//	// translation
+//	ret[3] = T(0,3);
+//	ret[4] = T(1,3);
+//	ret[5] = T(2,3);
+//	return ret;
+//}
 
-	// translation
-	ret[3] = T(0,3);
-	ret[4] = T(1,3);
-	ret[5] = T(2,3);
-	return ret;
-}
+//static Mat_<double,4,4> ParamsToPose_test(const double* p)
+//{
+//	Mat_<double,3,3> R;
+//	ceres::AngleAxisToRotationMatrix(p, ceres::ColumnMajorAdapter3x3(R.data()));
+//
+//	Mat_<double,4,4> ret(Mat_<double,4,4>::Identity());
+//	ret.block<3,3>(0,0) = R;
+//	ret.block<3,1>(0,3) = Vec_<double,3>(p[3], p[4], p[5]);
+//	return ret;
+//}
 
-static Mat_<double,4,4> ParamsToPose_test(const double* p)
-{
-	Mat_<double,3,3> R;
-	ceres::AngleAxisToRotationMatrix(p, ceres::ColumnMajorAdapter3x3(R.data()));
 
-	Mat_<double,4,4> ret(Mat_<double,4,4>::Identity());
-	ret.block<3,3>(0,0) = R;
-	ret.block<3,1>(0,3) = Vec_<double,3>(p[3], p[4], p[5]);
-	return ret;
+void PhotometricBundleAdjustment::specularityCalcualtion(const ScenePointPointer& pt,
+                                                         const Eigen::Isometry3d& T_w_beta_prime,
+                                                         const Vec3f* N_ptr,
+                                                         const float* R_ptr,
+                                                         PBANL::IBL_Radiance* ibl_Radiance
+                                                         ){
+	int width= _image_size.cols;
+	int height= _image_size.rows;
+	int r= pt->_x[1];
+	int c= pt->_x[0];
+	int B = std::max(_options.maskBlockRadius, std::max(2, _options.patchRadius));
+	int max_rows = (int) height - B - 1, max_cols = (int) width -  B - 1;
+
+
+	Eigen::Vector3f point_w= pt->X().cast<float>(); // point in world coordinate
+//	Eigen::Isometry3d T_w(_trajectory.atId(pt->refFrameId()).matrix());
+	Eigen::Isometry3d T_c(T_w_beta_prime.inverse());
+	Eigen::Vector3f point_c= (T_c * pt->X()).cast<float>();
+	const Vec3f& normal_pixel = N_ptr[r * width + c];
+	Vec3f normal =normalize(normal_pixel); //normal in camera coordinate
+	const float roughness_pixel= R_ptr[r * width + c];          // roughness
+	float reflectance = 1.0f;                                   // reflectance
+
+	int num_K = 6;                                              // K nearest neighbor search
+	std::unordered_map<int, PBANL::pointEnvlight> envLightMap_cur;// maintain envMaps of current frame here
+	float image_metallic=1e-3;                                  // metallic
+	Eigen::Matrix<float, 3, 1> beta= -point_c;
+	Vec3f baseColor(0.0, 0.0, 0.0);                             //base color
+	Vec3f N_(normal(0), normal(1), normal(2));
+	Vec3f View_beta(beta(0), beta(1), beta(2));
+	std::string renderedEnvLight_path=EnvMapPath;
+
+
+	// ===================================search for Env Light from control points===================
+	pcl::PointXYZ searchPoint(point_w.x(), point_w.y(), point_w.z());
+	std::vector<int> pointIdxKNNSearch(num_K);
+	std::vector<float> pointKNNSquaredDistance(num_K);
+	Vec3f key4Search;
+
+	if ( EnvLightLookup->kdtree.nearestKSearch(searchPoint, num_K, pointIdxKNNSearch, pointKNNSquaredDistance) > 0)
+	{
+		float disPoint2Env_min= 10.0f;
+		int targetEnvMapIdx=-1;
+		Vec3f targetEnvMapVal;
+
+		// find the closest control point which domain contains the current point
+		for (std::size_t i = 0; i < pointIdxKNNSearch.size (); ++i) {
+			Vec3f envMap_point((*(EnvLightLookup->ControlpointCloud))[pointIdxKNNSearch[i]].x, (*(EnvLightLookup->ControlpointCloud))[pointIdxKNNSearch[i]].y,
+			                   (*(EnvLightLookup->ControlpointCloud))[pointIdxKNNSearch[i]].z);
+
+			//                        std::cout << "\n------"<<envMap_point.val[0]<< " " << envMap_point.val[1]<< " " << envMap_point.val[2]
+			//                                  << " (squared distance: " << pointKNNSquaredDistance[i] << ")" << std::endl;
+			// 0.004367 is the squared distance of the closest control point
+			if (pointKNNSquaredDistance[i] > 0.004367) { continue; }
+
+
+			// calculate control point normal
+			// transform envMap_point to camera coordinate system
+			Eigen::Vector3f envMap_point_c1 = T_c.cast<float>() * Eigen::Vector3f(envMap_point.val[0], envMap_point.val[1], envMap_point.val[2]);
+			// project envMap_point to image plane
+			// float pixel_x = (fx * envMap_point_c1.x()) / envMap_point_c1.z() + cx;
+			// float pixel_y = (fy * envMap_point_c1.y()) / envMap_point_c1.z() + cy;
+
+			Vec2 uv = _calib.project(envMap_point_c1.cast<double>());
+			int r_n = std::round(uv[1]), c_n = std::round(uv[0]);
+			// check if the projected point is in the image
+			if(r_n < B || r_n >= max_rows || c_n < B || c_n >= max_cols) { continue; }
+
+			Vec3f ctrlPointNormal =  N_ptr[r_n * width + c_n];//newNormalMap.at<Vec3f>(r, c);
+			ctrlPointNormal=cv::normalize(ctrlPointNormal);
+
+			float angle_consine = ctrlPointNormal.dot(N_);
+			if (angle_consine<0.9962){ continue;} // 0.9848 is the cos(10 degree), 0.9962 is the cos(5 degree)
+			float disPoint2Env=  pointKNNSquaredDistance[i]/(ctrlPointNormal.dot(N_));
+			if (disPoint2Env<disPoint2Env_min){
+				disPoint2Env_min=disPoint2Env;
+				targetEnvMapIdx=i;
+				targetEnvMapVal=envMap_point;
+			}
+
+
+		}
+		if (targetEnvMapIdx!=-1){
+			key4Search.val[0] = targetEnvMapVal.val[0];
+			key4Search.val[1] = targetEnvMapVal.val[1];
+			key4Search.val[2] = targetEnvMapVal.val[2];
+		}
+
+	}
+	// if no envMap point is found, skip this point
+	if (key4Search.dot(key4Search)==0){ return ;}
+
+	int ctrlIndex= EnvLightLookup->envLightIdxMap[key4Search];
+	if ( EnvLightLookup->envLightIdxMap.size()==0){std::cerr<<"Error in EnvLight->envLightIdxMap! "<<endl;}
+
+	if (envLightMap_cur.count(ctrlIndex)==0){
+		stringstream ss;
+		string img_idx_str;
+		ss << ctrlIndex;
+		ss >> img_idx_str;
+		string name_prefix = "/envMap";
+
+		string renderedEnvLightfolder =renderedEnvLight_path + "/envMap" + img_idx_str + "/renderedEnvLight";
+		string renderedEnvLightDiffuse =renderedEnvLight_path + "/envMap" + img_idx_str + "/renderedEnvLightDiffuse";
+		string envMapDiffuse = renderedEnvLightDiffuse + "/envMapDiffuse_" + img_idx_str + ".pfm";
+		PBANL::pointEnvlight pEnv;
+		DSONL::EnvMapLookup *EnvMapLookup = new DSONL::EnvMapLookup();
+		EnvMapLookup->makeMipMap(pEnv.EnvmapSampler,renderedEnvLightfolder); // index_0: prefiltered Env light
+		delete EnvMapLookup;
+
+		//            diffuseMap *diffuseMap = new DSONL::diffuseMap;
+		//            diffuseMap->makeDiffuseMap(pEnv.EnvmapSampler, envMapDiffuse); // index_1: diffuse
+		//            delete diffuseMap;
+
+		envLightMap_cur.insert(make_pair(ctrlIndex, pEnv));
+		//                    cout<<"show size of envLightMap_cur:"<<envLightMap_cur.size()<<endl;
+	}
+
+	DSONL::prefilteredEnvmapSampler= & ( envLightMap_cur[ctrlIndex].EnvmapSampler[0]);
+	DSONL::brdfSampler_ = & (EnvLightLookup->brdfSampler[0]);
+	//diffuseSampler = & (envLightMap_cur[ctrlIndex].EnvmapSampler[1]);
+	// ===================================RADIANCE-COMPUTATION====================================
+	//PBANL::IBL_Radiance *ibl_Radiance = new PBANL::IBL_Radiance;
+	Sophus::SO3f enterPanoroma;
+	Sophus::SE3d T_c2w(T_w_beta_prime.rotation(), T_w_beta_prime.translation());
+	// TODO: convert the envmap to current "world coordinate" in advance !!!!!! done
+	Vec3f radiance_beta = ibl_Radiance->solveForRadiance(View_beta, N_, roughness_pixel, image_metallic,
+	                                                     reflectance, baseColor, T_c2w.rotationMatrix(),
+	                                                     enterPanoroma.inverse());
+
+	Vec3 radiance_beta_(radiance_beta[0],radiance_beta[1],radiance_beta[2]);
+
+	//	cout<<"radiance_beta: "<<radiance_beta<<endl;
+
+	if(radiance_beta_.x()<0 || radiance_beta_.y()<0 || radiance_beta_.z()<0 || radiance_beta_.x()>1e5 || radiance_beta_.y()>1e5 || radiance_beta_.z()>1e5)
+	{
+		cout<<"radiance_beta: "<<radiance_beta<<endl;
+
+		cout<<"radiance_beta_.x()<0 || radiance_beta_.y()<0 || radiance_beta_.z()<0"<<endl;
+//		exit(0);
+
+		return ;
+	}
+
+
+
+
+
+	pt->specularitySequence.insert(make_pair(_frame_id,Vec3(radiance_beta[0],radiance_beta[1],radiance_beta[2])));
+
+//	pt->specularitySequence[_frame_id]=radiance_beta_;
+
+
+
 }
 
 
 void PhotometricBundleAdjustment::
-addFrame(const uint8_t* I_ptr, const float* Z_ptr, const Mat44& T, Result* result)
+        addFrame(const uint8_t* I_ptr, const float* Z_ptr, const Vec3f* N_ptr, const float* R_ptr,  const Mat44& T, Result* result)
 {
     _trajectory.push_back(T, _frame_id);
     const Eigen::Isometry3d T_w(_trajectory.back());
     const Eigen::Isometry3d T_c(T_w.inverse());
-
+	PBANL::IBL_Radiance *ibl_Radiance = new PBANL::IBL_Radiance;
     typedef Eigen::Map<const Image_<uint8_t>, Eigen::Aligned> SrcMap;
     auto I = SrcMap(I_ptr, _image_size.rows, _image_size.cols);
-
-//	ImageSrcMap* image_src_map = ImageSrcMap::Create(_frame_id, I, T_w);
-//	_image_src_map_buffer.push_back(ImageSrcMapPointer(image_src_map));
-
 	I_ptr_map[_frame_id] = I_ptr;
-
-
     typedef Eigen::Map<const Image_<float>, Eigen::Aligned> SrcDepthMap;
     auto Z = SrcDepthMap(Z_ptr, _image_size.rows, _image_size.cols);
     // check the depth map
@@ -623,6 +777,7 @@ addFrame(const uint8_t* I_ptr, const float* Z_ptr, const Mat44& T, Result* resul
             Vec2 uv = _calib.project(T_c * pt->X());
             ++max_num_to_update;
             int r = std::round(uv[1]), c = std::round(uv[0]);
+
             if(r >= B && r < max_rows && c >= B && c <= max_cols) {
                 typename ScenePoint::ZnccPatchType other_patch(I, uv);
                 auto score = pt->patch().score( other_patch );
@@ -630,6 +785,11 @@ addFrame(const uint8_t* I_ptr, const float* Z_ptr, const Mat44& T, Result* resul
                     num_updated++;
 																	// old TODO update the patch for the new frame data
                     pt->addFrame(_frame_id);
+
+
+					// calculate specularity
+					specularityCalcualtion(pt, T_w, N_ptr, R_ptr, ibl_Radiance);
+
                     //
                     // block an area in the mask to prevent initializing redundant new
                     // scene points
@@ -642,37 +802,35 @@ addFrame(const uint8_t* I_ptr, const float* Z_ptr, const Mat44& T, Result* resul
             }
 
 
-			// back projection on previous frames, check and add previous frame to visualization frame list added by lei
-			// note: Image_<uint8_t>& image
-			uint32_t frame_id_start = _frame_buffer.front()->id(),frame_id_end=_frame_id;
-			for(uint32_t id = frame_id_start; id <frame_id_end; ++id) {
-				if (id==pt->refFrameId()){continue;} // skip the point itself
-//				std::cout<<"show and check the id: "<<id<<std::endl;
-				Eigen::Isometry3d T_c_id(Eigen::Isometry3d(_trajectory.atId(id)).inverse().matrix());
-				Vec2 uv = _calib.project(T_c_id * pt->X());
-				int r = std::round(uv[1]), c = std::round(uv[0]);
-				if(r >= B && r < max_rows && c >= B && c <= max_cols) {
-
-
-					typedef Eigen::Map<const Image_<uint8_t>, Eigen::Aligned> SrcMap;
-					auto I_prev = SrcMap(I_ptr_map[id], _image_size.rows, _image_size.cols);
-
-					typename ScenePoint::ZnccPatchType other_patch(I_prev, uv);
-					float score = pt->patch().score( other_patch );
-					if(score > _options.minScore) {
-
-											// check if the id is already in the visibility list: pt->visibilityList(), which is of type std::vector<uint32_t>
-						// if not, add it to the visibility list
-						auto it = std::find(pt->visibilityList().begin(), pt->visibilityList().end(), id);
-						if (it == pt->visibilityList().end()) {
-							pt->addFrame(id);
-						}
-
-
-
-					}
-				}
-			}
+//			// back projection on previous frames, check and add previous frame to visualization frame list added by lei
+//			// note: Image_<uint8_t>& image
+//			uint32_t frame_id_start = _frame_buffer.front()->id(),frame_id_end=_frame_id;
+//			for(uint32_t id = frame_id_start; id <frame_id_end; ++id) {
+//				if (id==pt->refFrameId()){continue;} // skip the point itself
+////				std::cout<<"show and check the id: "<<id<<std::endl;
+//				Eigen::Isometry3d T_c_id(Eigen::Isometry3d(_trajectory.atId(id)).inverse().matrix());
+//				Vec2 uv = _calib.project(T_c_id * pt->X());
+//				int r = std::round(uv[1]), c = std::round(uv[0]);
+//				if(r >= B && r < max_rows && c >= B && c <= max_cols) {
+//					typedef Eigen::Map<const Image_<uint8_t>, Eigen::Aligned> SrcMap;
+//					auto I_prev = SrcMap(I_ptr_map[id], _image_size.rows, _image_size.cols);
+//
+//					typename ScenePoint::ZnccPatchType other_patch(I_prev, uv);
+//					float score = pt->patch().score( other_patch );
+//					if(score > _options.minScore) {
+//
+//											// check if the id is already in the visibility list: pt->visibilityList(), which is of type std::vector<uint32_t>
+//						// if not, add it to the visibility list
+//						auto it = std::find(pt->visibilityList().begin(), pt->visibilityList().end(), id);
+//						if (it == pt->visibilityList().end()) {
+//							pt->addFrame(id);
+//						}
+//
+//
+//
+//					}
+//				}
+//			}
 
 		}
     }
@@ -699,7 +857,7 @@ addFrame(const uint8_t* I_ptr, const float* Z_ptr, const Mat44& T, Result* resul
     const IsLocalMax is_local_max(_saliency_map, _mask, _options.nonMaxSuppRadius);
 
 
-
+	// pixel selector
     for(int y = B; y < max_rows; ++y) {
         for(int x = B; x < max_cols; ++x) {
 
@@ -708,7 +866,7 @@ addFrame(const uint8_t* I_ptr, const float* Z_ptr, const Mat44& T, Result* resul
 
                 if(is_local_max(y, x)) {
                     Vec3 X = T_w * (z * _K_inv * Vec3(x, y, 1.0)); // X in the world frame
-                    std::unique_ptr<ScenePoint> p = make_unique<ScenePoint>(X, _frame_id);// associate a new scene point with its frame id
+                    std::unique_ptr<ScenePoint> p = std::make_unique<ScenePoint>(X, _frame_id);// associate a new scene point with its frame id
                     Vec_<int,2> xy(x, y);
                     p->setZnccPach( I, xy );
                     p->descriptor().resize(descriptor_dim);
@@ -716,6 +874,7 @@ addFrame(const uint8_t* I_ptr, const float* Z_ptr, const Mat44& T, Result* resul
                     p->setFirstProjection(xy);
 					p->ori_depth = z; // added by lei
 					p->inv_depth = 1.0f/z; // added by lei
+
                     new_scene_points.push_back(std::move(p));
                 }
             }
@@ -736,6 +895,25 @@ addFrame(const uint8_t* I_ptr, const float* Z_ptr, const Mat44& T, Result* resul
     }
 
 	std::cout<<"show final new scene points size: "<<new_scene_points.size()<<std::endl;
+
+
+	for(size_t i = 0; i < new_scene_points.size(); ++i) {
+
+		const auto& pt = new_scene_points[i];
+		specularityCalcualtion(pt,T_w,N_ptr,R_ptr,ibl_Radiance);
+
+	}
+
+	delete ibl_Radiance;
+
+
+
+
+
+
+
+
+
 
     //
     // extract the descriptors
@@ -828,6 +1006,82 @@ addFrame(const uint8_t* I_ptr, const float* Z_ptr, const Mat44& T, Result* resul
 
 		// use image pyramid to optimize the points
 
+
+
+
+
+
+
+		int countSame=0;
+		int countDiff=0;
+		int counter_size_1=0;
+		int counter_size_2=0;
+		int counter_size_3=0;
+		int counter_size_4=0;
+		int counter_size_5=0;
+		int counter_specu_size_1=0;
+		int counter_specu_size_2=0;
+		int counter_specu_size_3=0;
+		int counter_specu_size_4=0;
+		int counter_specu_size_5=0;
+		for(auto& pt : _scene_points) {
+			// statistics of the visibilityList size of all point
+			if (pt->visibilityList().size()==1){
+				counter_size_1++;
+			}else if (pt->visibilityList().size()==2){
+				counter_size_2++;
+			}else if (pt->visibilityList().size()==3){
+				counter_size_3++;
+			}else if (pt->visibilityList().size()==4){
+				counter_size_4++;
+			}else if (pt->visibilityList().size()==5){
+				counter_size_5++;
+			}
+		}
+
+		for (auto &pt : _scene_points) {
+//			for (auto& ele :pt->specularitySequence) {
+//				cout<<"show pt->specularitySequence["<<ele.first<<"]: \n "<<ele.second<<endl;
+//
+//			}
+			if (pt->specularitySequence.size()==1){
+				counter_specu_size_1++;
+			}else if (pt->specularitySequence.size()==2){
+				counter_specu_size_2++;
+			}else if (pt->specularitySequence.size()==3){
+				counter_specu_size_3++;
+			}else if (pt->specularitySequence.size()==4){
+				counter_specu_size_4++;
+			}else if (pt->specularitySequence.size()==5){
+				counter_specu_size_5++;
+			}
+		}
+
+		// check if visibility has the same length of specularity sequence
+		for(auto& pt : _scene_points) {
+			if (pt->visibilityList().size()==pt->specularitySequence.size()){
+				countSame++;
+			}else{
+				countDiff++;
+			}
+		}
+
+		Info("\n counter_size_1:  %d", counter_size_1);
+		Info("\n counter_size_2:  %d", counter_size_2);
+		Info("\n counter_size_3:  %d", counter_size_3);
+		Info("\n counter_size_4:  %d", counter_size_4);
+		Info("\n counter_size_5:  %d", counter_size_5);
+		Info("\n countSame:  %d", countSame);
+		Info("\n countDiff:  %d", countDiff);
+		Info("\n counter_specu_size_1:  %d", counter_specu_size_1);
+		Info("\n counter_specu_size_2:  %d", counter_specu_size_2);
+		Info("\n counter_specu_size_3:  %d", counter_specu_size_3);
+		Info("\n counter_specu_size_4:  %d", counter_specu_size_4);
+		Info("\n counter_specu_size_5:  %d", counter_specu_size_5);
+
+
+
+
         optimize(result);
 		optimizeSignal=true;
 
@@ -898,10 +1152,51 @@ MakePatchWeights(int radius, bool do_gaussian, double s_x = 1.0,
     }
 }
 
+
+
+static inline float specularityWeight( Vec3 refSpecularity, Vec3 tarSpecularity)
+{
+//	Vec3 deltaSpecularity = (refSpecularity - tarSpecularity).normalized() ; // RGB
+
+	Vec3 deltaSpecularity = (refSpecularity - tarSpecularity); // RGB
+
+	double sumWeight= 0.587* abs(deltaSpecularity.y())+0.114* abs(deltaSpecularity.x())+0.299* abs(deltaSpecularity.z());
+
+	//	if (sumWeight<0.5f){
+	//		cout<<"sumWeight great than 0.5 !!!: "<<sumWeight<<endl;
+	//	}
+
+	//	Info("CHECKING sumWeight %d\n", sumWeight);
+
+	if (sumWeight==0.0f){
+		return -1.0;}
+	else{
+		//float y = exp(-15*sumWeight);
+//		float y = exp(-6.0f*sumWeight);
+
+		float y = exp(-4.0f*sumWeight);
+
+		//		if (sumWeight<0.5f){
+		//			cout<<"y value !!!: "<<y<<endl;
+		//		}
+
+
+		return y;}
+
+}
+
+
+
+
+
+
+
+
+
 static Vec_<double,7> PoseToParams(const Mat44& T)
 {
     Vec_<double,7> ret;
-    const Mat_<double,3,3> R = T.block<3,3>(0,0);
+    const Mat_eigen<double,3,3> R = T.block<3,3>(0,0);
 //    ceres::RotationMatrixToAngleAxis(ceres::ColumnMajorAdapter3x3(R.data()), ret.data());
 	ceres::RotationMatrixToQuaternion(ceres::ColumnMajorAdapter3x3(R.data()), ret.data());
 
@@ -917,13 +1212,13 @@ static Vec_<double,7> PoseToParams(const Mat44& T)
 
 }
 
-static Mat_<double,4,4> ParamsToPose(const double* p)
+static Mat_eigen<double,4,4> ParamsToPose(const double* p)
 {
-    Mat_<double,3,3> R;
+	Mat_eigen<double,3,3> R;
 //    ceres::AngleAxisToRotationMatrix(p, ceres::ColumnMajorAdapter3x3(R.data()));
 	ceres::QuaternionToRotation(p, ceres::ColumnMajorAdapter3x3(R.data()));
 
-    Mat_<double,4,4> ret(Mat_<double,4,4>::Identity());
+	Mat_eigen<double,4,4> ret(Mat_eigen<double,4,4>::Identity());
     ret.block<3,3>(0,0) = R;
     ret.block<3,1>(0,3) = Vec_<double,3>(p[4], p[5], p[6]);
     return ret;
@@ -940,7 +1235,7 @@ public:
      * \param frame   descriptor data of the image we are matching against
      */
     DescriptorError(const Calibration& calib, const std::vector<double>& p0,
-                    const DescriptorFrame* frame, const std::vector<double>& w,
+                    const DescriptorFrame* frame, const double w,
 	                const size_t image_width,
 	                const size_t image_height,
 	                double mean_patch_value_ref,
@@ -950,13 +1245,15 @@ public:
 	                double depth_coeff
 	                )
             : _radius(PatchRadiusFromLength(p0.size() / frame->numChannels())),
-              _calib(calib), _p0(p0.data()), _frame(frame), _patch_weights(w.data()),
-	                                                            img_width (image_width),
+              _calib(calib), _p0(p0.data()), _frame(frame), img_width (image_width),
 	                                                            img_height (image_height),
 	                                                         mean_patch_value (mean_patch_value_ref),
 	      depth_coeffe(depth_coeff)
 
     {
+
+
+
 		image_grid.reset(new ceres::Grid2D<double, 1>(&_frame->image_tar_vectorized[0], 0, image_height, 0, image_width));
 		compute_interpolation.reset(new ceres::BiCubicInterpolator<ceres::Grid2D<double, 1> >(*image_grid));
 		x_host_normalized = x_norm;
@@ -968,10 +1265,13 @@ public:
 			mean_patch_value = 1.0;
 		}
 		patch_values=patch;
+
+		patch_weights_specularity=w;
         // TODO should just pass the config to get the radius value
         assert( p0.size() == w.size() );
     }
 	std::vector<double> patch_values;
+	double patch_weights_specularity;
 	double mean_patch_value;
 	double x_host_normalized;
 	double y_host_normalized;
@@ -980,7 +1280,7 @@ public:
     static ceres::CostFunction* Create(const Calibration& calib,
                                        const std::vector<double>& p0,
                                        const DescriptorFrame* f,
-                                       const std::vector<double>& w,
+                                       const double w,
 	                                   size_t image_width,
 	                                   size_t image_height,
 	                                   double mean_patch_value,
@@ -1109,7 +1409,8 @@ public:
 
 //		T mean_patch_value_target = patch_values_target/(PATTERN_SIZE);
 		for (size_t i = 0; i < PATTERN_SIZE; i++){
-			residuals[i] = patch_values_target[i] - (mean_patch_value_target / mean_patch_value)*T(patch_values[i]);
+//			residuals[i] = patch_values_target[i] - (mean_patch_value_target / mean_patch_value)*T(patch_values[i]);
+			residuals[i] = T(patch_weights_specularity)*(patch_values_target[i] -  (mean_patch_value_target / mean_patch_value)*T(patch_values[i]));
 		}
 
         // maybe we should return false if the point goes out of the image!  done!
@@ -1122,7 +1423,7 @@ private:
     const Calibration& _calib;
     const double* const _p0;
     const DescriptorFrame* _frame;
-    const double* const _patch_weights;
+
 
 	size_t img_width;
 	size_t img_height;
@@ -1205,27 +1506,6 @@ void PhotometricBundleAdjustment::optimize(Result* result)
 
 	for(auto& pt : _scene_points) {
 
-//		if (pt->_x[0] != 80 || pt->_x[1]!= 12){continue ;}
-
-//				0 80 12 0 80 12
-//				0 80 12 1 80 11
-//				0 80 12 2 80 10
-//				0 80 12 3 80 12
-//				0 80 12 4 80 11
-
-//		        1 463 233 1 463 233
-//		        1 463 233 2 463 232
-//		        1 463 233 3 463 234
-//		        1 463 233 4 462 234
-
-
-//		std::cout<<"pt->_x[0] : "<<pt->_x[0] << "and pt->_x[1]:"<<pt->_x[1] <<std::endl;
-//		std::cout <<"show point coordinates: "<<pt->X()<<std::endl;
-//		std::cout <<"show point ref id"<< pt->refFrameId()<<std::endl;
-//		std::cout <<"show point depth"<< pt->ori_depth<<std::endl;
-
-
-
         if(pt->numFrames() >= 3 && pt->refFrameId() >= frame_id_start) {
             num_selected_points++;
 			// get the patch values for the ref frame
@@ -1240,6 +1520,7 @@ void PhotometricBundleAdjustment::optimize(Result* result)
 			compute_interpolation.reset(new ceres::BiCubicInterpolator<ceres::Grid2D<double, 1> >(*image_grid));
 
 			std::vector<double> patch(PATTERN_SIZE, 0.0);
+//			std::vector<double> patch_sepcularity_weight(PATTERN_SIZE, 1.0);
 			for (size_t i = 0; i < PATTERN_SIZE; i++){
 				int du = PATTERN_OFFSETS[i][0];
 				int dv = PATTERN_OFFSETS[i][1];
@@ -1269,22 +1550,34 @@ void PhotometricBundleAdjustment::optimize(Result* result)
 					double x_norm = (pt->_x[0] - _calib.cx()) / _calib.fx();
 					double y_norm = (pt->_x[1] - _calib.cy()) / _calib.fy();
 
-
-//					// get the pose_W of this target frame
-//					const Eigen::Isometry3d pose_tar(_trajectory.atId(id).matrix());
-//					Vec3 pt_c_tar = pose_tar * pt->X();
-//					Eigen::Vector3d pt_norm((x_norm), (y_norm), (1.0f));
-//					const Eigen::Isometry3d ref_pose(Eigen::Isometry3d(_trajectory.atId(pt->refFrameId())));
-//					Eigen::Isometry3d tar_pose(Eigen::Isometry3d(_trajectory.atId(id)));
-//					double depth_coeef= (tar_pose*ref_pose.inverse() * pt_norm).z();
-//					std::cout<<"depth_coeef: "<<depth_coeef<<std::endl;
-					// pt->depth_tar_coeff=depth_coeef*pt->ori_depth;
-//					Vec2 uv = _calib.project(pt_c_tar);
-//					int r = std::round(uv[1]), c = std::round(uv[0]);
-//					double x_norm_tar = (c- _calib.cx()) / _calib.fx();
-//					double y_norm_tar = (r - _calib.cy()) / _calib.fy();
-
                     pt->setRefined(true);
+					float specularity_weight = 1.0;
+
+					if(pt->specularitySequence.find(id) != pt->specularitySequence.end()){
+						specularity_weight = specularityWeight(pt->specularitySequence[pt->refFrameId()],pt->specularitySequence[id]);
+
+						if (specularity_weight==-1){
+							specularity_weight=1.0f;
+						}
+						if (isnan(specularity_weight)){
+//							specularity_weight=1.0f;
+
+							continue;
+						}
+					}
+
+					else {
+						continue;
+						// if the point has no specularity, continue
+						//specularity_weight = 1.0;
+					}
+
+					if (specularity_weight!=1.0){
+						cout<<"check patch_sepcularity_weight: "<<specularity_weight<<endl;
+					}
+
+
+
 					double * depth_ptr = & pt->ori_depth;
 					double * depth_coeff_ptr = & pt->depth_tar_coeff;
 					double * ref_camera_ptr = camera_params[pt->refFrameId()].data();
@@ -1298,20 +1591,17 @@ void PhotometricBundleAdjustment::optimize(Result* result)
 					const auto huber_t = _options.robustThreshold;
                     auto* loss = huber_t > 0.0 ? new ceres::HuberLoss(huber_t) : nullptr;
                     ceres::CostFunction* cost = nullptr;
-                    cost = DescriptorError::Create(_calib, pt->descriptor(), getFrameAtId(id), patch_weights, size_t(_image_size.cols), size_t(_image_size.rows),
+                    cost = DescriptorError::Create(_calib, pt->descriptor(), getFrameAtId(id), specularity_weight, size_t(_image_size.cols), size_t(_image_size.rows),
 					                                mean_patch_value, patch, x_norm, y_norm,ref_camera_ptr,1);
 
 					problem.AddResidualBlock(cost, loss,ref_camera_ptr,camera_ptr, depth_ptr);
 					problem.SetParameterBlockConstant(depth_ptr);
-					if (pt->refFrameId()==frame_id_start){
-						depth_counter+=1; //  14209
-					//	problem.SetParameterBlockConstant(depth_ptr);
-					//	problem.SetParameterBlockConstant(ref_camera_ptr);
 
-						problem.SetParameterization(ref_camera_ptr, camera_parameterization);
-						problem.SetParameterization(camera_ptr, camera_parameterization);
 
-					}
+					problem.SetParameterization(ref_camera_ptr, camera_parameterization);
+					problem.SetParameterization(camera_ptr, camera_parameterization);
+
+
 
 
                 }

@@ -11,8 +11,11 @@
 #include <vector>
 #include <iosfwd>
 
+//template <typename T, int M = Eigen::Dynamic, int N = Eigen::Dynamic>
+//using Mat_ = Eigen::Matrix<T,M,N>;
+
 template <typename T, int M = Eigen::Dynamic, int N = Eigen::Dynamic>
-using Mat_ = Eigen::Matrix<T,M,N>;
+using Mat_eigen = Eigen::Matrix<T,M,N>;
 
 template <typename T, int M = Eigen::Dynamic>
 using Vec_ = Eigen::Matrix<T,M,1>;
@@ -23,11 +26,16 @@ using RowVec_ = Eigen::Matrix<T,1,N>;
 template <typename T>
 using Image_ = Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic,Eigen::RowMajor>;
 
-typedef Mat_<double,3,3> Mat33;
-typedef Mat_<double,4,4> Mat44;
-typedef Mat_<double,3,4> Mat34;
-typedef Mat_<double,3,Eigen::Dynamic> Mat3X;
-typedef Mat_<double,4,Eigen::Dynamic> Mat4X;
+//typedef Mat_<double,3,3> Mat33;
+//typedef Mat_<double,4,4> Mat44;
+//typedef Mat_<double,3,4> Mat34;
+//typedef Mat_<double,3,Eigen::Dynamic> Mat3X;
+//typedef Mat_<double,4,Eigen::Dynamic> Mat4X;
+typedef Mat_eigen<double,3,3> Mat33;
+typedef Mat_eigen<double,4,4> Mat44;
+typedef Mat_eigen<double,3,4> Mat34;
+typedef Mat_eigen<double,3,Eigen::Dynamic> Mat3X;
+typedef Mat_eigen<double,4,Eigen::Dynamic> Mat4X;
 
 typedef Vec_<double,2> Vec2;
 typedef Vec_<double,3> Vec3;

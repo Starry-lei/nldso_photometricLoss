@@ -1,5 +1,7 @@
 file(GLOB PhotometricBA "*.cpp")
-add_library(photobundle ${LIBRARY_TYPE} ${PhotometricBA})
+add_library(photobundle ${LIBRARY_TYPE} ${PhotometricBA}
+        envLightPreProcessing.cpp envLightPreProcessing.h deltaCompution.cpp deltaCompution.h
+        )
 
 set_target_properties(photobundle PROPERTIES LINKER_LANGUAGE CXX)
 option(WITH_OPENCV   "with opencv"             ON)

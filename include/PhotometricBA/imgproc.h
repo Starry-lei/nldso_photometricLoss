@@ -64,8 +64,8 @@ void xgradient(const TSrc* src, int rows, int cols, TDst* dst)
   constexpr auto S = imgradient_scale<TDst>();
 
   using namespace Eigen;
-  typedef Mat_<TSrc, Dynamic, Dynamic> SrcMat;
-  typedef Mat_<TDst, Dynamic, Dynamic> DstMat;
+  typedef Mat_eigen<TSrc, Dynamic, Dynamic> SrcMat;
+  typedef Mat_eigen<TDst, Dynamic, Dynamic> DstMat;
 
   typedef Map<const SrcMat> SrcMap;
   typedef Map<DstMat>       DstMap;
@@ -84,17 +84,17 @@ void xgradient(const TSrc* src, int rows, int cols, TDst* dst)
 }
 
 template <typename TDst, typename TSrc> inline
-Mat_<TDst,Eigen::Dynamic,Eigen::Dynamic>
+Mat_eigen<TDst,Eigen::Dynamic,Eigen::Dynamic>
 xgradient(const TSrc* src, int rows, int cols)
 {
-  Mat_<TDst, Eigen::Dynamic, Eigen::Dynamic> dst(rows, cols);
+  Mat_eigen<TDst, Eigen::Dynamic, Eigen::Dynamic> dst(rows, cols);
   xgradient(src, rows, cols, dst.data());
 
   return dst;
 }
 
 template <typename TDst, class Derived> inline
-Mat_<TDst, Eigen::Dynamic, Eigen::Dynamic>
+        Mat_eigen<TDst, Eigen::Dynamic, Eigen::Dynamic>
 xgradient(const Eigen::DenseBase<Derived>& M)
 {
   return xgradient<TDst>(&M(0,0), M.rows(), M.cols());
@@ -107,8 +107,8 @@ void ygradient(const TSrc* src, int rows, int cols, TDst* dst)
   constexpr auto S = imgradient_scale<TDst>();
 
   using namespace Eigen;
-  typedef Mat_<TSrc, Dynamic, Dynamic> SrcMat;
-  typedef Mat_<TDst, Dynamic, Dynamic> DstMat;
+  typedef Mat_eigen<TSrc, Dynamic, Dynamic> SrcMat;
+  typedef Mat_eigen<TDst, Dynamic, Dynamic> DstMat;
 
   typedef Map<const SrcMat> SrcMap;
   typedef Map<DstMat>       DstMap;
@@ -127,17 +127,17 @@ void ygradient(const TSrc* src, int rows, int cols, TDst* dst)
 }
 
 template <typename TDst, typename TSrc> inline
-Mat_<TDst,Eigen::Dynamic,Eigen::Dynamic>
+        Mat_eigen<TDst,Eigen::Dynamic,Eigen::Dynamic>
 ygradient(const TSrc* src, int rows, int cols)
 {
-  Mat_<TDst, Eigen::Dynamic, Eigen::Dynamic> dst(rows, cols);
+  Mat_eigen<TDst, Eigen::Dynamic, Eigen::Dynamic> dst(rows, cols);
   ygradient(src, rows, cols, dst.data());
 
   return dst;
 }
 
 template <typename TDst, class Derived> inline
-Mat_<TDst, Eigen::Dynamic, Eigen::Dynamic>
+        Mat_eigen<TDst, Eigen::Dynamic, Eigen::Dynamic>
 ygradient(const Eigen::DenseBase<Derived>& M)
 {
   return ygradient<TDst>(&M(0,0), M.rows(), M.cols());
@@ -148,7 +148,7 @@ void imgradientAbsMag(const TSrc* src, int rows, int cols, TDst* dst)
 {
   using namespace Eigen;
 
-  typedef Map< Mat_<TDst,Dynamic,Dynamic> > DstMap;
+  typedef Map< Mat_eigen<TDst,Dynamic,Dynamic> > DstMap;
   DstMap G(dst, rows, cols);
 
   G = (xgradient<TDst>(src, rows, cols).array().abs() +
@@ -156,16 +156,16 @@ void imgradientAbsMag(const TSrc* src, int rows, int cols, TDst* dst)
 }
 
 template <typename TDst, typename TSrc> inline
-Mat_<TDst,Eigen::Dynamic,Eigen::Dynamic>
+        Mat_eigen<TDst,Eigen::Dynamic,Eigen::Dynamic>
 imgradientAbsMag(const TSrc* src, int rows, int cols)
 {
-  Mat_<TDst,Eigen::Dynamic,Eigen::Dynamic> ret(rows, cols);
+  Mat_eigen<TDst,Eigen::Dynamic,Eigen::Dynamic> ret(rows, cols);
   imgradientAbsMag<TDst>(src, rows, cols, ret.data());
   return ret;
 }
 
 template <typename TDst, class Derived> inline
-Mat_<TDst,Eigen::Dynamic,Eigen::Dynamic>
+        Mat_eigen<TDst,Eigen::Dynamic,Eigen::Dynamic>
 imgradientAbsMag(const Eigen::DenseBase<Derived>& A)
 {
   return imgradientAbsMag<TDst>(&A(0,0), A.rows(), A.cols());

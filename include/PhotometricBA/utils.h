@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <random>
 #include <map>
+#include <unordered_map>
 
 #include <boost/program_options.hpp>
 #include <boost/mpl/range_c.hpp>
@@ -28,7 +29,7 @@ inline std::string to_string(std::string s) { return s; }
 
 
 
-namespace utils {
+namespace pbaUtils {
 
 template <typename T> inline void UNUSED(T&&) {}
 
@@ -70,7 +71,8 @@ std::ostream& toStream(const Sequence& seq, std::ostream& os = std::cout)
   using namespace boost::mpl;
   using namespace boost::fusion;
 
-  typedef range_c<std::size_t, 0, result_of::size<Sequence>::value> Indices;
+//  typedef range_c<std::size_t, 0, result_of::size<Sequence>::value> Indices;
+  typedef range_c<std::size_t, 0, std::extent<Sequence>::value> Indices;
   for_each(Indices(), PrintFields<Sequence>(seq, os));
 
   os << "\b" << "";
@@ -243,7 +245,7 @@ struct Error : public std::logic_error
 
 
 #define THROW_ERROR(msg) \
-    throw utils::Error(utils::Format("[ %s:%04d ] %s", MYFILE, __LINE__, msg))
+    throw pbaUtils::Error(pbaUtils::Format("[ %s:%04d ] %s", MYFILE, __LINE__, msg))
 
 #define THROW_ERROR_IF(cond, msg) if( !!(cond) ) THROW_ERROR( (msg) )
 

@@ -9,7 +9,7 @@
 #include <fstream>
 #include <vector>
 
-using namespace utils;
+using namespace pbaUtils;
 
 static void toGray(const cv::Mat& src, cv::Mat& ret)
 {
@@ -110,6 +110,9 @@ UniquePointer<DatasetFrame> RGBDDataset::getFrame(int f_i, int lvl) const
     return nullptr;
   }
 
+  frame.N= loadNormal(f_i);
+  frame.R= loadRoughness(f_i);
+
   toGray(frame.I_orig, frame.I);
 
   cv::pyrDown(frame.I, frame.I_lvl_1,cv::Size(frame.I.cols / 2, frame.I.rows / 2));
@@ -164,7 +167,7 @@ UniquePointer<DatasetFrame> RGBDDataset::getFrame(int f_i, int lvl) const
 //    return std::vector<std::string>();
 //}
 
-bool RGBDDataset::init(const utils::ConfigFile & cf) {
+bool RGBDDataset::init(const pbaUtils::ConfigFile & cf) {
 
     try
     {
@@ -193,8 +196,8 @@ bool RGBDDataset::init(const utils::ConfigFile & cf) {
                 std::stringstream ss;
                 ss << s;
                 std::string t;
-                std::string sRGB, sDepth;
-//                std::string sRGB, sDepth, sMetallic, sBasecolor, sNormal, sRoughness;
+//                std::string sRGB, sDepth;
+                std::string sRGB, sDepth, sMetallic, sNormal, sRoughness;
                 // readin rgb file
 
                 ss >> t;
@@ -208,15 +211,15 @@ bool RGBDDataset::init(const utils::ConfigFile & cf) {
                 sDepth = sequenceFolder + "/" + sDepth;
                 _depth.push_back(sDepth);
                 // readin Normal file
-                //                ss >> t;
-                //                ss >> sNormal;
-                //                sNormal = dir + "/" + sNormal;
-                //                normalfiles.push_back(sNormal);
-                //                // readin Roughness file
-                //                ss >> t;
-                //                ss >> sRoughness;
-                //                sRoughness = dir + "/" + sRoughness;
-                //                roughnessfiles.push_back(sRoughness);
+				ss >> t;
+				ss >> sNormal;
+				sNormal = sequenceFolder + "/" + sNormal;
+				_normal.push_back(sNormal);
+				// readin Roughness file
+				ss >> t;
+				ss >> sRoughness;
+				sRoughness = sequenceFolder + "/" + sRoughness;
+				_roughness.push_back(sRoughness);
             }
         }
         auto frame = this->getFrame(0, 0);
@@ -235,11 +238,41 @@ std::vector<std::string> RGBDDataset::getTimestamp() const {
     return timestamps;
 }
 
+cv::Mat RGBDDataset::loadNormal(int f_i) const {
+	std::string normal_fn = _normal[f_i];
+	cv::Mat normal = loadPFM(normal_fn.c_str());
+	//    std::cout<<"show N file name:"<<normal_fn<<std::endl;
+	// Scale the pixel values to the range [-1, 1]
+	cv::Mat normals_c_oneView = 2 * normal - 1;
+	// Swap the R and B channels and invert the G and B channels
+	cv::Mat normals;
+	cv::cvtColor(normals_c_oneView, normals, cv::COLOR_BGR2RGB);
+	cv::Mat channels[3];
+	cv::split(normals, channels);
+	channels[1] = -channels[1];
+	channels[2] = -channels[2];
+	cv::merge(channels, 3, normals);
+
+	return normals;
+}
+
+cv::Mat RGBDDataset::loadRoughness(int f_i) const {
+	std::string roughness_fn = _roughness[f_i];
+	cv::Mat roughness = loadPFM(roughness_fn.c_str());
+	//    std::cout<<"show R file name:"<<roughness_fn<<std::endl;
+	//    std::cout<<"show roughness channel"<<roughness.channels()<<std::endl;
+	//    int channelIdx=1;
+	//    cv::Mat roughness_C1;
+	//    extractChannel(roughness, roughness_C1, channelIdx);
+	return roughness;
+}
+
+
 namespace {
 
-    static inline Mat_<double,3,4> set_kitti_camera_from_line(std::string line)
+    static inline Mat_eigen<double,3,4> set_kitti_camera_from_line(std::string line)
 {
-  auto tokens = utils::splitstr(line);
+  auto tokens = pbaUtils::splitstr(line);
   THROW_ERROR_IF( tokens.empty() || tokens[0].empty() || tokens[0][0] != 'P',
                  "invalid calibration line");
   THROW_ERROR_IF( tokens.size() != 13, "wrong line length" );
@@ -248,7 +281,7 @@ namespace {
   for(size_t i = 1; i < tokens.size(); ++i)
     vals.push_back(str2num<float>(tokens[i]));
 
-  Mat_<double,3,4> ret;
+  Mat_eigen<double,3,4> ret;
   for(int r = 0, i = 0; r < ret.rows(); ++r)
     for(int c = 0; c < ret.cols(); ++c, ++i)
       ret(r,c) = vals[i];
@@ -304,7 +337,7 @@ tumRGBDDataset::~tumRGBDDataset(){}
 //  return true;
 //}
 
-bool tumRGBDDataset::init(const utils::ConfigFile &cf) {
+bool tumRGBDDataset::init(const pbaUtils::ConfigFile &cf) {
 
     try
     {

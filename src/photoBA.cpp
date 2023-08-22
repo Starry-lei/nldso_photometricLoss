@@ -4,7 +4,6 @@
 
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/calib3d/calib3d.hpp>
-
 #include "PhotometricBA/pba.h"
 #include "PhotometricBA/utils.h"
 #include "PhotometricBA/debug.h"
@@ -58,19 +57,50 @@ PhotometricBundleAdjustment* photoba=nullptr;
 EigenAlignedContainer_<Vec3> allRefinedPoints;
 int fid=0; // start frame id
 
+void readCtrlPointPoseData(string fileName, vector<Sophus::SE3f, Eigen::aligned_allocator<Sophus::SE3f>>& pose) {
+
+	ifstream trajectory(fileName);
+	if (!trajectory.is_open()) {
+		cout << "No controlPointPose data!" << fileName << endl;
+		return;
+	}
+
+	float  qw, qx, qy, qz, tx, ty, tz;
+	string line;
+	while (getline(trajectory, line)) {
+		stringstream lineStream(line);
+		lineStream >> qw >> qx >> qy >> qz>> tx >> ty >> tz;
+
+		Eigen::Vector3f t(tx, ty, tz);
+		Eigen::Quaternionf q = Eigen::Quaternionf(qw, qx, qy, qz).normalized();
+		Sophus::SE3f SE3_qt(q, t);
+		pose.push_back(SE3_qt);
+	}
+
+}
+
+
 int main(int argc, char** argv)
 {
 	bool show_gui = true;
     signal(SIGINT, sigHandler);
-    utils::ProgramOptions options;
+
+	pbaUtils::ProgramOptions options;
+
+//    utils::ProgramOptions options;
     options
             ("output,o", "refined_poses_es_absolute.txt", "trajectory output file")
             ("config,c", "../config/tum_rgbd.cfg", "config file")
             .parse(argc, argv);
 
-    utils::ConfigFile cf(options.get<std::string>("config"));
+	pbaUtils::ConfigFile cf(options.get<std::string>("config"));
 	dataset = Dataset::Create(options.get<std::string>("config"));
-	//// load initial trajectory
+	// check if dataset is empty
+	if(dataset == nullptr) {
+		std::cerr<<"Failed to create dataset\n";
+		return -1;
+	}
+	// load initial trajectory
 	T_init = loadPosesTumRGBDFormat(cf.get<std::string>("trajectory"));
 	//	T_init = loadPosesKittiFormat(cf.get<std::string>("trajectory"));
 	// load GT trajectory
@@ -78,7 +108,7 @@ int main(int argc, char** argv)
 	//	std::string abs_pose= "../data/dataSetPBA_init_poor/GT_pose_list_fr3.txt";
 		std::string abs_pose= "../data/dataSetPBA_init_poor/01_150.txt";
 //	std::string abs_pose= "../data/dataSetPBA_init_poor/scene0370_02_seq_01_tumRGBD_segmented_reseted.txt";
-
+	    cout<<"dataset created! "<<endl;
 
 	T_init_abs_pose = loadPosesTumRGBDFormat(abs_pose);
 
@@ -101,6 +131,24 @@ int main(int argc, char** argv)
 		EigenAlignedContainer_<Mat44> T_opt;
 		cv::Mat_<float> zmap;
 		UniquePointer<DatasetFrame> frame;
+
+	// load environment light path
+	std::string EnvMapPath=cf.get<std::string>("EnvMapPath");
+	std::string EnvMapPosePath=cf.get<std::string>("EnvMapPosePath");
+
+	// convert environment light pose the coordinate system of the first camera in PBA sequence
+	std::vector<Sophus::SE3f, Eigen::aligned_allocator<Sophus::SE3f>> trajectoryPoses;
+	string fileName = "/home/lei/Documents/Dataset/dataSetPBA/sequences/02/poses.txt";
+	readCtrlPointPoseData(fileName, trajectoryPoses);
+	Sophus::SE3f frontCamPose_w (trajectoryPoses[0]);
+
+	photoba->EnvMapPath=EnvMapPath;
+
+	PBANL::envLightLookup  *EnvLightLookup= new PBANL::envLightLookup(argc, argv, EnvMapPath,EnvMapPosePath,frontCamPose_w);
+	photoba->EnvLightLookup= EnvLightLookup;
+
+
+
 	if (show_gui) {
 			pangolin::CreateWindowAndBind("Main", 1800, 1000);
 			glEnable(GL_DEPTH_TEST);
@@ -301,7 +349,16 @@ bool next_step( ){
 
 		const uint8_t* I = frame->image().ptr<const uint8_t>();
 		float* Z =frame->depth().ptr<float>();
-		photoba->addFrame(I, Z, T_init[fid],  &result);
+
+		const Vec3f* N = frame->normal().ptr<Vec3f>();
+		const float* R= frame->roughness().ptr<float>();
+
+		if (N==nullptr || R==nullptr){
+			std::cout<<"N or R  is nullptr"<<std::endl;
+			return false;
+		}
+
+		photoba->addFrame(I, Z, N, R,T_init[fid],  &result);
 
 		if(optimizeSignal) {
 			optimizeSignal=false;

@@ -18,8 +18,15 @@
 #include <boost/circular_buffer.hpp>
 #include <map>
 
-namespace utils {
-    class ConfigFile;
+#include "envLightPreProcessing.h"
+#include "deltaCompution.h"
+
+//namespace utils {
+//    class ConfigFile;
+//};  // utils
+
+namespace pbaUtils {
+	class ConfigFile;
 };  // utils
 
 extern bool  optimizeSignal;
@@ -86,7 +93,8 @@ public:
 
         Options() {}
 
-        Options(const utils::ConfigFile& cf);
+//        Options(const utils::ConfigFile& cf);
+		Options(const pbaUtils::ConfigFile& cf);
 
     private:
         friend std::ostream& operator<<(std::ostream&, const Options&);
@@ -165,7 +173,15 @@ public:
      * \param T pose initialization for this frame
      * \param result, if not null we store the optmization results in it
      */
-    void addFrame(const uint8_t* image, const float* depth_map, const Mat44& T, Result* = nullptr);
+//  void addFrame(const uint8_t* image, const float* depth_map, const Mat44& T, Result* = nullptr);
+	void addFrame(const uint8_t* image, const float* depth_map, const Vec3f* N_ptr, const float* R_ptr, const Mat44& T, Result* = nullptr);
+
+
+
+	std::string EnvMapPath;
+	PBANL::envLightLookup* EnvLightLookup=NULL;
+	Vec3 calcuSpecularity(Vec3& point, PBANL::envLightLookup* EnvLightLookup, Vec3 normal, float roughness);
+
 
 	Trajectory initial_trajectory;
 	class DescriptorFrame;
@@ -197,6 +213,14 @@ public:
 	int lvl=0;
 	uint32_t _frame_id = 0;
 
+	struct ScenePoint;
+	typedef UniquePointer<ScenePoint>      ScenePointPointer;
+
+	void specularityCalcualtion(const ScenePointPointer& pt,const Eigen::Isometry3d& T_w_beta_prime,
+	                            const Vec3f* N_ptr,
+	                            const float* R_ptr,
+	                            PBANL::IBL_Radiance* ibl_Radiance
+	                            );
 
 
 
@@ -204,8 +228,8 @@ protected:
     void optimize(Result*);
 
 private:
-    struct ScenePoint;
-    typedef UniquePointer<ScenePoint>      ScenePointPointer;
+//    struct ScenePoint;
+//    typedef UniquePointer<ScenePoint>      ScenePointPointer;
     typedef std::vector<ScenePointPointer> ScenePointPointerList;
 
     /** removes scene points whose frame id == id */

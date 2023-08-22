@@ -5,8 +5,9 @@
 #include "file_loader.h"
 #include "calibration.h"
 #include <opencv2/core/core.hpp>
+#include "dataLoader/PFMReadWrite.h"
 
-namespace utils {
+namespace pbaUtils {
 class ConfigFile;
 }; // utils
 
@@ -190,6 +191,9 @@ public:
     UniquePointer<DatasetFrame> getFrame(int f_i, int lvl) const;
     std::vector<std::string> getTimestamp() const;
 
+	cv::Mat loadNormal(int f_i) const;
+	cv::Mat loadRoughness(int f_i) const;
+
 
 protected:
     ImageSize _image_size;
@@ -203,7 +207,7 @@ protected:
 //	float _depth_scale= 1.0f;
     std::vector<std::string> timestamps;
 
-    virtual bool init(const utils::ConfigFile&);
+    virtual bool init(const pbaUtils::ConfigFile&);
 }; // RGBDDataset
 
 class tumRGBDDataset : public RGBDDataset
@@ -219,7 +223,7 @@ public:
 protected:
     Calibration _calib;
 
-    bool init(const utils::ConfigFile&);
+    bool init(const pbaUtils::ConfigFile&);
     bool loadCalibration(std::string calib_fn);
 
 
