@@ -120,6 +120,7 @@ int main(int argc, char** argv)
         }
     }
 
+
     string output_fn = options.get<std::string>("output");
     Info("Writing refined poses to %s\n", output_fn.c_str());
     writePosesTumRGBDFormat(output_fn, result.poses, dataset->getTimestamp());
