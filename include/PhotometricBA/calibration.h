@@ -21,7 +21,9 @@ public:
      * \param b the stereo baseline
      */
     inline Calibration(const Mat33& K, double b)
-            : _K(K), _baseline(b) {}
+            : _K(K), _baseline(b) {
+		_K_orig=_K;
+	}
 
     inline const double& b() const { return _baseline; }
     inline const double& fx() const { return _K(0,0); }
@@ -65,6 +67,25 @@ public:
                 0.0, 0.0, 1.0;
     }
 
+	inline void setKforImpyramid(int lvl)
+	{
+		_K=_K_orig;
+		if (lvl<=0){
+			_K=_K_orig;
+			return ;
+		}
+		else{
+			for (int i=0;i<lvl;i++){
+				_K(0,0)=_K(0,0)/2;
+				_K(1,1)=_K(1,1)/2;
+				_K(0,2)=_K(0,2)/2;
+				_K(1,2)=_K(1,2)/2;
+			}
+		}
+	}
+
+
+
     inline void scale(double s)
     {
         if(s > 1.0) {
@@ -81,9 +102,10 @@ public:
         return Calibration(K, _baseline * 2);
     }
 
-
+	Mat33 _K_orig;
 private:
     Mat33 _K;
+
     double _baseline;
 }; // Calibration
 

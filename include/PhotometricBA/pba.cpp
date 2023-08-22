@@ -519,6 +519,10 @@ PhotometricBundleAdjustment::PhotometricBundleAdjustment(
           _frame_buffer(options.slidingWindowSize),_image_src_map_buffer(options.slidingWindowSize)
 {
 
+	_calib._K_orig=_calib.K();
+	_image_size_orig=_image_size;
+
+
     _mask.resize(_image_size.rows, _image_size.cols);
     _saliency_map.resize(_image_size.rows, _image_size.cols);
     _K_inv = calib.K().inverse();
@@ -655,8 +659,6 @@ addFrame(const uint8_t* I_ptr, const float* Z_ptr, const Mat44& T, Result* resul
 
 					typename ScenePoint::ZnccPatchType other_patch(I_prev, uv);
 					float score = pt->patch().score( other_patch );
-
-
 					if(score > _options.minScore) {
 
 											// check if the id is already in the visibility list: pt->visibilityList(), which is of type std::vector<uint32_t>
@@ -690,8 +692,13 @@ addFrame(const uint8_t* I_ptr, const float* Z_ptr, const Mat44& T, Result* resul
     int count_selectedPoint = 0;
     salientImage.convertTo(salientImage, CV_8UC1);
 
+//	cv::imshow("salientImage:"+std::to_string(_frame_id),salientImage);
+//	cv::waitKey(0);
+
     typedef IsLocalMax_<decltype(_saliency_map), decltype(_mask)> IsLocalMax;
     const IsLocalMax is_local_max(_saliency_map, _mask, _options.nonMaxSuppRadius);
+
+
 
     for(int y = B; y < max_rows; ++y) {
         for(int x = B; x < max_cols; ++x) {
@@ -756,25 +763,9 @@ addFrame(const uint8_t* I_ptr, const float* Z_ptr, const Mat44& T, Result* resul
 
 
 		// define a file to save the optimized points and corresponding pixel values
-		std::ofstream myfile;
-		std::string filename = "optimized_points" +std::to_string(_frame_id) +".txt";
-		myfile.open (filename);
         uint32_t frame_id_start = _frame_buffer.front()->id(),
                 frame_id_end   = _frame_buffer.back()->id();
         int num_selected_points = 0;
-		std::map<uint32_t, Vec_<double,6>> camera_params_test;
-		for(uint32_t id = frame_id_start; id <= frame_id_end; ++id) {
-			camera_params_test[id] = PoseToParams_test(Eigen::Isometry3d(_trajectory.atId(id)).inverse().matrix());
-		}
-
-
-//		show Scene point size in current round of optimiation : 20480, bad bug  of original paper!!
-//		        number of points in frame 1: 3504
-//		        number of points in frame 2: 2075
-//		        number of points in frame 3: 1579
-//		        number of points in frame 4: 0
-//		        number of points in frame 5: 0
-
 
 		//count the number of points in each frame in the current round of optimization
 		int counter_frame1 = 0;
@@ -1316,6 +1307,10 @@ void PhotometricBundleAdjustment::optimize(Result* result)
 						depth_counter+=1; //  14209
 					//	problem.SetParameterBlockConstant(depth_ptr);
 					//	problem.SetParameterBlockConstant(ref_camera_ptr);
+
+						problem.SetParameterization(ref_camera_ptr, camera_parameterization);
+						problem.SetParameterization(camera_ptr, camera_parameterization);
+
 					}
 
 
@@ -1325,10 +1320,10 @@ void PhotometricBundleAdjustment::optimize(Result* result)
     }
 
 
-	for(uint32_t id = frame_id_start; id <= frame_id_end; ++id) {
-		double * camera_ptr_para = camera_params[id].data();
-		problem.SetParameterization(camera_ptr_para, camera_parameterization);
-	}
+//	for(uint32_t id = frame_id_start; id <= frame_id_end; ++id) {
+//		double * camera_ptr_para = camera_params[id].data();
+//		problem.SetParameterization(camera_ptr_para, camera_parameterization);
+//	}
 
     // set the first camera constant
     {
@@ -1472,5 +1467,20 @@ auto PhotometricBundleAdjustment::removePointsAtFrame(uint32_t id) -> ScenePoint
     _scene_points.swap(points_to_keep);
     return points_to_remove;
 }
+void PhotometricBundleAdjustment::setImage_size(int lvl) {
 
+	_image_size=_image_size_orig;
 
+	if (lvl==0){
+		return ;
+	}else if (lvl==1){
+		_image_size.rows = _image_size.rows/2;
+		_image_size.cols = _image_size.cols/2;
+	}else if (lvl==2){
+		_image_size.rows = _image_size.rows/4;
+		_image_size.cols = _image_size.cols/4;
+	}else if (lvl==3){
+		_image_size.rows = _image_size.rows/8;
+		_image_size.cols = _image_size.cols/8;
+	}
+}

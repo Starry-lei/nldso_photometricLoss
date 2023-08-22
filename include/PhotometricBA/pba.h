@@ -185,6 +185,19 @@ public:
 	static std::map<uint32_t, Eigen::Map<const Image_<uint8_t>, Eigen::Aligned>> _image_buffer;
 
 	ImageSize   _image_size;
+	ImageSize _image_size_orig;
+
+	void setImage_size(int lvl);
+
+	Calibration _calib;
+	Image_<uint16_t> _mask;
+	Image_<float> _saliency_map;
+	Mat33 _K_inv;
+	Trajectory _trajectory;
+	int lvl=0;
+	uint32_t _frame_id = 0;
+
+
 
 
 protected:
@@ -209,19 +222,19 @@ private:
     class DescriptorError;
 
 private:
-    uint32_t _frame_id = 0;
-    Calibration _calib;
+//    uint32_t _frame_id = 0;
+//    Calibration _calib;
 //    ImageSize   _image_size;
     Options     _options;
-    Trajectory _trajectory;
+//    Trajectory _trajectory;
 	std::map<uint32_t, const uint8_t*> I_ptr_map;
 
 //    DescriptorFrameBuffer _frame_buffer;
     ScenePointPointerList _scene_points;
-    Image_<uint16_t> _mask;
-    Image_<float> _saliency_map;
+//    Image_<uint16_t> _mask;
+//    Image_<float> _saliency_map;
 
-    Mat33 _K_inv;
+//    Mat33 _K_inv;
 }; // PhotometricBundleAdjustment
 
 

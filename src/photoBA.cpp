@@ -64,7 +64,7 @@ int main(int argc, char** argv)
     signal(SIGINT, sigHandler);
     utils::ProgramOptions options;
     options
-            ("output,o", "refined_poses_es_tum_abs_pose_14072023.txt", "trajectory output file")
+            ("output,o", "refined_poses_es_absolute.txt", "trajectory output file")
             ("config,c", "../config/tum_rgbd.cfg", "config file")
             .parse(argc, argv);
 
@@ -76,7 +76,10 @@ int main(int argc, char** argv)
 	// load GT trajectory
 	//	std::string abs_pose= "../data/dataSetPBA_init_poor/Kitti_GT_00.txt";
 	//	std::string abs_pose= "../data/dataSetPBA_init_poor/GT_pose_list_fr3.txt";
-	std::string abs_pose= "../data/dataSetPBA_init_poor/01_150.txt";
+		std::string abs_pose= "../data/dataSetPBA_init_poor/01_150.txt";
+//	std::string abs_pose= "../data/dataSetPBA_init_poor/scene0370_02_seq_01_tumRGBD_segmented_reseted.txt";
+
+
 	T_init_abs_pose = loadPosesTumRGBDFormat(abs_pose);
 
 	//	T_init_abs_pose = loadPosesKittiFormat(abs_pose);
@@ -265,14 +268,37 @@ bool next_step( ){
 	EigenAlignedContainer_<Mat44> T_opt;
 	cv::Mat_<float> zmap;
 	UniquePointer<DatasetFrame> frame;
-	for(; (frame = dataset->getFrame(fid)) && !gStop; ++fid ){
-		if (fid==T_init.size()-5) {
+
+	std::string dataFolder="/home/lei/Documents/Research/nldso_photometricLoss/dataAnalysis/seq01/lvl_1_pose/";
+
+
+	int lvl=0;
+
+	photoba->lvl = lvl;
+	photoba->_calib.setKforImpyramid(lvl);
+	photoba->setImage_size(lvl);
+	photoba->_mask.resize(photoba->_image_size.rows, photoba->_image_size.cols);
+	photoba->_saliency_map.resize(photoba->_image_size.rows, photoba->_image_size.cols);
+	std::cout<<"show photoba->_calib._K_orig()\n "<<photoba->_calib._K_orig.matrix()<<std::endl;
+	std::cout<<"show new photoba->_calib.K():\n "<<photoba->_calib.K().matrix()<<std::endl;
+	std::cout<<"check _K_inv outside addFrame"<< photoba->_calib.K().matrix().inverse()<<std::endl;
+	std::cout <<"show image size: "<<photoba->_image_size.rows<<" "<<photoba->_image_size.cols<<std::endl;
+	photoba->_K_inv = photoba->_calib.K().matrix().inverse().matrix();
+
+
+
+	for(; (frame = dataset->getFrame(fid, lvl)) && !gStop; ++fid ){
+		if (fid==T_init.size()-4) {
 			std::cout <<"End of dataset reached\n";
-			auto output_fn = "refined_poses_es_tum_abs_pose.txt";
+			auto output_fn = dataFolder+ "refined_poses_es_tum_abs_pose"+ std::to_string(lvl)+ ".txt";
 			writePosesTumRGBDFormat(output_fn, result.poses, dataset->getTimestamp());
 			return false;
 		}
 		printf("Frame %05d\n", fid);
+
+//		cv::imshow("frame->image()",frame->image());
+//		cv::waitKey(0);
+
 		const uint8_t* I = frame->image().ptr<const uint8_t>();
 		float* Z =frame->depth().ptr<float>();
 		photoba->addFrame(I, Z, T_init[fid],  &result);
