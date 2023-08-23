@@ -147,6 +147,16 @@ int main(int argc, char** argv)
 	PBANL::envLightLookup  *EnvLightLookup= new PBANL::envLightLookup(argc, argv, EnvMapPath,EnvMapPosePath,frontCamPose_w);
 	photoba->EnvLightLookup= EnvLightLookup;
 
+	if (photoba->EnvLightLookup->envLightIdxMap.size() == 0)
+	{
+		std::cout<<"No environment light data!"<<std::endl;
+		return -1;
+	}
+
+
+
+//	;// control point cloud
+
 
 
 	if (show_gui) {
@@ -270,6 +280,26 @@ void draw_scene( PhotometricBundleAdjustment::Result & res,  EigenAlignedContain
 			}
 		}
 
+		// render the control points
+
+		if (photoba->EnvLightLookup->envLightIdxMap.size() > 0) {
+			glPointSize(3.0);
+			glBegin(GL_POINTS);
+			for (const auto& kv_lm : res.refinedPoints) {
+				    allRefinedPoints.push_back(kv_lm);
+				    glColor3ubv(color_points);
+				    pangolin::glVertex(kv_lm);
+			}
+
+			glEnd();
+		}
+
+
+
+
+
+
+
 		// render the refined trajectory
 		if (show_trajectory && res.poses.size() > 0) {
 			glLineWidth(2);
@@ -286,13 +316,13 @@ void draw_scene( PhotometricBundleAdjustment::Result & res,  EigenAlignedContain
 		}
 		// render the GT trajectory
 		// render 3D map points --------------anchor-------------------------
-		if (show_points3d && res.refinedPoints.size() > 0) {
-			glPointSize(3.0);
+		if (photoba->EnvLightLookup->envLightIdxMap.size() > 0) {
+			glPointSize(6.0);
 			glBegin(GL_POINTS);
-			for (const auto& kv_lm : res.refinedPoints) {
-				allRefinedPoints.push_back(kv_lm);
-				glColor3ubv(color_points);
-				pangolin::glVertex(kv_lm);
+			for (const auto& envLight : photoba->EnvLightLookup->envLightIdxMap) {
+				Vec3 point(envLight.first.x, envLight.first.y, envLight.first.z);
+				glColor3ubv(color_camera_left);
+				pangolin::glVertex(point);
 			}
 
 			glEnd();
