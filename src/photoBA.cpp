@@ -76,7 +76,7 @@ int main(int argc, char** argv)
 	// load GT trajectory
 	//	std::string abs_pose= "../data/dataSetPBA_init_poor/Kitti_GT_00.txt";
 	//	std::string abs_pose= "../data/dataSetPBA_init_poor/GT_pose_list_fr3.txt";
-		std::string abs_pose= "../data/dataSetPBA_init_poor/01_150.txt";
+		std::string abs_pose= "../data/dataSetPBA_init_poor/seq12_300_Poses_gt.txt";
 //	std::string abs_pose= "../data/dataSetPBA_init_poor/scene0370_02_seq_01_tumRGBD_segmented_reseted.txt";
 
 
@@ -288,7 +288,7 @@ bool next_step( ){
 
 
 	for(; (frame = dataset->getFrame(fid, lvl)) && !gStop; ++fid ){
-		if (fid==T_init.size()-4) {
+		if (fid==T_init.size()-3) {
 			std::cout <<"End of dataset reached\n";
 			auto output_fn = dataFolder+ "refined_poses_es_tum_abs_pose"+ std::to_string(lvl)+ ".txt";
 			writePosesTumRGBDFormat(output_fn, result.poses, dataset->getTimestamp());
