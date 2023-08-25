@@ -1109,7 +1109,8 @@ public:
 
 //		T mean_patch_value_target = patch_values_target/(PATTERN_SIZE);
 		for (size_t i = 0; i < PATTERN_SIZE; i++){
-			residuals[i] = patch_values_target[i] - (mean_patch_value_target / mean_patch_value)*T(patch_values[i]);
+//			residuals[i] = patch_values_target[i] - (mean_patch_value_target / mean_patch_value)*T(patch_values[i]);
+			residuals[i] = patch_values_target[i] - T(patch_values[i]);
 		}
 
         // maybe we should return false if the point goes out of the image!  done!
