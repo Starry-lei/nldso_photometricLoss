@@ -1156,9 +1156,9 @@ MakePatchWeights(int radius, bool do_gaussian, double s_x = 1.0,
 
 static inline float specularityWeight( Vec3 refSpecularity, Vec3 tarSpecularity)
 {
-//	Vec3 deltaSpecularity = (refSpecularity - tarSpecularity).normalized() ; // RGB
+	Vec3 deltaSpecularity = (refSpecularity - tarSpecularity).normalized() ; // RGB
 
-	Vec3 deltaSpecularity = (refSpecularity - tarSpecularity); // RGB
+//	Vec3 deltaSpecularity = (refSpecularity - tarSpecularity); // RGB
 
 	double sumWeight= 0.587* abs(deltaSpecularity.y())+0.114* abs(deltaSpecularity.x())+0.299* abs(deltaSpecularity.z());
 
@@ -1174,14 +1174,13 @@ static inline float specularityWeight( Vec3 refSpecularity, Vec3 tarSpecularity)
 		//float y = exp(-15*sumWeight);
 //		float y = exp(-6.0f*sumWeight);
 
-		float y = exp(-4.0f*sumWeight);
+		float y = 10*exp(-5.0f*sumWeight);
 
 		//		if (sumWeight<0.5f){
 		//			cout<<"y value !!!: "<<y<<endl;
 		//		}
-
-
-		return y;}
+		return y;
+	}
 
 }
 
@@ -1410,7 +1409,9 @@ public:
 //		T mean_patch_value_target = patch_values_target/(PATTERN_SIZE);
 		for (size_t i = 0; i < PATTERN_SIZE; i++){
 //			residuals[i] = patch_values_target[i] - (mean_patch_value_target / mean_patch_value)*T(patch_values[i]);
-			residuals[i] = T(patch_weights_specularity)*(patch_values_target[i] -  (mean_patch_value_target / mean_patch_value)*T(patch_values[i]));
+//			residuals[i] = T(patch_weights_specularity)*(patch_values_target[i] -  (mean_patch_value_target / mean_patch_value)*T(patch_values[i]));
+			residuals[i] = T(patch_weights_specularity)*(patch_values_target[i] -  T(patch_values[i]));
+
 		}
 
         // maybe we should return false if the point goes out of the image!  done!
@@ -1565,12 +1566,11 @@ void PhotometricBundleAdjustment::optimize(Result* result)
 							continue;
 						}
 					}
-
-					else {
-						continue;
-						// if the point has no specularity, continue
-						//specularity_weight = 1.0;
-					}
+//					else {
+////						continue;
+//						// if the point has no specularity, continue
+//						specularity_weight = 1.0;
+//					}
 
 					if (specularity_weight!=1.0){
 						cout<<"check patch_sepcularity_weight: "<<specularity_weight<<endl;

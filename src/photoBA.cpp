@@ -106,7 +106,7 @@ int main(int argc, char** argv)
 	// load GT trajectory
 	//	std::string abs_pose= "../data/dataSetPBA_init_poor/Kitti_GT_00.txt";
 	//	std::string abs_pose= "../data/dataSetPBA_init_poor/GT_pose_list_fr3.txt";
-		std::string abs_pose= "../data/dataSetPBA_init_poor/01_150.txt";
+		std::string abs_pose= "../data/dataSetPBA_init_poor/seq12_300_Poses_gt.txt";
 //	std::string abs_pose= "../data/dataSetPBA_init_poor/scene0370_02_seq_01_tumRGBD_segmented_reseted.txt";
 	    cout<<"dataset created! "<<endl;
 
@@ -384,8 +384,8 @@ bool next_step( ){
 
 		const Vec3f* N = frame->normal().ptr<Vec3f>();
 
-		cv::imshow("frame->normal()",frame->normal());
-		waitKey(0)	;
+//		cv::imshow("frame->normal()",frame->normal());
+//		waitKey(0)	;
 
 		const float* R= frame->roughness().ptr<float>();
 
