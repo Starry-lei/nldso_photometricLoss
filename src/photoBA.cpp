@@ -138,7 +138,9 @@ int main(int argc, char** argv)
 
 	// convert environment light pose the coordinate system of the first camera in PBA sequence
 	std::vector<Sophus::SE3f, Eigen::aligned_allocator<Sophus::SE3f>> trajectoryPoses;
-	string fileName = "/home/lei/Documents/Dataset/dataSetPBA/sequences/02/poses.txt";
+//	string fileName = "/home/lei/Documents/Dataset/dataSetPBA/sequences/02/poses.txt";
+	string fileName = "/home/lei/Documents/Dataset/dataSetPBA/sequences/12/300frame0370_02/cam_interpolated_poses_Env.txt";
+    // transform env light pose to the coordinate system of the first camera in PBA sequence
 	readCtrlPointPoseData(fileName, trajectoryPoses);
 	Sophus::SE3f frontCamPose_w (trajectoryPoses[0]);
 
@@ -381,6 +383,10 @@ bool next_step( ){
 		float* Z =frame->depth().ptr<float>();
 
 		const Vec3f* N = frame->normal().ptr<Vec3f>();
+
+		cv::imshow("frame->normal()",frame->normal());
+		waitKey(0)	;
+
 		const float* R= frame->roughness().ptr<float>();
 
 		if (N==nullptr || R==nullptr){

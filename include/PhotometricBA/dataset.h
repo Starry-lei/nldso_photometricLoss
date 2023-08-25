@@ -171,7 +171,13 @@ public:
 //			return D;
 
 		}
-        inline const cv::Mat& normal() const { return N; }
+        inline const cv::Mat& normal() const {
+
+
+			//TODO: preprocessing normal map
+
+			return N;
+		}
         inline const cv::Mat& roughness() const { return R; }
         inline std::string filename() const { return fn; }
 
