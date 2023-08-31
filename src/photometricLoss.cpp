@@ -46,8 +46,8 @@ int main(int argc, char **argv) {
 //    std::string envMap_Folder="/home/lei/Documents/Research/envMapData/SeventeenPointsEnvMap";
 //    string controlPointPose_path= "/home/lei/Documents/Research/envMapData/scene0370_02_control_cam_pose.txt";
 
-    std::string envMap_Folder="/home/lei/Documents/Research/envMapData/EnvMap_2358";
-    string controlPointPose_path= "/home/lei/Documents/Research/envMapData/2frame0370_02_control_cam_pose_2358.txt";
+    std::string envMap_Folder="/home/lei/Documents/Research/envMapData/renderedEnvMaps795";
+    string controlPointPose_path= "/home/lei/Documents/Research/envMapData/control_cam_pose_scene0370_02origins_down795.txt";
 
     Mat grayImage_target, grayImage_ref, depth_ref, depth_target, image_ref_baseColor, image_target_baseColor;
     Mat image_ref_metallic = dataLoader->image_ref_metallic;
@@ -418,9 +418,9 @@ bool useImgPyramid = true;
             // use estimated pose
 //            DSONL::updateDelta(dataLoader->camPose1,EnvLightLookup, statusMap,Rotation,Translation,Klvl,image_ref_baseColor,inv_depth_ref,image_ref_metallic ,image_ref_roughness,deltaMap,newNormalMap,up_new, butt_new, pointOfInterestArea_Non_Lambertian_2358);//         DSONL::updateDelta(dataLoader->camPose1,EnvLightLookup, statusMap,Rotation,Translation,Klvl,image_ref_baseColor,inv_depth_ref,image_ref_metallic ,image_ref_roughness,deltaMap,newNormalMap,up_new, butt_new);
             // use GT  pose
-//            DSONL::updateDelta(dataLoader->camPose1,EnvLightLookup, statusMap,Rotation_GT,Translation_GT,Klvl,image_ref_baseColor,inv_depth_ref,image_ref_metallic ,image_ref_roughness,deltaMap,newNormalMap,up_new, butt_new, pointOfInterestArea_Non_Lambertian_2358);
+            DSONL::updateDelta(dataLoader->camPose1,EnvLightLookup, statusMap,Rotation_GT,Translation_GT,Klvl,image_ref_baseColor,inv_depth_ref,image_ref_metallic ,image_ref_roughness,deltaMap,newNormalMap,up_new, butt_new, pointOfInterestArea_Non_Lambertian_2358);
             // deltaMapGT
-//            Mat deltaMapGT_res= deltaMapGT(grayImage_ref,depth_ref,grayImage_target,depth_target,K.cast<double>(),distanceThres,xi_GT, upper, buttom, deltaMap, statusMap, pointOfInterestArea_Non_Lambertian_2358);
+            Mat deltaMapGT_res= deltaMapGT(grayImage_ref,depth_ref,grayImage_target,depth_target,K.cast<double>(),distanceThres,xi_GT, upper, buttom, deltaMap, statusMap, pointOfInterestArea_Non_Lambertian_2358);
 
 //            for (int u = 0; u < grayImage_ref.rows; u++)// colId, cols: 0 to 480
 //            {
@@ -434,8 +434,8 @@ bool useImgPyramid = true;
 //                }
 //            }
 
-//            imshow("deltaMapGT_res",deltaMapGT_res);
-//            waitKey(0);
+            imshow("deltaMapGT_res",deltaMapGT_res);
+            waitKey(0);
 
 
             // compare deltaMap_GT with deltaMap:
