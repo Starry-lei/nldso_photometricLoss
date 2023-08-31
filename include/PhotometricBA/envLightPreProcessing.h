@@ -29,7 +29,7 @@ namespace PBANL{
     struct pointEnvlight {
 //        EIGEN_MAKE_ALIGNED_OPERATOR_NEW
         pointEnvlight(){
-            EnvmapSampler.reserve(2);
+            EnvmapSampler.reserve(1);
         }
         pointEnvlight(pointEnvlight const& );
         Sophus::SE3f envMapPose_world; //Sophus::SE3f* envMapPose_camera;

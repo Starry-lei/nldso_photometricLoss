@@ -216,7 +216,7 @@ public:
 	struct ScenePoint;
 	typedef UniquePointer<ScenePoint>      ScenePointPointer;
 
-	void specularityCalcualtion(const ScenePointPointer& pt,const Eigen::Isometry3d& T_w_beta_prime,
+	void specularityCalcualtion(const ScenePointPointer& pt, const bool self, const Image_<float>& depth, const Eigen::Isometry3d& T_w_beta_prime,
 	                            const Vec3f* N_ptr,
 	                            const float* R_ptr,
 	                            PBANL::IBL_Radiance* ibl_Radiance
@@ -252,6 +252,8 @@ private:
     Options     _options;
 //    Trajectory _trajectory;
 	std::map<uint32_t, const uint8_t*> I_ptr_map;
+	std::map<uint32_t, const Vec3f*> normal_ptr_map;
+	std::map<uint32_t, const float*> roughness_ptr_map;
 
 //    DescriptorFrameBuffer _frame_buffer;
     ScenePointPointerList _scene_points;

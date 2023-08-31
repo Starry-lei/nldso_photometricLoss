@@ -1316,7 +1316,7 @@ namespace DSONL {
 
 
         Mat deltda_map_allchannels;
-        cvtColor(pred_deltaMap, deltda_map_allchannels, CV_RGB2GRAY);
+        cvtColor(pred_deltaMap, deltda_map_allchannels, cv::COLOR_RGB2GRAY);
 
         Mat envMapWorkMap(pointOfInterest.rows, pointOfInterest.cols, CV_8UC3, Scalar(0,0,0));
         Mat correspInLeft(pointOfInterest.rows, pointOfInterest.cols, CV_8UC1, Scalar(0));

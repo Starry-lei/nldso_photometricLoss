@@ -578,6 +578,8 @@ void ExtractPatch(T* dst, const Image& I, const Vec_<int,2>& uv, int radius)
 
 
 void PhotometricBundleAdjustment::specularityCalcualtion(const ScenePointPointer& pt,
+                                                         const bool self,
+                                                         const Image_<float>& depth,
                                                          const Eigen::Isometry3d& T_w_beta_prime,
                                                          const Vec3f* N_ptr,
                                                          const float* R_ptr,
@@ -585,147 +587,306 @@ void PhotometricBundleAdjustment::specularityCalcualtion(const ScenePointPointer
                                                          ){
 	int width= _image_size.cols;
 	int height= _image_size.rows;
-	int r= pt->_x[1];
-	int c= pt->_x[0];
+
+
 	int B = std::max(_options.maskBlockRadius, std::max(2, _options.patchRadius));
 	int max_rows = (int) height - B - 1, max_cols = (int) width -  B - 1;
 
 
-	Eigen::Vector3f point_w= pt->X().cast<float>(); // point in world coordinate
-//	Eigen::Isometry3d T_w(_trajectory.atId(pt->refFrameId()).matrix());
+	Eigen::Vector3f point_w_orig= pt->X().cast<float>(); // point in world coordinate
 	Eigen::Isometry3d T_c(T_w_beta_prime.inverse());
-	Eigen::Vector3f point_c= (T_c * pt->X()).cast<float>();
-	const Vec3f& normal_pixel = N_ptr[r * width + c];
-	Vec3f normal =normalize(normal_pixel); //normal in camera coordinate
-	const float roughness_pixel= R_ptr[r * width + c];          // roughness
-	float reflectance = 1.0f;                                   // reflectance
+	Eigen::Vector3f point_c_orig= (T_c * pt->X()).cast<float>();// pt->X() is point in world coordinate, which contanins both depth and pose error, we cna not trust it
 
-	int num_K = 6;                                              // K nearest neighbor search
-	std::unordered_map<int, PBANL::pointEnvlight> envLightMap_cur;// maintain envMaps of current frame here
-	float image_metallic=1e-3;                                  // metallic
-	Eigen::Matrix<float, 3, 1> beta= -point_c;
-	Vec3f baseColor(0.0, 0.0, 0.0);                             //base color
-	Vec3f N_(normal(0), normal(1), normal(2));
-	Vec3f View_beta(beta(0), beta(1), beta(2));
+
+	Vec2 uv = _calib.project(point_c_orig.cast<double>());
+	int r_orig = std::round(uv[1]), c_orig = std::round(uv[0]);
+
+	std::vector<Vec3d> patch_specularity(PATTERN_SIZE, 0.0);
+
+	std::unordered_map<int, PBANL::pointEnvlight> envLightMap_cur;
 	std::string renderedEnvLight_path=EnvMapPath;
 
 
-	// ===================================search for Env Light from control points===================
-	pcl::PointXYZ searchPoint(point_w.x(), point_w.y(), point_w.z());
-	std::vector<int> pointIdxKNNSearch(num_K);
-	std::vector<float> pointKNNSquaredDistance(num_K);
-	Vec3f key4Search;
+	for (size_t i = 0; i < PATTERN_SIZE; i++) {
 
-	if ( EnvLightLookup->kdtree.nearestKSearch(searchPoint, num_K, pointIdxKNNSearch, pointKNNSquaredDistance) > 0)
-	{
-		float disPoint2Env_min= 10.0f;
-		int targetEnvMapIdx=-1;
-		Vec3f targetEnvMapVal;
+		int du = PATTERN_OFFSETS[i][0];
+		int dv = PATTERN_OFFSETS[i][1];
+		int c  = c_orig + du; // col
+		int r =  r_orig + dv; // row
 
-		// find the closest control point which domain contains the current point
-		for (std::size_t i = 0; i < pointIdxKNNSearch.size (); ++i) {
-			Vec3f envMap_point((*(EnvLightLookup->ControlpointCloud))[pointIdxKNNSearch[i]].x, (*(EnvLightLookup->ControlpointCloud))[pointIdxKNNSearch[i]].y,
-			                   (*(EnvLightLookup->ControlpointCloud))[pointIdxKNNSearch[i]].z);
-
-			//                        std::cout << "\n------"<<envMap_point.val[0]<< " " << envMap_point.val[1]<< " " << envMap_point.val[2]
-			//                                  << " (squared distance: " << pointKNNSquaredDistance[i] << ")" << std::endl;
-			// 0.004367 is the squared distance of the closest control point
-			if (pointKNNSquaredDistance[i] > 0.004367) { continue; }
+		Eigen::Vector3f point_c= (depth(r,c) * _K_inv * Vec3(c, r, 1.0)).cast<float>();
+		Eigen::Vector3f point_w= (T_w_beta_prime * Vec3(point_c.x(),point_c.y(), point_c.z())).cast<float>();
 
 
-			// calculate control point normal
-			// transform envMap_point to camera coordinate system
-			Eigen::Vector3f envMap_point_c1 = T_c.cast<float>() * Eigen::Vector3f(envMap_point.val[0], envMap_point.val[1], envMap_point.val[2]);
-			// project envMap_point to image plane
-			// float pixel_x = (fx * envMap_point_c1.x()) / envMap_point_c1.z() + cx;
-			// float pixel_y = (fy * envMap_point_c1.y()) / envMap_point_c1.z() + cy;
+		const Vec3f& normal_pixel = N_ptr[r * width + c];
+		Vec3f normal =normalize(normal_pixel); //normal in camera coordinate
+		const float roughness_pixel= R_ptr[r * width + c];          // roughness
+		float reflectance = 1.0f;                                   // reflectance
 
-			Vec2 uv = _calib.project(envMap_point_c1.cast<double>());
-			int r_n = std::round(uv[1]), c_n = std::round(uv[0]);
-			// check if the projected point is in the image
-			if(r_n < B || r_n >= max_rows || c_n < B || c_n >= max_cols) { continue; }
+		int num_K = 3;                                              // K nearest neighbor search
+//		std::unordered_map<int, PBANL::pointEnvlight> envLightMap_cur;// maintain envMaps of current frame here
+		float image_metallic=1e-3;                                  // metallic
+		Eigen::Matrix<float, 3, 1> beta= -point_c;
+		Vec3f baseColor(0.0, 0.0, 0.0);                             //base color
+		Vec3f N_(normal(0), normal(1), normal(2));
+		Vec3f View_beta(beta(0), beta(1), beta(2));
+//		std::string renderedEnvLight_path=EnvMapPath;
 
-			Vec3f ctrlPointNormal =  N_ptr[r_n * width + c_n];//newNormalMap.at<Vec3f>(r, c);
-			ctrlPointNormal=cv::normalize(ctrlPointNormal);
 
-			float angle_consine = ctrlPointNormal.dot(N_);
-			if (angle_consine<0.9962){ continue;} // 0.9848 is the cos(10 degree), 0.9962 is the cos(5 degree)
-			float disPoint2Env=  pointKNNSquaredDistance[i]/(ctrlPointNormal.dot(N_));
-			if (disPoint2Env<disPoint2Env_min){
-				disPoint2Env_min=disPoint2Env;
-				targetEnvMapIdx=i;
-				targetEnvMapVal=envMap_point;
+		// ===================================search for Env Light from control points===================
+		pcl::PointXYZ searchPoint(point_w.x(), point_w.y(), point_w.z());
+		std::vector<int> pointIdxKNNSearch(num_K);
+		std::vector<float> pointKNNSquaredDistance(num_K);
+		Vec3f key4Search;
+
+		if ( EnvLightLookup->kdtree.nearestKSearch(searchPoint, num_K, pointIdxKNNSearch, pointKNNSquaredDistance) > 0)
+		{
+			float disPoint2Env_min= 10.0f;
+			int targetEnvMapIdx=-1;
+			Vec3f targetEnvMapVal;
+
+			// find the closest control point which domain contains the current point
+			for (std::size_t i = 0; i < pointIdxKNNSearch.size (); ++i) {
+				Vec3f envMap_point((*(EnvLightLookup->ControlpointCloud))[pointIdxKNNSearch[i]].x, (*(EnvLightLookup->ControlpointCloud))[pointIdxKNNSearch[i]].y,
+				                   (*(EnvLightLookup->ControlpointCloud))[pointIdxKNNSearch[i]].z);
+
+				//                        std::cout << "\n------"<<envMap_point.val[0]<< " " << envMap_point.val[1]<< " " << envMap_point.val[2]
+				//                                  << " (squared distance: " << pointKNNSquaredDistance[i] << ")" << std::endl;
+				// 0.004367 is the squared distance of the closest control point
+				if (pointKNNSquaredDistance[i] > 0.004367*3) { continue; }
+
+
+				// calculate control point normal
+				// transform envMap_point to camera coordinate system
+				Eigen::Vector3f envMap_point_c1 = T_c.cast<float>() * Eigen::Vector3f(envMap_point.val[0], envMap_point.val[1], envMap_point.val[2]);
+				// project envMap_point to image plane
+				// float pixel_x = (fx * envMap_point_c1.x()) / envMap_point_c1.z() + cx;
+				// float pixel_y = (fy * envMap_point_c1.y()) / envMap_point_c1.z() + cy;
+
+				Vec2 uv = _calib.project(envMap_point_c1.cast<double>());
+				int r_n = std::round(uv[1]), c_n = std::round(uv[0]);
+				// check if the projected point is in the image
+				if(r_n < B || r_n >= max_rows || c_n < B || c_n >= max_cols) { continue; }
+
+				Vec3f ctrlPointNormal =  N_ptr[r_n * width + c_n];//newNormalMap.at<Vec3f>(r, c);
+				ctrlPointNormal=cv::normalize(ctrlPointNormal);
+
+				float angle_consine = ctrlPointNormal.dot(N_);
+				if (angle_consine<0.9848){ continue;} // 0.9848 is the cos(10 degree), 0.9962 is the cos(5 degree)
+				float disPoint2Env=  pointKNNSquaredDistance[i]/(ctrlPointNormal.dot(N_));
+				if (disPoint2Env<disPoint2Env_min){
+					disPoint2Env_min=disPoint2Env;
+					targetEnvMapIdx=i;
+					targetEnvMapVal=envMap_point;
+				}
+
+
+			}
+			if (targetEnvMapIdx!=-1){
+				key4Search.val[0] = targetEnvMapVal.val[0];
+				key4Search.val[1] = targetEnvMapVal.val[1];
+				key4Search.val[2] = targetEnvMapVal.val[2];
 			}
 
+		}
+		// if no envMap point is found, skip this point
+		if (key4Search.dot(key4Search)==0){ return ;}
 
+		int ctrlIndex= EnvLightLookup->envLightIdxMap[key4Search];
+		if ( EnvLightLookup->envLightIdxMap.size()==0){std::cerr<<"Error in EnvLight->envLightIdxMap! "<<endl;}
+
+		if (envLightMap_cur.count(ctrlIndex)==0){
+			stringstream ss;
+			string img_idx_str;
+			ss << ctrlIndex;
+			ss >> img_idx_str;
+			string name_prefix = "/envMap";
+			string renderedEnvLightfolder =renderedEnvLight_path + "/envMap" + img_idx_str + "/renderedEnvLight";
+			string renderedEnvLightDiffuse =renderedEnvLight_path + "/envMap" + img_idx_str + "/renderedEnvLightDiffuse";
+			string envMapDiffuse = renderedEnvLightDiffuse + "/envMapDiffuse_" + img_idx_str + ".pfm";
+			PBANL::pointEnvlight pEnv;
+			DSONL::EnvMapLookup *EnvMapLookup = new DSONL::EnvMapLookup();
+			EnvMapLookup->makeMipMap(pEnv.EnvmapSampler,renderedEnvLightfolder); // index_0: prefiltered Env light
+			delete EnvMapLookup;
+
+			//            diffuseMap *diffuseMap = new DSONL::diffuseMap;
+			//            diffuseMap->makeDiffuseMap(pEnv.EnvmapSampler, envMapDiffuse); // index_1: diffuse
+			//            delete diffuseMap;
+
+			envLightMap_cur.insert(make_pair(ctrlIndex, pEnv));
+			//                    cout<<"show size of envLightMap_cur:"<<envLightMap_cur.size()<<endl;
 		}
-		if (targetEnvMapIdx!=-1){
-			key4Search.val[0] = targetEnvMapVal.val[0];
-			key4Search.val[1] = targetEnvMapVal.val[1];
-			key4Search.val[2] = targetEnvMapVal.val[2];
-		}
+
+		DSONL::prefilteredEnvmapSampler= & ( envLightMap_cur[ctrlIndex].EnvmapSampler[0]);
+		DSONL::brdfSampler_ = & (EnvLightLookup->brdfSampler[0]);
+		//diffuseSampler = & (envLightMap_cur[ctrlIndex].EnvmapSampler[1]);
+		// ===================================RADIANCE-COMPUTATION====================================
+		//PBANL::IBL_Radiance *ibl_Radiance = new PBANL::IBL_Radiance;
+		Sophus::SO3f enterPanoroma;
+		Sophus::SE3d T_c2w(T_w_beta_prime.rotation(), T_w_beta_prime.translation());
+		// TODO: convert the envmap to current "world coordinate" in advance !!!!!! done
+		Vec3f radiance_beta = ibl_Radiance->solveForRadiance(View_beta, N_, roughness_pixel, image_metallic,
+		                                                     reflectance, baseColor, T_c2w.rotationMatrix(),
+		                                                     enterPanoroma.inverse());
+
+		Vec3 radiance_beta_(radiance_beta[0],radiance_beta[1],radiance_beta[2]);
+
+		if (isnan(radiance_beta[0])){ continue ;}
+
+
+		patch_specularity.push_back(Vec3d(radiance_beta[0],radiance_beta[1],radiance_beta[2]));
 
 	}
-	// if no envMap point is found, skip this point
-	if (key4Search.dot(key4Search)==0){ return ;}
 
-	int ctrlIndex= EnvLightLookup->envLightIdxMap[key4Search];
-	if ( EnvLightLookup->envLightIdxMap.size()==0){std::cerr<<"Error in EnvLight->envLightIdxMap! "<<endl;}
 
-	if (envLightMap_cur.count(ctrlIndex)==0){
-		stringstream ss;
-		string img_idx_str;
-		ss << ctrlIndex;
-		ss >> img_idx_str;
-		string name_prefix = "/envMap";
 
-		string renderedEnvLightfolder =renderedEnvLight_path + "/envMap" + img_idx_str + "/renderedEnvLight";
-		string renderedEnvLightDiffuse =renderedEnvLight_path + "/envMap" + img_idx_str + "/renderedEnvLightDiffuse";
-		string envMapDiffuse = renderedEnvLightDiffuse + "/envMapDiffuse_" + img_idx_str + ".pfm";
-		PBANL::pointEnvlight pEnv;
-		DSONL::EnvMapLookup *EnvMapLookup = new DSONL::EnvMapLookup();
-		EnvMapLookup->makeMipMap(pEnv.EnvmapSampler,renderedEnvLightfolder); // index_0: prefiltered Env light
-		delete EnvMapLookup;
 
-		//            diffuseMap *diffuseMap = new DSONL::diffuseMap;
-		//            diffuseMap->makeDiffuseMap(pEnv.EnvmapSampler, envMapDiffuse); // index_1: diffuse
-		//            delete diffuseMap;
-
-		envLightMap_cur.insert(make_pair(ctrlIndex, pEnv));
-		//                    cout<<"show size of envLightMap_cur:"<<envLightMap_cur.size()<<endl;
+	if (pt->_x[0]==339 && pt->_x[1]==236){
+		cout<<"debug"<<endl;
+		cout<<"show T_w_beta_prime:\n"<<T_w_beta_prime.matrix()<<endl;
+		// show current r, c
+		cout<<"r: "<<r_orig<<", c: "<<c_orig<<endl;
 	}
 
-	DSONL::prefilteredEnvmapSampler= & ( envLightMap_cur[ctrlIndex].EnvmapSampler[0]);
-	DSONL::brdfSampler_ = & (EnvLightLookup->brdfSampler[0]);
-	//diffuseSampler = & (envLightMap_cur[ctrlIndex].EnvmapSampler[1]);
-	// ===================================RADIANCE-COMPUTATION====================================
-	//PBANL::IBL_Radiance *ibl_Radiance = new PBANL::IBL_Radiance;
-	Sophus::SO3f enterPanoroma;
-	Sophus::SE3d T_c2w(T_w_beta_prime.rotation(), T_w_beta_prime.translation());
-	// TODO: convert the envmap to current "world coordinate" in advance !!!!!! done
-	Vec3f radiance_beta = ibl_Radiance->solveForRadiance(View_beta, N_, roughness_pixel, image_metallic,
-	                                                     reflectance, baseColor, T_c2w.rotationMatrix(),
-	                                                     enterPanoroma.inverse());
 
-	Vec3 radiance_beta_(radiance_beta[0],radiance_beta[1],radiance_beta[2]);
+//	const Vec3f& normal_pixel = N_ptr[r * width + c];
+//	Vec3f normal =normalize(normal_pixel); //normal in camera coordinate
+//	const float roughness_pixel= R_ptr[r * width + c];          // roughness
+//	float reflectance = 1.0f;                                   // reflectance
+//
+//	int num_K = 6;                                              // K nearest neighbor search
+//	std::unordered_map<int, PBANL::pointEnvlight> envLightMap_cur;// maintain envMaps of current frame here
+//	float image_metallic=1e-3;                                  // metallic
+//	Eigen::Matrix<float, 3, 1> beta= -point_c;
+//	Vec3f baseColor(0.0, 0.0, 0.0);                             //base color
+//	Vec3f N_(normal(0), normal(1), normal(2));
+//	Vec3f View_beta(beta(0), beta(1), beta(2));
+//	std::string renderedEnvLight_path=EnvMapPath;
+//
+//
+//	// ===================================search for Env Light from control points===================
+//	pcl::PointXYZ searchPoint(point_w.x(), point_w.y(), point_w.z());
+//	std::vector<int> pointIdxKNNSearch(num_K);
+//	std::vector<float> pointKNNSquaredDistance(num_K);
+//	Vec3f key4Search;
+//
+//	if ( EnvLightLookup->kdtree.nearestKSearch(searchPoint, num_K, pointIdxKNNSearch, pointKNNSquaredDistance) > 0)
+//	{
+//		float disPoint2Env_min= 10.0f;
+//		int targetEnvMapIdx=-1;
+//		Vec3f targetEnvMapVal;
+//
+//		// find the closest control point which domain contains the current point
+//		for (std::size_t i = 0; i < pointIdxKNNSearch.size (); ++i) {
+//			Vec3f envMap_point((*(EnvLightLookup->ControlpointCloud))[pointIdxKNNSearch[i]].x, (*(EnvLightLookup->ControlpointCloud))[pointIdxKNNSearch[i]].y,
+//			                   (*(EnvLightLookup->ControlpointCloud))[pointIdxKNNSearch[i]].z);
+//
+//			//                        std::cout << "\n------"<<envMap_point.val[0]<< " " << envMap_point.val[1]<< " " << envMap_point.val[2]
+//			//                                  << " (squared distance: " << pointKNNSquaredDistance[i] << ")" << std::endl;
+//			// 0.004367 is the squared distance of the closest control point
+//			if (pointKNNSquaredDistance[i] > 0.004367) { continue; }
+//
+//
+//			// calculate control point normal
+//			// transform envMap_point to camera coordinate system
+//			Eigen::Vector3f envMap_point_c1 = T_c.cast<float>() * Eigen::Vector3f(envMap_point.val[0], envMap_point.val[1], envMap_point.val[2]);
+//			// project envMap_point to image plane
+//			// float pixel_x = (fx * envMap_point_c1.x()) / envMap_point_c1.z() + cx;
+//			// float pixel_y = (fy * envMap_point_c1.y()) / envMap_point_c1.z() + cy;
+//
+//			Vec2 uv = _calib.project(envMap_point_c1.cast<double>());
+//			int r_n = std::round(uv[1]), c_n = std::round(uv[0]);
+//			// check if the projected point is in the image
+//			if(r_n < B || r_n >= max_rows || c_n < B || c_n >= max_cols) { continue; }
+//
+//			Vec3f ctrlPointNormal =  N_ptr[r_n * width + c_n];//newNormalMap.at<Vec3f>(r, c);
+//			ctrlPointNormal=cv::normalize(ctrlPointNormal);
+//
+//			float angle_consine = ctrlPointNormal.dot(N_);
+//			if (angle_consine<0.9962){ continue;} // 0.9848 is the cos(10 degree), 0.9962 is the cos(5 degree)
+//			float disPoint2Env=  pointKNNSquaredDistance[i]/(ctrlPointNormal.dot(N_));
+//			if (disPoint2Env<disPoint2Env_min){
+//				disPoint2Env_min=disPoint2Env;
+//				targetEnvMapIdx=i;
+//				targetEnvMapVal=envMap_point;
+//			}
+//
+//
+//		}
+//		if (targetEnvMapIdx!=-1){
+//			key4Search.val[0] = targetEnvMapVal.val[0];
+//			key4Search.val[1] = targetEnvMapVal.val[1];
+//			key4Search.val[2] = targetEnvMapVal.val[2];
+//		}
+//
+//	}
+//	// if no envMap point is found, skip this point
+//	if (key4Search.dot(key4Search)==0){ return ;}
+//
+//	int ctrlIndex= EnvLightLookup->envLightIdxMap[key4Search];
+//	if ( EnvLightLookup->envLightIdxMap.size()==0){std::cerr<<"Error in EnvLight->envLightIdxMap! "<<endl;}
+//
+//	if (envLightMap_cur.count(ctrlIndex)==0){
+//		stringstream ss;
+//		string img_idx_str;
+//		ss << ctrlIndex;
+//		ss >> img_idx_str;
+//		string name_prefix = "/envMap";
+//
+//		string renderedEnvLightfolder =renderedEnvLight_path + "/envMap" + img_idx_str + "/renderedEnvLight";
+//		string renderedEnvLightDiffuse =renderedEnvLight_path + "/envMap" + img_idx_str + "/renderedEnvLightDiffuse";
+//		string envMapDiffuse = renderedEnvLightDiffuse + "/envMapDiffuse_" + img_idx_str + ".pfm";
+//		PBANL::pointEnvlight pEnv;
+//		DSONL::EnvMapLookup *EnvMapLookup = new DSONL::EnvMapLookup();
+//		EnvMapLookup->makeMipMap(pEnv.EnvmapSampler,renderedEnvLightfolder); // index_0: prefiltered Env light
+//		delete EnvMapLookup;
+//
+//		//            diffuseMap *diffuseMap = new DSONL::diffuseMap;
+//		//            diffuseMap->makeDiffuseMap(pEnv.EnvmapSampler, envMapDiffuse); // index_1: diffuse
+//		//            delete diffuseMap;
+//
+//		envLightMap_cur.insert(make_pair(ctrlIndex, pEnv));
+//		//                    cout<<"show size of envLightMap_cur:"<<envLightMap_cur.size()<<endl;
+//	}
+//
+//	DSONL::prefilteredEnvmapSampler= & ( envLightMap_cur[ctrlIndex].EnvmapSampler[0]);
+//	DSONL::brdfSampler_ = & (EnvLightLookup->brdfSampler[0]);
+//	//diffuseSampler = & (envLightMap_cur[ctrlIndex].EnvmapSampler[1]);
+//	// ===================================RADIANCE-COMPUTATION====================================
+//	//PBANL::IBL_Radiance *ibl_Radiance = new PBANL::IBL_Radiance;
+//	Sophus::SO3f enterPanoroma;
+//	Sophus::SE3d T_c2w(T_w_beta_prime.rotation(), T_w_beta_prime.translation());
+//	// TODO: convert the envmap to current "world coordinate" in advance !!!!!! done
+//	Vec3f radiance_beta = ibl_Radiance->solveForRadiance(View_beta, N_, roughness_pixel, image_metallic,
+//	                                                     reflectance, baseColor, T_c2w.rotationMatrix(),
+//	                                                     enterPanoroma.inverse());
+//
+//	Vec3 radiance_beta_(radiance_beta[0],radiance_beta[1],radiance_beta[2]);
 
 	//	cout<<"radiance_beta: "<<radiance_beta<<endl;
 
-	if(radiance_beta_.x()<0 || radiance_beta_.y()<0 || radiance_beta_.z()<0 || radiance_beta_.x()>1e5 || radiance_beta_.y()>1e5 || radiance_beta_.z()>1e5)
-	{
-		cout<<"radiance_beta: "<<radiance_beta<<endl;
+	// average the patch radiance in patch_specularity
+	Vec3f radiance_beta_avg(0,0,0);
+	for (int i = 0; i < patch_specularity.size(); ++i) {
+		radiance_beta_avg += patch_specularity[i];
+	}
+	radiance_beta_avg *= 1.0f/patch_specularity.size();
 
-		cout<<"radiance_beta_.x()<0 || radiance_beta_.y()<0 || radiance_beta_.z()<0"<<endl;
-//		exit(0);
+	if(  radiance_beta_avg.val[0]>1e5 || radiance_beta_avg.val[1]>1e5 || radiance_beta_avg.val[2]>1e5)
+	{
+//		cout<<"radiance_beta: "<<radiance_beta<<endl;
+//		cout<<"show the point pixel position: "<<endl;
+//		cout<<"show its frame id:"<< pt->refFrameId()<<endl;
+//		cout<<"pixel_x: "<<pt->_x[1]<<"pixel_y "<<pt->_x[0]<<endl;
+//
+//		cout<<"radiance_beta_.x()<0 || radiance_beta_.y()<0 || radiance_beta_.z()<0"<<endl;
+//		// exit(0);
 
 		return ;
 	}
 
 
-
-
-
-	pt->specularitySequence.insert(make_pair(_frame_id,Vec3(radiance_beta[0],radiance_beta[1],radiance_beta[2])));
+	pt->specularitySequence.insert(make_pair(_frame_id,Vec3(radiance_beta_avg[0],radiance_beta_avg[1],radiance_beta_avg[2])));
 
 //	pt->specularitySequence[_frame_id]=radiance_beta_;
 
@@ -744,6 +905,8 @@ void PhotometricBundleAdjustment::
     typedef Eigen::Map<const Image_<uint8_t>, Eigen::Aligned> SrcMap;
     auto I = SrcMap(I_ptr, _image_size.rows, _image_size.cols);
 	I_ptr_map[_frame_id] = I_ptr;
+	normal_ptr_map[_frame_id] = N_ptr;
+	roughness_ptr_map[_frame_id] = R_ptr;
     typedef Eigen::Map<const Image_<float>, Eigen::Aligned> SrcDepthMap;
     auto Z = SrcDepthMap(Z_ptr, _image_size.rows, _image_size.cols);
     // check the depth map
@@ -778,17 +941,19 @@ void PhotometricBundleAdjustment::
             ++max_num_to_update;
             int r = std::round(uv[1]), c = std::round(uv[0]);
 
+
+
             if(r >= B && r < max_rows && c >= B && c <= max_cols) {
                 typename ScenePoint::ZnccPatchType other_patch(I, uv);
-                auto score = pt->patch().score( other_patch );
+                auto score = pt->patch().score( other_patch);
                 if(score > _options.minScore) {
                     num_updated++;
 																	// old TODO update the patch for the new frame data
                     pt->addFrame(_frame_id);
 
-
-					// calculate specularity
-					specularityCalcualtion(pt, T_w, N_ptr, R_ptr, ibl_Radiance);
+//					bool view_beta = false;
+//					// calculate specularity
+//					specularityCalcualtion(pt, view_beta, Z, T_w, N_ptr, R_ptr, ibl_Radiance);
 
                     //
                     // block an area in the mask to prevent initializing redundant new
@@ -879,7 +1044,6 @@ void PhotometricBundleAdjustment::
                 }
             }
 
-
         }
     }
 
@@ -896,14 +1060,56 @@ void PhotometricBundleAdjustment::
 
 	std::cout<<"show final new scene points size: "<<new_scene_points.size()<<std::endl;
 
+	cv::Mat weightMap_frame_3 = cv::Mat::zeros(480,640,CV_8UC1);
+	cv::Mat selectedPoints_frame_3 = cv::Mat::zeros(480,640,CV_8UC1);
+	cv::Mat weightMap_frame_5 = cv::Mat::zeros(480,640,CV_8UC1);
+	cv::Mat weightMap_frame_7 = cv::Mat::zeros(480,640,CV_8UC1);
 
-	for(size_t i = 0; i < new_scene_points.size(); ++i) {
+//	for(size_t i = 0; i < new_scene_points.size(); ++i) {
+//		bool view_beta = true;
+//		const auto& pt = new_scene_points[i];
+//		specularityCalcualtion(pt,view_beta,Z, T_w,N_ptr,R_ptr,ibl_Radiance);
+//
+//		if(pt->refFrameId()==3){
+//
+//			selectedPoints_frame_3.at<uchar>(pt->_x[1],pt->_x[0]) = 255;
+//
+//			if (pt->specularitySequence.size()>=1){
+//				Vec3 specularityVal(pt->specularitySequence[pt->refFrameId()]);
+//				Vec3 channelWeight(0.114,0.587,0.299);
+//				double specularity = specularityVal.x()*channelWeight.x()+specularityVal.y()*channelWeight.y()+specularityVal.z()*channelWeight.z();
+//				std::cout<<"specularityVal: "<<specularity<<std::endl;
+//				weightMap_frame_3.at<uchar>(pt->_x[1],pt->_x[0]) = specularity*255;
+//			}
+//		}
+//
+//		if (pt->refFrameId()==7){
+//			if (pt->specularitySequence.size()>=1){
+//			Vec3 specularityVal(pt->specularitySequence[pt->refFrameId()]);
+//			Vec3 channelWeight(0.114,0.587,0.299);
+//			double specularity = specularityVal.x()*channelWeight.x()+specularityVal.y()*channelWeight.y()+specularityVal.z()*channelWeight.z();
+//			std::cout<<"specularityVal: "<<specularity<<std::endl;
+//			weightMap_frame_7.at<uchar>(pt->_x[1],pt->_x[0]) = specularity*255;
+////			weightMap_frame_5.at<cv::Vec3b>(pt->_x[1],pt->_x[0]) = Vec3b((pt->specularitySequence[pt->refFrameId()]*255).x(),(pt->specularitySequence[pt->refFrameId()]*255).y(),(pt->specularitySequence[pt->refFrameId()]*255).z());
+//		}
+//
+//		}
+//	}
 
-		const auto& pt = new_scene_points[i];
-		specularityCalcualtion(pt,T_w,N_ptr,R_ptr,ibl_Radiance);
-
-	}
-
+//	if (_frame_id==3){
+//		std::string weightMapPath = "/home/lei/Documents/Dataset/data_Analysis/seq12/weightMap/weightMap_frame_3.png";
+//		std::string selectedPointsPath = "/home/lei/Documents/Dataset/data_Analysis/seq12/weightMap/selectedPoints_frame_3.png";
+//		cv::imwrite(selectedPointsPath,selectedPoints_frame_3);
+//		cv::imwrite(weightMapPath,weightMap_frame_3);
+//	}
+//	if (_frame_id==7){
+//		// save the weight map
+//		std::string weightMapPath = "/home/lei/Documents/Dataset/data_Analysis/seq12/weightMap/weightMap_frame_5.png";
+////		imshow("weightMap_frame_5",weightMap_frame_7);
+////		waitKey(0);
+//
+//		cv::imwrite(weightMapPath,weightMap_frame_7);
+//	}
 	delete ibl_Radiance;
 
 
@@ -952,10 +1158,16 @@ void PhotometricBundleAdjustment::
 		int counter_frame4 = 0;
 		int counter_frame5 = 0;
 		for(auto& pt : _scene_points) {
-
 			if(pt->numFrames() >= 3 && pt->refFrameId() >= frame_id_start) {
-
 				if (pt->refFrameId()== frame_id_start){
+
+					//TODO:calculate the specularity value of the point
+
+
+
+
+
+
 					counter_frame1++;
 				}else if(pt->refFrameId()== frame_id_start+1){
 					counter_frame2++;
@@ -972,11 +1184,11 @@ void PhotometricBundleAdjustment::
 		}
 
 		// print the number of points in each frame in the current round of optimization
-		std::cout<<"number of points in frame 0: "<<counter_frame1<<std::endl;
-		std::cout<<"number of points in frame 1: "<<counter_frame2<<std::endl;
-		std::cout<<"number of points in frame 2: "<<counter_frame3<<std::endl;
-		std::cout<<"number of points in frame 3: "<<counter_frame4<<std::endl;
-		std::cout<<"number of points in frame 4: "<<counter_frame5<<std::endl;
+//		std::cout<<"number of points in frame 0: "<<counter_frame1<<std::endl;
+//		std::cout<<"number of points in frame 1: "<<counter_frame2<<std::endl;
+//		std::cout<<"number of points in frame 2: "<<counter_frame3<<std::endl;
+//		std::cout<<"number of points in frame 3: "<<counter_frame4<<std::endl;
+//		std::cout<<"number of points in frame 4: "<<counter_frame5<<std::endl;
 
 
 //        for(auto& pt : _scene_points) {
@@ -1024,60 +1236,71 @@ void PhotometricBundleAdjustment::
 		int counter_specu_size_3=0;
 		int counter_specu_size_4=0;
 		int counter_specu_size_5=0;
-		for(auto& pt : _scene_points) {
-			// statistics of the visibilityList size of all point
-			if (pt->visibilityList().size()==1){
-				counter_size_1++;
-			}else if (pt->visibilityList().size()==2){
-				counter_size_2++;
-			}else if (pt->visibilityList().size()==3){
-				counter_size_3++;
-			}else if (pt->visibilityList().size()==4){
-				counter_size_4++;
-			}else if (pt->visibilityList().size()==5){
-				counter_size_5++;
-			}
-		}
-
-		for (auto &pt : _scene_points) {
-//			for (auto& ele :pt->specularitySequence) {
-//				cout<<"show pt->specularitySequence["<<ele.first<<"]: \n "<<ele.second<<endl;
-//
+//		for(auto& pt : _scene_points) {
+//			// statistics of the visibilityList size of all point
+//			if (pt->visibilityList().size()==1){
+//				counter_size_1++;
+//			}else if (pt->visibilityList().size()==2){
+//				counter_size_2++;
+//			}else if (pt->visibilityList().size()==3){
+//				counter_size_3++;
+//			}else if (pt->visibilityList().size()==4){
+//				counter_size_4++;
+//			}else if (pt->visibilityList().size()==5){
+//				counter_size_5++;
 //			}
-			if (pt->specularitySequence.size()==1){
-				counter_specu_size_1++;
-			}else if (pt->specularitySequence.size()==2){
-				counter_specu_size_2++;
-			}else if (pt->specularitySequence.size()==3){
-				counter_specu_size_3++;
-			}else if (pt->specularitySequence.size()==4){
-				counter_specu_size_4++;
-			}else if (pt->specularitySequence.size()==5){
-				counter_specu_size_5++;
-			}
-		}
+//		}
+
+//		for (auto &pt : _scene_points) {
+////			for (auto& ele :pt->specularitySequence) {
+////				cout<<"show pt->specularitySequence["<<ele.first<<"]: \n "<<ele.second<<endl;
+////
+////			}
+//			if (pt->specularitySequence.size()==1){
+//				counter_specu_size_1++;
+//			}else if (pt->specularitySequence.size()==2){
+//				counter_specu_size_2++;
+//			}else if (pt->specularitySequence.size()==3){
+//				counter_specu_size_3++;
+//			}else if (pt->specularitySequence.size()==4){
+//				counter_specu_size_4++;
+//			}else if (pt->specularitySequence.size()==5){
+//				counter_specu_size_5++;
+//			}
+//		}
 
 		// check if visibility has the same length of specularity sequence
 		for(auto& pt : _scene_points) {
-			if (pt->visibilityList().size()==pt->specularitySequence.size()){
-				countSame++;
-			}else{
-				countDiff++;
+
+			if( pt->refFrameId()==3 &&pt->visibilityList().size()>=3 ) {
+				for (auto &ele : pt->specularitySequence) {
+					std::cout<<"pt->_x[0]"<<pt->_x[0]<<"and pt->_x[1]"<<pt->_x[1]<<std::endl;
+					std::cerr<< "show pt->specularitySequence[" << ele.first << "]: \n " << ele.second << endl;
+				}
 			}
+
+
+//			if (pt->visibilityList().size()==pt->specularitySequence.size()){
+//				countSame++;
+//			}else{
+//				countDiff++;
+//			}
 		}
 
-		Info("\n counter_size_1:  %d", counter_size_1);
-		Info("\n counter_size_2:  %d", counter_size_2);
-		Info("\n counter_size_3:  %d", counter_size_3);
-		Info("\n counter_size_4:  %d", counter_size_4);
-		Info("\n counter_size_5:  %d", counter_size_5);
-		Info("\n countSame:  %d", countSame);
-		Info("\n countDiff:  %d", countDiff);
-		Info("\n counter_specu_size_1:  %d", counter_specu_size_1);
-		Info("\n counter_specu_size_2:  %d", counter_specu_size_2);
-		Info("\n counter_specu_size_3:  %d", counter_specu_size_3);
-		Info("\n counter_specu_size_4:  %d", counter_specu_size_4);
-		Info("\n counter_specu_size_5:  %d", counter_specu_size_5);
+//		Info("\n counter_size_1:  %d", counter_size_1);
+//		Info("\n counter_size_2:  %d", counter_size_2);
+//		Info("\n counter_size_3:  %d", counter_size_3);
+//		Info("\n counter_size_4:  %d", counter_size_4);
+//		Info("\n counter_size_5:  %d", counter_size_5);
+//		Info("\n countSame:  %d", countSame);
+//		Info("\n countDiff:  %d", countDiff);
+//		Info("\n counter_specu_size_1:  %d", counter_specu_size_1);
+//		Info("\n counter_specu_size_2:  %d", counter_specu_size_2);
+//		Info("\n counter_specu_size_3:  %d", counter_specu_size_3);
+//		Info("\n counter_specu_size_4:  %d", counter_specu_size_4);
+//		Info("\n counter_specu_size_5:  %d", counter_specu_size_5);
+
+
 
 
 
@@ -1154,31 +1377,57 @@ MakePatchWeights(int radius, bool do_gaussian, double s_x = 1.0,
 
 
 
+//static inline float specularityWeight( Vec3 refSpecularity, Vec3 tarSpecularity)
+//{
+//
+////	refSpecularity = refSpecularity.normalized();
+////	tarSpecularity = tarSpecularity.normalized();
+////
+////	double similarity = refSpecularity.dot(tarSpecularity);
+//
+////
+//	Vec3 deltaSpecularity = (refSpecularity - tarSpecularity).normalized() ; // RGB
+//////	Vec3 deltaSpecularity = (refSpecularity - tarSpecularity); // RGB
+//	double sumWeight= 0.587* abs(deltaSpecularity.y())+0.114* abs(deltaSpecularity.x())+0.299* abs(deltaSpecularity.z());
+//
+//	//	if (sumWeight<0.5f){
+//	//		cout<<"sumWeight great than 0.5 !!!: "<<sumWeight<<endl;
+//	//	}
+//
+//	//	Info("CHECKING sumWeight %d\n", sumWeight);
+//
+//	if (sumWeight==0.0f){
+//		return -1.0;}
+//	else{
+////		float y = exp(-15*sumWeight);
+//		float y = exp(-6.0f*sumWeight);
+//
+////		float y = 10*exp(-5.0f*sumWeight);
+//
+////		float y = similarity;
+//
+//		//		if (sumWeight<0.5f){
+//		//			cout<<"y value !!!: "<<y<<endl;
+//		//		}
+//		return y;
+//	}
+//
+//}
+//
+
 static inline float specularityWeight( Vec3 refSpecularity, Vec3 tarSpecularity)
 {
-	Vec3 deltaSpecularity = (refSpecularity - tarSpecularity).normalized() ; // RGB
 
-//	Vec3 deltaSpecularity = (refSpecularity - tarSpecularity); // RGB
 
-	double sumWeight= 0.587* abs(deltaSpecularity.y())+0.114* abs(deltaSpecularity.x())+0.299* abs(deltaSpecularity.z());
+	Vec3 deltaSpecularity = (refSpecularity - tarSpecularity) ; // RGB
 
-	//	if (sumWeight<0.5f){
-	//		cout<<"sumWeight great than 0.5 !!!: "<<sumWeight<<endl;
-	//	}
+	double sumWeight= 0.587* abs(deltaSpecularity.y()/refSpecularity.y())+0.114* abs(deltaSpecularity.x()/refSpecularity.x())+0.299* abs(deltaSpecularity.z()/refSpecularity.z());
 
-	//	Info("CHECKING sumWeight %d\n", sumWeight);
 
 	if (sumWeight==0.0f){
 		return -1.0;}
 	else{
-		//float y = exp(-15*sumWeight);
-//		float y = exp(-6.0f*sumWeight);
-
-		float y = 10*exp(-5.0f*sumWeight);
-
-		//		if (sumWeight<0.5f){
-		//			cout<<"y value !!!: "<<y<<endl;
-		//		}
+		float y = exp(-4.8f*sumWeight);
 		return y;
 	}
 
@@ -1267,7 +1516,7 @@ public:
 
 		patch_weights_specularity=w;
         // TODO should just pass the config to get the radius value
-        assert( p0.size() == w.size() );
+//        assert( p0.size() == w.size() );
     }
 	std::vector<double> patch_values;
 	double patch_weights_specularity;
@@ -1505,6 +1754,10 @@ void PhotometricBundleAdjustment::optimize(Result* result)
 
 	int depth_counter=0;
 
+//	cv::Mat weightMap_3To5 = cv::Mat::zeros(480, 640, CV_32FC1);
+	Mat Change(480, 640, CV_32FC1, Scalar(0));
+
+
 	for(auto& pt : _scene_points) {
 
         if(pt->numFrames() >= 3 && pt->refFrameId() >= frame_id_start) {
@@ -1541,6 +1794,7 @@ void PhotometricBundleAdjustment::optimize(Result* result)
 			// the key is to use projected patch to calculate the residual
 
 
+
             for(auto id : pt->visibilityList()) {
 
                 if(id >= frame_id_start && id <= frame_id_end) {
@@ -1554,27 +1808,32 @@ void PhotometricBundleAdjustment::optimize(Result* result)
                     pt->setRefined(true);
 					float specularity_weight = 1.0;
 
-					if(pt->specularitySequence.find(id) != pt->specularitySequence.end()){
-						specularity_weight = specularityWeight(pt->specularitySequence[pt->refFrameId()],pt->specularitySequence[id]);
-
-						if (specularity_weight==-1){
-							specularity_weight=1.0f;
-						}
-						if (isnan(specularity_weight)){
-//							specularity_weight=1.0f;
-
-							continue;
-						}
-					}
+//					if(pt->specularitySequence.find(id) != pt->specularitySequence.end()){
+//						specularity_weight = specularityWeight(pt->specularitySequence[pt->refFrameId()],pt->specularitySequence[id]);
+//
+//						if (pt->refFrameId()==3 && id==7){
+////							Vec3 channelWeight(0.114,0.587,0.299);
+//							Vec3 specularityChange= (pt->specularitySequence[pt->refFrameId()] - pt->specularitySequence[id]);
+////							double orig= pt->specularitySequence[pt->refFrameId()] .x()*channelWeight.x()+pt->specularitySequence[pt->refFrameId()].y()*channelWeight.y()+pt->specularitySequence[pt->refFrameId()].z()*channelWeight.z();
+////							double specularity = abs(specularityChange.x())*channelWeight.x()+abs(specularityChange.y())*channelWeight.y()+abs(specularityChange.z())*channelWeight.z();
+//
+//							double specularity= 0.587* abs(specularityChange.y()/pt->specularitySequence[pt->refFrameId()].y())+0.114* abs(specularityChange.x()/pt->specularitySequence[pt->refFrameId()].x())+0.299* abs(specularityChange.z()/pt->specularitySequence[pt->refFrameId()].z());
+//
+//							Change.at<float>(pt->_x[1], pt->_x[0]) = (specularity);
+//							std::cout<<"specularity_weight: "<<specularity_weight<<std::endl;
+//						}
+//						if (specularity_weight==-1){
+//							specularity_weight=0.0f;
+//						}
+//
+//					}
 //					else {
 ////						continue;
 //						// if the point has no specularity, continue
 //						specularity_weight = 1.0;
 //					}
 
-					if (specularity_weight!=1.0){
-						cout<<"check patch_sepcularity_weight: "<<specularity_weight<<endl;
-					}
+
 
 
 
@@ -1606,8 +1865,44 @@ void PhotometricBundleAdjustment::optimize(Result* result)
 
                 }
             }
-        }
+
+
+
+
+
+
+		}
     }
+
+
+//	if (_frame_id==7){
+//		//save the weight map
+//		std::string weightMapPath = "/home/lei/Documents/Dataset/data_Analysis/seq12/weightMap/specularityRelativetMap_3To7.png";
+//		cv::imwrite(weightMapPath, Change);
+//
+//		double minVal; double maxVal;
+//		minMaxLoc( Change, &minVal, &maxVal);
+//		cout<<"minVal:"<<minVal<<endl;
+//		cout<<"maxVal:"<<maxVal<<endl;
+//
+//		Change = Change/maxVal;
+//
+//		Change.convertTo(Change, CV_8UC1, 255.0);
+//
+//		cv::Mat mask = (Change>0);
+//		cv::Mat colorMappedImage;
+//		cv::applyColorMap(Change, colorMappedImage, cv::COLORMAP_JET); // You can choose different colormaps
+//		cv::Mat outputImage = colorMappedImage.clone();
+//
+//		// Apply the mask to the color-mapped image
+//		outputImage.setTo(cv::Scalar(0, 0, 0), ~mask);
+//
+//		// save outputImage
+//		std::string outputImagePath = "/home/lei/Documents/Dataset/data_Analysis/seq12/weightMap/specularityRelativetMap_3To7_color.png";
+//		cv::imwrite(outputImagePath, outputImage);
+//
+//
+//	}
 
 
 //	for(uint32_t id = frame_id_start; id <= frame_id_end; ++id) {
@@ -1664,18 +1959,10 @@ void PhotometricBundleAdjustment::optimize(Result* result)
 
 	// put back the refined depth values
 
-		for(auto& pt : _scene_points) {
-			if(pt->numFrames() >= 3 && pt->refFrameId() >= frame_id_start) {
-				for(auto id : pt->visibilityList()) {
-					if(id >= frame_id_start && id <= frame_id_end) {
-					const Eigen::Isometry3d refined_camera_pose_w(_trajectory.atId(pt->refFrameId()));
-//						Vec3 X = refined_camera_pose_w * ((1.0/pt->inv_depth) * _K_inv * Vec3(pt->_x[0], pt->_x[1], 1.0)); // X in the world frame
-					Vec3 X = refined_camera_pose_w * ((pt->ori_depth) * _K_inv * Vec3(pt->_x[0], pt->_x[1], 1.0)); // X in the world frame
-
-					pt->X() = X;
-					}
-				}
-			}
+	for(auto& pt : _scene_points) {
+		const Eigen::Isometry3d refined_camera_pose_w(_trajectory.atId(pt->refFrameId()));
+		Vec3 X = refined_camera_pose_w * ((pt->ori_depth) * _K_inv * Vec3(pt->_x[0], pt->_x[1], 1.0)); // X in the world frame
+		pt->X() = X;
 		}
 
 

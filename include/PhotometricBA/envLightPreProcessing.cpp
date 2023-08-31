@@ -170,7 +170,7 @@ namespace PBANL {
         envMapPose_world=old.envMapPose_world;
         pointBase= old.pointBase;
         EnvmapSampler.push_back(old.EnvmapSampler[0]);
-        EnvmapSampler.push_back(old.EnvmapSampler[1]);
+//        EnvmapSampler.push_back(old.EnvmapSampler[1]);
         ctrlPointIdx= old.ctrlPointIdx ;
     }
 
