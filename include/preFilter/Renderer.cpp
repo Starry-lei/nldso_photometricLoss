@@ -1,6 +1,6 @@
 // Copyright (C) Thorsten Thormaehlen, MIT License (see license file)
 #include <GL/glew.h>
-#include <opencv2/core/core.hpp>
+//#include <opencv2/core/core.hpp>
 #include <string>
 #include <iostream> 
 #include <iomanip>
@@ -9,9 +9,9 @@
 #include <ctype.h>
 #define _USE_MATH_DEFINES
 #include <math.h>
-#include <opencv2/imgcodecs.hpp>
-#include <opencv2/imgproc/imgproc.hpp>
-#include <opencv2/highgui/highgui.hpp>
+//#include <opencv2/imgcodecs.hpp>
+//#include <opencv2/imgproc/imgproc.hpp>
+//#include <opencv2/highgui/highgui.hpp>
 #include <GL/freeglut.h> // we use glut here as window manager
 
 #include "FileTools.h"
@@ -21,7 +21,7 @@
 #include "Renderer.h"
 #include "ShaderNode.h"
 #include "StringTools.h"
-#include "settings/preComputeSetting.h"
+#include "preComputeSetting.h"
 
 using namespace std;
 using namespace gsn;

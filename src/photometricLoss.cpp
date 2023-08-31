@@ -50,6 +50,11 @@ int main(int argc, char **argv) {
         Image_tar8UC3 = dataLoader->grayImage_target;
     }
 
+	// show Image_ref8UC3
+	cv::imshow("Image_ref8UC3", Image_ref8UC3);
+	cv::imshow("Image_tar8UC3", Image_tar8UC3);
+	cv::waitKey(0);
+
 	depth_ref_inv = dataLoader->depth_map_ref;
     depth_tar_inv = dataLoader->depth_map_target;
     K_synthetic = dataLoader->camera_intrinsics;
@@ -66,15 +71,15 @@ int main(int argc, char **argv) {
 //    cvtColor(Image_ref32FC3, grayImage_ref_32FC1, CV_RGB2GRAY);
 //    cvtColor(Image_tar32FC3, grayImage_tar_32FC1, CV_RGB2GRAY);
 
-    cvtColor(Image_ref8UC3, grayImage_ref, CV_RGB2GRAY);
-    cvtColor(Image_tar8UC3, grayImage_tar, CV_RGB2GRAY);
+    cvtColor(Image_ref8UC3, grayImage_ref, cv::COLOR_RGB2GRAY); //CV_RGB2GRAY
+    cvtColor(Image_tar8UC3, grayImage_tar, cv::COLOR_RGB2GRAY);
 
-    Mat grayImg, mat_mean, mat_stddev;
-    double mean_val;
-    double std_dev;
-    meanStdDev(grayImage_ref_pS, mat_mean, mat_stddev);
-    mean_val= mat_mean.at<double>(0,0);
-    std_dev = mat_stddev.at<double>(0,0);
+//    Mat grayImg, mat_mean, mat_stddev;
+//    double mean_val;
+//    double std_dev;
+//    meanStdDev(grayImage_ref_pS, mat_mean, mat_stddev);
+//    mean_val= mat_mean.at<double>(0,0);
+//    std_dev = mat_stddev.at<double>(0,0);
 
     // ====================================== pointSelector========================================
     bool usePixelSelector= true;
@@ -438,7 +443,7 @@ int main(int argc, char **argv) {
                 Mat diffuseImage_tar_sparse = sparse_specularRemoval_tar.run(dsoSelectedPointMask_tar_C3,sparsityMaskTar);
                 Mat specularImage_tar_sparse = sparse_specularRemoval_tar.specularImage;
                 Mat tar_temp= Image_tar8UC3-specularImage_tar_sparse;
-                cvtColor(tar_temp, tar_temp, CV_RGB2GRAY);
+                cvtColor(tar_temp, tar_temp, cv::COLOR_RGB2GRAY);
 //
 //
                 Mat clusterImage_sparse = sparse_specularRemoval_ref.clusterImage;

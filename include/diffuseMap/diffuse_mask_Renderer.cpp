@@ -1,6 +1,6 @@
 // Copyright (C) Thorsten Thormaehlen, MIT License (see license file)
 #include <GL/glew.h>
-#include <opencv2/core/core.hpp>
+
 #include <string>
 #include <iostream>
 #include <iomanip>
@@ -17,10 +17,8 @@
 #include "preFilter/FileTools.h"
 #include "preFilter/StringTools.h"
 
-#include "settings/preComputeSetting.h"
-#include <opencv2/highgui/highgui.hpp>
-#include <opencv2/imgcodecs.hpp>
-#include <opencv2/imgproc/imgproc.hpp>
+#include "preFilter/preComputeSetting.h"
+
 
 using namespace std;
 using namespace gsn;

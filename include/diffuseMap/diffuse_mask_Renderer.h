@@ -9,6 +9,11 @@
 #include "preFilter/Mesh.h"
 #include "preFilter/ShaderNode.h"
 
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/imgcodecs.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/core/core.hpp>
+
 namespace gsn {
   /*!
   \class Renderer Renderer.h

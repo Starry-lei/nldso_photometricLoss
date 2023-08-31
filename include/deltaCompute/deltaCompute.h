@@ -4,13 +4,13 @@
 
 #pragma once
 //#include <iostream>
-#include "settings/preComputeSetting.h"
+#include "preFilter/preComputeSetting.h"
 #include <Eigen/Core>
-#include <sophus/se3.hpp>
 #include <cmath>
 #include <math.h>
 #include <opencv2/core/mat.hpp>
 #include <opencv2/highgui/highgui.hpp>
+#include <sophus/se3.hpp>
 #include <unordered_map>
 
 

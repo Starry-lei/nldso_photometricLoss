@@ -78,6 +78,7 @@ include_directories(thirdparty/CLI11/include)
 
 # include_directories(thirdparty/g2o/include)
 include_directories(include)
+include_directories(/usr/local/include/opencv4/)
 
 # to use link to target "ceres"
 # Note: always link to ceres first, as otherwise a system-wide install might
@@ -102,7 +103,7 @@ message(STATUS "Found TBB ${TBB_VERSION_MAJOR}.${TBB_VERSION_MINOR} (interface v
 
 # to use link to target "OpenCV"
 # NOTE: not specifying version, since 2, 3 or 4 is fine
-find_package(OpenCV 3.3 REQUIRED)
+find_package(OpenCV  REQUIRED)
 
 # COMPONENTS core features2d
 message(STATUS "Found OpenCV ${OpenCV_VERSION} headers in: ${OpenCV_INCLUDE_DIRS}")
@@ -110,9 +111,9 @@ add_library(OpenCV INTERFACE IMPORTED)
 set_property(TARGET OpenCV PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${OpenCV_INCLUDE_DIRS})
 set_property(TARGET OpenCV PROPERTY INTERFACE_LINK_LIBRARIES ${OpenCV_LIBS})
 
-if(OpenCV_VERSION VERSION_LESS 3)
-  set_property(TARGET OpenCV PROPERTY INTERFACE_COMPILE_DEFINITIONS DBATK_OPENCV2)
-endif()
+#if(OpenCV_VERSION VERSION_LESS 3)
+#  set_property(TARGET OpenCV PROPERTY INTERFACE_COMPILE_DEFINITIONS DBATK_OPENCV2)
+#endif()
 
 # add PCL library, remained to be installed as third party library
 if(NOT DEFINED CMAKE_SUPPRESS_DEVELOPER_WARNINGS)
@@ -140,26 +141,31 @@ message(STATUS "show IT: ${CMAKE_CURRENT_SOURCE_DIR}")
 
 set(dsonl_SOURCE_FILES
 
+#        include/settings/preComputeSetting.h
+        include/preFilter/preComputeSetting.cpp
+
   include/settings/setting.cpp
 
-
+  include/dataLoader/PFMReadWrite.h
   include/dataLoader/PFMReadWrite.cpp
   include/preFilter/preFilter.h
 
 
   # include/numType.h
   include/preFilter/FileTools.cpp
-  include/preFilter/Renderer.cpp
+  include/preFilter/Renderer.h
+#  include/preFilter/Renderer.cpp
 
   include/preFilter/Matrix.cpp
   include/preFilter/Mesh.cpp
   include/preFilter/ShaderNode.cpp
   include/preFilter/StringTools.cpp
   include/preFilter/LoadOBJ.cpp
-
-  include/preFilter/specular_mask_Renderer.cpp
+  include/preFilter/specular_mask_Renderer.h
+#  include/preFilter/specular_mask_Renderer.cpp
   include/diffuseMap/Renderer_diffuse.cpp
-  include/diffuseMap/diffuse_mask_Renderer.cpp
+  include/diffuseMap/diffuse_mask_Renderer.h
+#  include/diffuseMap/diffuse_mask_Renderer.cpp
 
   include/deltaCompute/deltaCompute.h
   include/deltaCompute/deltaCompute.cpp
@@ -169,8 +175,8 @@ set(dsonl_SOURCE_FILES
 
 
 
-  include/settings/preComputeSetting.h
-  include/settings/preComputeSetting.cpp
+
+#  include/settings/preComputeSetting.cpp
 
   include/utils/ultils.h
   include/cameraProjection/reprojection.h
@@ -196,16 +202,18 @@ set(dsonl_SOURCE_FILES
 add_library(dsonl ${dsonl_SOURCE_FILES})
 add_subdirectory(include/matplotplusplus)
 
-add_executable(photometricLoss src/photometricLoss.cpp src/SpecularHighlightRemoval/SpecularHighlightRemoval.cpp)
+add_executable(photometricLoss src/photometricLoss.cpp src/SpecularHighlightRemoval/SpecularHighlightRemoval.cpp
+
+        )
 target_link_libraries(photometricLoss
   PUBLIC matplot
   Ceres::ceres
   pangolin
   fmt::fmt
   TBB::tbb
+  dsonl
   OpenCV
   ${PCL_LIBRARIES}
-  dsonl
   ${OPENGL_LIBRARIES}
   ${GLUT_LIBRARIES}
   ${GLEW_LIBRARIES}

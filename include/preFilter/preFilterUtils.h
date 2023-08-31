@@ -17,7 +17,7 @@
 #include <iostream>
 #include <math.h>
 #include <memory>
-#include <opencv2/highgui/highgui.hpp>
+//#include <opencv2/highgui/highgui.hpp>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -31,7 +31,7 @@
 #include "diffuseMap/diffuse_mask_Renderer.h"
 
 
-#include "settings/preComputeSetting.h"
+#include "preComputeSetting.h"
 
 using namespace std;
 using namespace gsn;
