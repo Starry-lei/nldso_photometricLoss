@@ -78,6 +78,7 @@ include_directories(thirdparty/CLI11/include)
 
 # include_directories(thirdparty/g2o/include)
 include_directories(include)
+include_directories(/usr/local/include/opencv4/)
 
 # to use link to target "ceres"
 # Note: always link to ceres first, as otherwise a system-wide install might
@@ -102,7 +103,7 @@ message(STATUS "Found TBB ${TBB_VERSION_MAJOR}.${TBB_VERSION_MINOR} (interface v
 
 # to use link to target "OpenCV"
 # NOTE: not specifying version, since 2, 3 or 4 is fine
-find_package(OpenCV 3.3 REQUIRED)
+find_package(OpenCV REQUIRED)
 
 # COMPONENTS core features2d
 message(STATUS "Found OpenCV ${OpenCV_VERSION} headers in: ${OpenCV_INCLUDE_DIRS}")
@@ -198,14 +199,16 @@ add_subdirectory(include/matplotplusplus)
 
 add_executable(photometricLoss src/photometricLoss.cpp src/SpecularHighlightRemoval/SpecularHighlightRemoval.cpp)
 target_link_libraries(photometricLoss
+
   PUBLIC matplot
+        dsonl
   Ceres::ceres
   pangolin
   fmt::fmt
   TBB::tbb
   OpenCV
   ${PCL_LIBRARIES}
-  dsonl
+
   ${OPENGL_LIBRARIES}
   ${GLUT_LIBRARIES}
   ${GLEW_LIBRARIES}
