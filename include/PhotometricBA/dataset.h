@@ -149,6 +149,8 @@ public:
 
 		cv::Mat I_lvl_1;      //< grayscale image
 		cv::Mat D_lvl_1;      //< depth as float
+		cv::Mat N_lvl_1;      //< normal as float
+		cv::Mat R_lvl_1;      //< roughness as float
 
 		int _lvl = 0;
 
@@ -161,8 +163,6 @@ public:
 
 		}
         inline cv::Mat& depth()  {
-
-
 			if (_lvl==1)
 			{return D_lvl_1;}
 			else if (_lvl==0)
@@ -174,11 +174,23 @@ public:
         inline const cv::Mat& normal() const {
 
 
-			//TODO: preprocessing normal map
+			if (_lvl==1)
+			{return N_lvl_1;}
+			else if (_lvl==0)
+			{return N;}
 
-			return N;
+//			return N;
 		}
-        inline const cv::Mat& roughness() const { return R; }
+        inline const cv::Mat& roughness() const {
+
+			if (_lvl==1)
+			{return R_lvl_1;}
+			else if (_lvl==0)
+			{return R;}
+
+//			return R;
+
+		}
         inline std::string filename() const { return fn; }
 
         virtual ~MonoFrame() {}

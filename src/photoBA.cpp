@@ -384,6 +384,10 @@ bool next_step( ){
 
 		const Vec3f* N = frame->normal().ptr<Vec3f>();
 
+
+
+//		cout<<"show frame->normal() type:"<<frame->normal().type()<<endl;
+
 //		cv::imshow("frame->normal()",frame->normal());
 //		waitKey(0)	;
 
@@ -394,7 +398,7 @@ bool next_step( ){
 			return false;
 		}
 
-		photoba->addFrame(I, Z, N, R,T_init[fid],  &result);
+		photoba->addFrame(I, Z,frame->depth() ,frame->normal(), frame->roughness(),T_init[fid],  &result);
 
 		if(optimizeSignal) {
 			optimizeSignal=false;

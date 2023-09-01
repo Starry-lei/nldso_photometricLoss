@@ -5,8 +5,8 @@
 
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
-
 #include <fstream>
+#include <iostream>
 #include <vector>
 
 using namespace pbaUtils;
@@ -110,13 +110,17 @@ UniquePointer<DatasetFrame> RGBDDataset::getFrame(int f_i, int lvl) const
     return nullptr;
   }
 
-  frame.N= loadNormal(f_i);
-  frame.R= loadRoughness(f_i);
+  frame.N= loadNormal(f_i).clone();
+
+  frame.R= loadRoughness(f_i).clone();
 
   toGray(frame.I_orig, frame.I);
 
   cv::pyrDown(frame.I, frame.I_lvl_1,cv::Size(frame.I.cols / 2, frame.I.rows / 2));
   cv::pyrDown(frame.D, frame.D_lvl_1 ,cv::Size(frame.D.cols / 2, frame.D.rows / 2));
+  cv::pyrDown(frame.N, frame.N_lvl_1,cv::Size(frame.I.cols / 2, frame.I.rows / 2));
+  cv::pyrDown(frame.R, frame.R_lvl_1 ,cv::Size(frame.D.cols / 2, frame.D.rows / 2));
+
 
 
   if(_scale_by > 1) {
@@ -240,20 +244,26 @@ std::vector<std::string> RGBDDataset::getTimestamp() const {
 
 cv::Mat RGBDDataset::loadNormal(int f_i) const {
 	std::string normal_fn = _normal[f_i];
-	cv::Mat normal = loadPFM(normal_fn.c_str());
-	//    std::cout<<"show N file name:"<<normal_fn<<std::endl;
-	// Scale the pixel values to the range [-1, 1]
-	cv::Mat normals_c_oneView = 2 * normal - 1;
-	// Swap the R and B channels and invert the G and B channels
-	cv::Mat normals;
-	cv::cvtColor(normals_c_oneView, normals, cv::COLOR_BGR2RGB);
-	cv::Mat channels[3];
-	cv::split(normals, channels);
-	channels[1] = -channels[1];
-	channels[2] = -channels[2];
-	cv::merge(channels, 3, normals);
+//	cv::Mat normal = loadPFM(normal_fn.c_str());
+//	//    std::cout<<"show N file name:"<<normal_fn<<std::endl;
+//	// Scale the pixel values to the range [-1, 1]
+//	cv::Mat normals_c_oneView = 2 * normal - 1;
+//	// Swap the R and B channels and invert the G and B channels
+//	cv::Mat normals;
+//	cv::cvtColor(normals_c_oneView, normals, cv::COLOR_BGR2RGB);
+//	cv::Mat channels[3];
+//	cv::split(normals, channels);
+//	channels[1] = -channels[1];
+//	channels[2] = -channels[2];
+//	cv::merge(channels, 3, normals);
 
-	return normals;
+	float normalArray[480][640][3]={0.0f};
+	std::ifstream readIn(normal_fn, std::ios::in | std::ios::binary);
+	readIn.read((char*) &normalArray, sizeof normalArray);
+	cv::Mat normal_A(480,640,CV_32FC3, &normalArray);
+	cv::Mat normal_map_GT = normal_A.clone();
+
+	return normal_map_GT;
 }
 
 cv::Mat RGBDDataset::loadRoughness(int f_i) const {

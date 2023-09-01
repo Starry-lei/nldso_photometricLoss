@@ -174,7 +174,7 @@ public:
      * \param result, if not null we store the optmization results in it
      */
 //  void addFrame(const uint8_t* image, const float* depth_map, const Mat44& T, Result* = nullptr);
-	void addFrame(const uint8_t* image, const float* depth_map, const Vec3f* N_ptr, const float* R_ptr, const Mat44& T, Result* = nullptr);
+	void addFrame(const uint8_t* image, const float* depth_map, const Mat& depthMap,const Mat& N_map, const Mat&  R_map, const Mat44& T, Result* = nullptr);
 
 
 
@@ -203,6 +203,10 @@ public:
 	ImageSize   _image_size;
 	ImageSize _image_size_orig;
 
+	std::vector<cv::Mat> normalMaps;
+	std::vector<cv::Mat> roughnessMaps;
+	std::vector<cv::Mat> depthMaps;
+
 	void setImage_size(int lvl);
 
 	Calibration _calib;
@@ -219,8 +223,7 @@ public:
 	void specularityCalcualtion(const ScenePointPointer& pt, const bool self, const Image_<float>& depth, const Eigen::Isometry3d& T_w_beta_prime,
 	                            const Vec3f* N_ptr,
 	                            const float* R_ptr,
-	                            PBANL::IBL_Radiance* ibl_Radiance
-	                            );
+	                            PBANL::IBL_Radiance* ibl_Radiance);
 
 
 
