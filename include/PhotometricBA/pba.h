@@ -21,6 +21,10 @@
 #include "envLightPreProcessing.h"
 #include "deltaCompution.h"
 
+#include "pixelSelector.h"
+
+
+
 //namespace utils {
 //    class ConfigFile;
 //};  // utils
@@ -41,7 +45,7 @@ public:
     struct Options
     {
         /** maximum number of points to intialize from a new frame */
-        int maxNumPoints =4096 ;// 4096;
+        int maxNumPoints = 4096*5 ;// 4096;
 
         /** number of frames in the sliding window */
         int slidingWindowSize = 5;//7; //5;

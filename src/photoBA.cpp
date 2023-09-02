@@ -376,8 +376,8 @@ bool next_step( ){
 		}
 		printf("Frame %05d\n", fid);
 
-//		cv::imshow("frame->image()",frame->image());
-//		cv::waitKey(0);
+		cv::imshow("frame->image()",frame->image());
+		cv::waitKey(0);
 
 		const uint8_t* I = frame->image().ptr<const uint8_t>();
 		float* Z =frame->depth().ptr<float>();

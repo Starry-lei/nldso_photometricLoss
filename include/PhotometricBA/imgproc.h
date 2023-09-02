@@ -199,6 +199,9 @@ class IsLocalMax_
           }
         }
       }
+
+
+
     }
 
     return true;

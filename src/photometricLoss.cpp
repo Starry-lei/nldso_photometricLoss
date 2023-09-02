@@ -77,8 +77,8 @@ int main(int argc, char **argv) {
  //  1: specular_diffuse transition, 2: diffuse, 3: specular
 
 
-    cvtColor(Image_ref8UC3, grayImage_ref, CV_RGB2GRAY);
-    cvtColor(Image_tar8UC3, grayImage_tar, CV_RGB2GRAY);
+    cvtColor(Image_ref8UC3, grayImage_ref, COLOR_RGB2GRAY);
+    cvtColor(Image_tar8UC3, grayImage_tar, COLOR_RGB2GRAY);
 
 // ====================================== pointSelector========================================
     bool usePixelSelector= true;
@@ -314,10 +314,10 @@ int main(int argc, char **argv) {
                 Mat specularityMap_2_8UC3,specularityMap_2_mask_8uC1, specularityMap_2_mask;
                 specularityMap_1.convertTo(specularityMap_1_8UC3,CV_8UC3,255);
                 specularityMap_2.convertTo(specularityMap_2_8UC3,CV_8UC3,255);
-                cvtColor(specularityMap_1,specularityMap_1_mask,CV_RGB2GRAY);
+                cvtColor(specularityMap_1,specularityMap_1_mask,COLOR_RGB2GRAY);
                 specularityMap_1.convertTo(specularityMap_1_mask_8uC1, CV_8UC1, 255);
                 specularityMap_2.convertTo(specularityMap_2_mask_8uC1, CV_8UC1, 255);
-                cvtColor(specularityMap_2,specularityMap_2_mask,CV_RGB2GRAY);
+                cvtColor(specularityMap_2,specularityMap_2_mask,COLOR_RGB2GRAY);
                 double min_specularity, max_specularity;
                 cv::minMaxLoc(specularityMap_1, &min_specularity, &max_specularity);
                 cout << "\n show specularityMap_1 min, max:\n" << min_specularity << "," << max_specularity << endl;
@@ -415,8 +415,8 @@ int main(int argc, char **argv) {
 //                drawClusters(clusterImage_specular_2,specularityMap_2_8UC3,"specularityMap_2");
 // ============================finish removing specular reflection area=================================================
 //                waitKey(0);
-                cvtColor(specularityMap_1,specularityMap_1,CV_RGB2GRAY);
-                cvtColor(specularityMap_2,specularityMap_2,CV_RGB2GRAY);
+                cvtColor(specularityMap_1,specularityMap_1,COLOR_RGB2GRAY);
+                cvtColor(specularityMap_2,specularityMap_2,COLOR_RGB2GRAY);
                 // start removing specular reflection area
                 cout<<"show type of specularityMap_1:"<<specularityMap_1.type()<<endl;
                 vector<double> specularityMap_Vec_1;

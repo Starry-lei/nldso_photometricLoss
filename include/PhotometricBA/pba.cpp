@@ -1033,7 +1033,8 @@ void PhotometricBundleAdjustment::
             double z = Z(y,x);
             if(z >= _options.minValidDepth && z <= _options.maxValidDepth) {
 
-                if(is_local_max(y, x)) {
+                if(is_local_max(y, x)) { // condition for pixel selector
+
                     Vec3 X = T_w * (z * _K_inv * Vec3(x, y, 1.0)); // X in the world frame
                     std::unique_ptr<ScenePoint> p = std::make_unique<ScenePoint>(X, _frame_id);// associate a new scene point with its frame id
                     Vec_<int,2> xy(x, y);
@@ -1213,8 +1214,6 @@ void PhotometricBundleAdjustment::
 
 
 				if (pt->refFrameId()== frame_id_start){
-
-
 					Eigen::Isometry3d T_w_beta_start(_trajectory[pt->refFrameId()].matrix());
 					int r=pt->_x[1];
 					int c=pt->_x[0];
@@ -1329,6 +1328,12 @@ void PhotometricBundleAdjustment::
 					Vec3 radiance_beta_(radiance_beta[0],radiance_beta[1],radiance_beta[2]);
 					if (isnan(radiance_beta[0])){ continue ;}
 
+					if (radiance_beta[0]>10){
+						cout<<"radiance_beta[0]:"<<radiance_beta[0]<<endl;
+						cout<<"show pixel coordinate:"<<endl;
+						cout<<"r:"<<r<<", c:"<<c<<endl;
+					}
+
 					pt->specularitySequence.insert(make_pair(pt->refFrameId(),Vec3(radiance_beta[0],radiance_beta[1],radiance_beta[2])));
 
 
@@ -1347,12 +1352,16 @@ void PhotometricBundleAdjustment::
 						pt->specularitySequence.insert(make_pair(pt->visibilityList()[i],Vec3(radiance_beta_i[0],radiance_beta_i[1],radiance_beta_i[2])));
 
 						if (i==4){
-							Vec3f diff((radiance_beta_i-radiance_beta));
+
+							Vec3 specularityChange= Vec3((radiance_beta_i-radiance_beta).val[0],(radiance_beta_i-radiance_beta).val[1],(radiance_beta_i-radiance_beta).val[2]);
+							float specularity= abs(specularityChange.y()/radiance_beta.val[1])+abs(specularityChange.x()/radiance_beta.val[0])+abs(specularityChange.z()/radiance_beta.val[1]);
+							//
+//							Vec3f diff((radiance_beta_i-radiance_beta));
 //							cout<<"show radiance_beta_i:\n"<<radiance_beta_i<<endl;
 //							cout<<"show radiance_beta:\n "<<radiance_beta<<endl;
-							float sumWeight= 0.587* abs(diff.val[1])+0.114* abs(diff.val[0])+0.299* abs(diff.val[2]);
-							float orig= 0.587*radiance_beta.val[1]+0.114* radiance_beta.val[0]+0.299* radiance_beta.val[2];
-							weightMap.at<float>(r,c)=  sumWeight/orig*255;
+//							float sumWeight= 0.587* abs(diff.val[1])+0.114* abs(diff.val[0])+0.299* abs(diff.val[2]);
+//							float orig= 0.587*radiance_beta.val[1]+0.114* radiance_beta.val[0]+0.299* radiance_beta.val[2];
+							weightMap.at<float>(r,c)=  specularity*255.0f;
 						}
 					}
 
@@ -1897,6 +1906,8 @@ void PhotometricBundleAdjustment::
 					pt->specularitySequence.insert(make_pair(pt->refFrameId(),Vec3(radiance_beta[0],radiance_beta[1],radiance_beta[2])));
 
 
+
+
 					for (int i = 1; i < pt->visibilityList().size(); ++i) {
 						Eigen::Isometry3d T_w_view_2_start_c2w(_trajectory[pt->visibilityList()[i]].matrix());
 						Eigen::Isometry3d T_w_view_2_start_w2c(T_w_view_2_start_c2w.inverse());
@@ -1918,8 +1929,15 @@ void PhotometricBundleAdjustment::
 			}
 		}
 
-//		imshow("weightMap",weightMap);
-//		waitKey(0);
+
+		cout<<"show counter_frame1:"<<counter_frame1<<endl;
+		cout<<"show counter_frame2:"<<counter_frame2<<endl;
+		cout<<"show counter_frame3:"<<counter_frame3<<endl;
+		cout<<"show counter_frame4:"<<counter_frame4<<endl;
+		cout<<"show counter_frame5:"<<counter_frame5<<endl;
+
+		imshow("weightMap",weightMap);
+		waitKey(0);
 
 		cout<<"======================show envLightMap_cur size: "<<envLightMap_cur.size()<<"===========================:\n"<<endl;
 
@@ -2433,19 +2451,25 @@ void PhotometricBundleAdjustment::optimize(Result* result)
 					float specularity_weight = 1.0;
 
 					if(pt->specularitySequence.find(id) != pt->specularitySequence.end()){
+
 						specularity_weight = specularityWeight(pt->specularitySequence[pt->refFrameId()],pt->specularitySequence[id]);
 //
-//						if (pt->refFrameId()==3 && id==7){
-////							Vec3 channelWeight(0.114,0.587,0.299);
-//							Vec3 specularityChange= (pt->specularitySequence[pt->refFrameId()] - pt->specularitySequence[id]);
-////							double orig= pt->specularitySequence[pt->refFrameId()] .x()*channelWeight.x()+pt->specularitySequence[pt->refFrameId()].y()*channelWeight.y()+pt->specularitySequence[pt->refFrameId()].z()*channelWeight.z();
-////							double specularity = abs(specularityChange.x())*channelWeight.x()+abs(specularityChange.y())*channelWeight.y()+abs(specularityChange.z())*channelWeight.z();
-//
-//							double specularity= 0.587* abs(specularityChange.y()/pt->specularitySequence[pt->refFrameId()].y())+0.114* abs(specularityChange.x()/pt->specularitySequence[pt->refFrameId()].x())+0.299* abs(specularityChange.z()/pt->specularitySequence[pt->refFrameId()].z());
-//
-//							Change.at<float>(pt->_x[1], pt->_x[0]) = (specularity);
-//							std::cout<<"specularity_weight: "<<specularity_weight<<std::endl;
-//						}
+						if (pt->refFrameId()==3 && id==7){
+
+							cout<<"show pt->specularitySequence[pt->refFrameId()]:"<<	pt->specularitySequence[pt->refFrameId()]<<endl;
+							cout<<"show pt->specularitySequence[id]:"<<	pt->specularitySequence[id]<<endl;
+
+							Vec3 specularityChange= (pt->specularitySequence[pt->refFrameId()] - pt->specularitySequence[id]);
+							float specularity= abs(specularityChange.y()/pt->specularitySequence[pt->refFrameId()].y())+abs(specularityChange.x()/pt->specularitySequence[pt->refFrameId()].x())+abs(specularityChange.z()/pt->specularitySequence[pt->refFrameId()].z());
+//							std::cout<<"specularity change: "<<specularity<<endl;
+							if ((specularity)>3){
+								cout<<"show pixel position: "<<pt->_x[0]<<" "<<pt->_x[1]<<endl;
+								cout<<"specularity change: "<<specularity<<endl;
+								continue ;
+							}
+							Change.at<float>(pt->_x[1], pt->_x[0]) = (specularity);
+							std::cout<<"specularity_weight: "<<specularity_weight<<std::endl;
+						}
 						if (isnan(specularity_weight)){
 							continue ;
 						}
@@ -2493,34 +2517,38 @@ void PhotometricBundleAdjustment::optimize(Result* result)
     }
 
 
-//	if (_frame_id==7){
-//		//save the weight map
-//		std::string weightMapPath = "/home/lei/Documents/Dataset/data_Analysis/seq12/weightMap/specularityRelativetMap_3To7.png";
-//		cv::imwrite(weightMapPath, Change);
-//
-//		double minVal; double maxVal;
-//		minMaxLoc( Change, &minVal, &maxVal);
-//		cout<<"minVal:"<<minVal<<endl;
-//		cout<<"maxVal:"<<maxVal<<endl;
-//
-//		Change = Change/maxVal;
-//
-//		Change.convertTo(Change, CV_8UC1, 255.0);
-//
-//		cv::Mat mask = (Change>0);
-//		cv::Mat colorMappedImage;
-//		cv::applyColorMap(Change, colorMappedImage, cv::COLORMAP_JET); // You can choose different colormaps
-//		cv::Mat outputImage = colorMappedImage.clone();
-//
-//		// Apply the mask to the color-mapped image
-//		outputImage.setTo(cv::Scalar(0, 0, 0), ~mask);
-//
-//		// save outputImage
-//		std::string outputImagePath = "/home/lei/Documents/Dataset/data_Analysis/seq12/weightMap/specularityRelativetMap_3To7_color.png";
-//		cv::imwrite(outputImagePath, outputImage);
-//
-//
-//	}
+	if (_frame_id==7){
+		//save the weight map
+		std::string weightMapPath = "/home/lei/Documents/Dataset/data_Analysis/seq12/weightMap/specularityRelativetMap_3To7_new.png";
+		cv::imwrite(weightMapPath, Change);
+
+		double minVal; double maxVal;
+		minMaxLoc( Change, &minVal, &maxVal);
+		cout<<"minVal:"<<minVal<<endl;
+		cout<<"maxVal:"<<maxVal<<endl;
+
+		Change = Change/maxVal;
+
+		Change.convertTo(Change, CV_8UC1, 255.0);
+
+		cv::Mat mask = (Change>0);
+		cv::Mat colorMappedImage;
+		cv::applyColorMap(Change, colorMappedImage, cv::COLORMAP_JET); // You can choose different colormaps
+		cv::Mat outputImage = colorMappedImage.clone();
+
+		// Apply the mask to the color-mapped image
+		outputImage.setTo(cv::Scalar(0, 0, 0), ~mask);
+
+		// save outputImage
+		std::string outputImagePath = "/home/lei/Documents/Dataset/data_Analysis/seq12/weightMap/specularityRelativetMap_3To7_color.png";
+		cv::imwrite(outputImagePath, outputImage);
+
+		cv::imshow("Change", Change);
+		cv::imshow("outputImage", outputImage);
+		cv::waitKey(0);
+
+
+	}
 
 
 //	for(uint32_t id = frame_id_start; id <= frame_id_end; ++id) {

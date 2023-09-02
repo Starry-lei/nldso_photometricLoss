@@ -11,7 +11,9 @@
 #include <pcl/filters/voxel_grid.h>
 #include "sophus/se3.hpp"
 #include <unordered_map>
-
+#include <tbb/parallel_for.h>
+#include <vector>
+#include <mutex>
 #include "preFilter/preFilter.h"
 #include "settings/common.h"
 
