@@ -398,7 +398,7 @@ bool next_step( ){
 			return false;
 		}
 
-		photoba->addFrame(I, Z,frame->depth() ,frame->normal(), frame->roughness(),T_init[fid],  &result);
+		photoba->addFrame(I, frame->image(), Z,frame->depth() ,frame->normal(), frame->roughness(),T_init[fid],  &result);
 
 		if(optimizeSignal) {
 			optimizeSignal=false;

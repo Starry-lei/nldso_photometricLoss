@@ -525,6 +525,12 @@ PhotometricBundleAdjustment::PhotometricBundleAdjustment(
 	_calib._K_orig=_calib.K();
 	_image_size_orig=_image_size;
 
+	Eigen::Matrix3f camera_intrinsics;
+	camera_intrinsics<<_calib.K()(0,0),_calib.K()(0,1),_calib.K()(0,2),
+						_calib.K()(1,0),_calib.K()(1,1),_calib.K()(1,2),
+						_calib.K()(2,0),_calib.K()(2,1),_calib.K()(2,2);
+
+	DSONL::setGlobalCalib(_image_size.cols,_image_size.rows,camera_intrinsics);
 
     _mask.resize(_image_size.rows, _image_size.cols);
     _saliency_map.resize(_image_size.rows, _image_size.cols);
@@ -896,7 +902,7 @@ void PhotometricBundleAdjustment::specularityCalcualtion(const ScenePointPointer
 
 
 void PhotometricBundleAdjustment::
-        addFrame(const uint8_t* I_ptr, const float* Z_ptr, const Mat& depthMap, const Mat& N_map, const Mat& R_map,  const Mat44& T, Result* result)
+        addFrame(const uint8_t* I_ptr, const cv::Mat& grayImg, const float* Z_ptr, const Mat& depthMap, const Mat& N_map, const Mat& R_map,  const Mat44& T, Result* result)
 {
     _trajectory.push_back(T, _frame_id);
     const Eigen::Isometry3d T_w(_trajectory.back());
@@ -1025,6 +1031,30 @@ void PhotometricBundleAdjustment::
     typedef IsLocalMax_<decltype(_saliency_map), decltype(_mask)> IsLocalMax;
     const IsLocalMax is_local_max(_saliency_map, _mask, _options.nonMaxSuppRadius);
 
+	DSONL::FrameHessian* newFrame_ref=NULL;
+	float* color_ref=NULL;
+	int  npts_lvl_ref[0];
+	DSONL::FrameHessian* frame_ref= new DSONL::FrameHessian();
+	DSONL::PixelSelector* pixelSelector_lvl= new DSONL::PixelSelector(640,480);
+	float* color_ref_lvl= new float[640*480];
+	float* statusMapPoints_ref= new float[640*480];
+	float densities[] = {1,0.5,0.15,0.05,0.03}; // 不同层取得点密度
+
+
+	for (int row = 0; row < 480; ++row) {
+		const uchar *pixel_ref_lvl= grayImg.ptr<uchar>(row);//  IRef.ptr<uchar>(row);
+		for (int col = 0; col < 640; ++col) {
+			color_ref_lvl[row*640+col]= (float) pixel_ref_lvl[col];
+		}
+	}
+	frame_ref->makeImages(color_ref_lvl);
+	pixelSelector_lvl->currentPotential= 3;
+	npts_lvl_ref[0]=  pixelSelector_lvl->makeMaps(frame_ref, statusMapPoints_ref, densities[0] * 640 * 480, 1, true, 2);
+	cout << "\n npts_lvl_ref[i]: " << npts_lvl_ref[0] << "\n densities[i-1]*wG[0]*hG[0]:" << densities[0] *640 * 480 << endl;
+
+
+	Mat dsoSelectedPointMask(grayImg.rows,  grayImg.cols, CV_8UC1, Scalar(0));
+	int dso_point_counter=0;
 
 	// pixel selector
     for(int y = B; y < max_rows; ++y) {
@@ -1033,7 +1063,14 @@ void PhotometricBundleAdjustment::
             double z = Z(y,x);
             if(z >= _options.minValidDepth && z <= _options.maxValidDepth) {
 
-                if(is_local_max(y, x)) { // condition for pixel selector
+
+				if((statusMapPoints_ref!=NULL && statusMapPoints_ref[y*grayImg.cols+x]!=0)) { // dso condition for pixel selector
+
+					//if(is_local_max(y, x)) { // orginal for pixel selector
+
+					dso_point_counter+=1;
+					dsoSelectedPointMask.at<uchar>(y,x)= 255;
+
 
                     Vec3 X = T_w * (z * _K_inv * Vec3(x, y, 1.0)); // X in the world frame
                     std::unique_ptr<ScenePoint> p = std::make_unique<ScenePoint>(X, _frame_id);// associate a new scene point with its frame id
@@ -1051,6 +1088,21 @@ void PhotometricBundleAdjustment::
 
         }
     }
+
+
+	cv::imshow("dsoSelectedPointMask:"+std::to_string(_frame_id),dsoSelectedPointMask);
+	cv::waitKey(0);
+
+
+
+	delete newFrame_ref;
+	delete frame_ref;
+	delete pixelSelector_lvl;
+	delete[] color_ref;
+	delete[] statusMapPoints_ref;
+	delete[] color_ref_lvl;
+
+
 
     std::cout<<"new scene points size: "<<new_scene_points.size()<<std::endl;
 	// keep the best N points
@@ -1214,6 +1266,12 @@ void PhotometricBundleAdjustment::
 
 
 				if (pt->refFrameId()== frame_id_start){
+
+					std::unordered_map<cv::Point2i, float, DSONL::hash2d<cv::Point2i>, DSONL::equalTo2D<cv::Point2i>> pixelDepthMap_1;
+					std::unordered_map<cv::Point2i, float, DSONL::hash2d<cv::Point2i>, DSONL::equalTo2D<cv::Point2i>> pixelDepthMap_2;
+					std::unordered_map<cv::Point2i, float, DSONL::hash2d<cv::Point2i>, DSONL::equalTo2D<cv::Point2i>> pixelDepthMap_3;
+					std::unordered_map<cv::Point2i, float, DSONL::hash2d<cv::Point2i>, DSONL::equalTo2D<cv::Point2i>> pixelDepthMap_4;
+
 					Eigen::Isometry3d T_w_beta_start(_trajectory[pt->refFrameId()].matrix());
 					int r=pt->_x[1];
 					int c=pt->_x[0];
@@ -1221,7 +1279,7 @@ void PhotometricBundleAdjustment::
 					Vec3f normal = normalize(normal_pixel); //normal in camera coordinate
 					const float roughness_pixel= roughnessMaps[0].at<float>(r,c);
 					float reflectance = 1.0f;                                   // reflectance
-					int num_K = 3;
+					int num_K = 5;
 //					cout<<"check normal and roughness:\n "<<normal_pixel<<", and "<<roughness_pixel<<"and depth:"<<depthMaps[0].at<float>(r,c)<<endl;
 					Eigen::Vector3f point_c= (depthMaps[0].at<float>(r,c) * _K_inv * Vec3(c, r, 1.0)).cast<float>();
 					Eigen::Vector3f point_w= (T_w_beta_start * Vec3(point_c.x(),point_c.y(), point_c.z())).cast<float>();
@@ -1256,18 +1314,19 @@ void PhotometricBundleAdjustment::
 
 							// calculate control point normal
 							// transform envMap_point to camera coordinate system
-							Eigen::Vector3f envMap_point_c1 = T_c.cast<float>() * Eigen::Vector3f(envMap_point.val[0], envMap_point.val[1], envMap_point.val[2]);
+							Eigen::Vector3f envMap_point_c1 = T_w_beta_start.inverse().cast<float>() * Eigen::Vector3f(envMap_point.val[0], envMap_point.val[1], envMap_point.val[2]);
 							// project envMap_point to image plane
 							// float pixel_x = (fx * envMap_point_c1.x()) / envMap_point_c1.z() + cx;
 							// float pixel_y = (fy * envMap_point_c1.y()) / envMap_point_c1.z() + cy;
 
-							Vec2 uv = _calib.project(envMap_point_c1.cast<double>());
+							Vec2 uv((_calib.fx() * envMap_point_c1.x()) / envMap_point_c1.z() + _calib.cx(), (_calib.fy() * envMap_point_c1.y()) / envMap_point_c1.z() + _calib.cy());
 							int r_n = std::round(uv[1]), c_n = std::round(uv[0]);
+
 							// check if the projected point is in the image
 							if(r_n < B || r_n >= max_rows || c_n < B || c_n >= max_cols) { continue; }
 
 //							Vec3f ctrlPointNormal =  N_ptr[r_n * width + c_n];//newNormalMap.at<Vec3f>(r, c);
-							Vec3f ctrlPointNormal =  normalMaps[0].at<Vec3f>(r, c);;//newNormalMap.at<Vec3f>(r, c);
+							Vec3f ctrlPointNormal =  normalMaps[0].at<Vec3f>(r_n, c_n);;//newNormalMap.at<Vec3f>(r, c);
 
 							ctrlPointNormal=cv::normalize(ctrlPointNormal);
 
@@ -1279,8 +1338,6 @@ void PhotometricBundleAdjustment::
 								targetEnvMapIdx=i;
 								targetEnvMapVal=envMap_point;
 							}
-
-
 						}
 						if (targetEnvMapIdx!=-1){
 							key4Search.val[0] = targetEnvMapVal.val[0];
@@ -1338,10 +1395,65 @@ void PhotometricBundleAdjustment::
 
 
 					for (int i = 1; i < pt->visibilityList().size(); ++i) {
+
+
 						Eigen::Isometry3d T_w_view_2_start_c2w(_trajectory[pt->visibilityList()[i]].matrix());
 						Eigen::Isometry3d T_w_view_2_start_w2c(T_w_view_2_start_c2w.inverse());
 
 						Eigen::Vector3d view_beta_prime_i_c = T_w_view_2_start_w2c*(point_w.cast<double>());
+
+
+						Vec2 uv((_calib.fx() * view_beta_prime_i_c.x()) / view_beta_prime_i_c.z() + _calib.cx(), (_calib.fy() * view_beta_prime_i_c.y()) / view_beta_prime_i_c.z() + _calib.cy());
+//						int r_n = std::round(uv[1]), c_n = std::round(uv[0]);
+						int pixel_col_right= std::round(uv(0));
+						int pixel_row_right =std::round(uv(1));
+						Eigen::Matrix<int, 2, 1> pt2d(pixel_col_right,pixel_row_right );
+						cv::Point2i pixel_coor (pixel_row_right, pixel_col_right);
+
+						if (i==1){
+							// for occlusion problem on the second view
+							if (pixelDepthMap_1.count(pixel_coor)!=0 ){
+								if( view_beta_prime_i_c.z()<pixelDepthMap_1[pixel_coor]){
+									pixelDepthMap_1.insert(make_pair(pixel_coor,view_beta_prime_i_c.z()));
+								} else{
+									pt->specularitySequence.insert(make_pair(pt->visibilityList()[i],Vec3(-666.0f,-666.0f,-666.0f)));
+								}
+							}
+							pixelDepthMap_1.insert(make_pair(pixel_coor,view_beta_prime_i_c.z()));
+
+						}else if (i==2){
+							// for occlusion problem on the third view
+							if (pixelDepthMap_2.count(pixel_coor)!=0 ){
+								if( view_beta_prime_i_c.z()<pixelDepthMap_2[pixel_coor]){
+									pixelDepthMap_2.insert(make_pair(pixel_coor,view_beta_prime_i_c.z()));
+								} else{
+									pt->specularitySequence.insert(make_pair(pt->visibilityList()[i],Vec3(-666.0f,-666.0f,-666.0f)));
+								}
+							}
+							pixelDepthMap_2.insert(make_pair(pixel_coor,view_beta_prime_i_c.z()));
+						}else if(i==3) {
+							// for occlusion problem on the fourth view
+							if (pixelDepthMap_3.count(pixel_coor) != 0) {
+								if (view_beta_prime_i_c.z() < pixelDepthMap_3[pixel_coor]) {
+									pixelDepthMap_3.insert(make_pair(pixel_coor, view_beta_prime_i_c.z()));
+								} else {
+									pt->specularitySequence.insert(make_pair(pt->visibilityList()[i], Vec3(-666.0f, -666.0f, -666.0f)));
+								}
+							}
+							pixelDepthMap_3.insert(make_pair(pixel_coor, view_beta_prime_i_c.z()));
+						}else if(i==4) {
+							// for occlusion problem on the fifth view
+							if (pixelDepthMap_4.count(pixel_coor) != 0) {
+								if (view_beta_prime_i_c.z() < pixelDepthMap_4[pixel_coor]) {
+									pixelDepthMap_4.insert(make_pair(pixel_coor, view_beta_prime_i_c.z()));
+								} else {
+									pt->specularitySequence.insert(make_pair(pt->visibilityList()[i], Vec3(-666.0f, -666.0f, -666.0f)));
+								}
+							}
+							pixelDepthMap_4.insert(make_pair(pixel_coor, view_beta_prime_i_c.z()));
+						}
+
+
 						view_beta_prime_i_c= - view_beta_prime_i_c.normalized();
 						Vec3f View_beta_i(view_beta_prime_i_c(0), view_beta_prime_i_c(1), view_beta_prime_i_c(2));
 
@@ -1367,563 +1479,23 @@ void PhotometricBundleAdjustment::
 
 
 					counter_frame1++;
-					// save the relative position of the point in the first frame
-
-
 				}else if(pt->refFrameId()== frame_id_start+1){
 
 					int currentFrameIdx=1;
-
-					Eigen::Isometry3d T_w_beta_start(_trajectory[pt->refFrameId()].matrix());
-					int r=pt->_x[1];
-					int c=pt->_x[0];
-					const Vec3f normal_pixel = normalMaps[currentFrameIdx].at<Vec3f>(r,c);
-					Vec3f normal = normalize(normal_pixel); //normal in camera coordinate
-					const float roughness_pixel= roughnessMaps[currentFrameIdx].at<float>(r,c);
-					float reflectance = 1.0f;                                   // reflectance
-					int num_K = 3;
-					//					cout<<"check normal and roughness:\n "<<normal_pixel<<", and "<<roughness_pixel<<"and depth:"<<depthMaps[0].at<float>(r,c)<<endl;
-					Eigen::Vector3f point_c= (depthMaps[currentFrameIdx].at<float>(r,c) * _K_inv * Vec3(c, r, 1.0)).cast<float>();
-					Eigen::Vector3f point_w= (T_w_beta_start * Vec3(point_c.x(),point_c.y(), point_c.z())).cast<float>();
-
-					float image_metallic=1e-3;                                  // metallic
-					Eigen::Matrix<float, 3, 1> beta= -point_c;
-					beta= beta.normalized();
-					Vec3f baseColor(0.0, 0.0, 0.0);                             //base color
-					Vec3f N_(normal(0), normal(1), normal(2));
-					Vec3f View_beta(beta(0), beta(1), beta(2));
-
-					pcl::PointXYZ searchPoint(point_w.x(), point_w.y(), point_w.z());
-					std::vector<int> pointIdxKNNSearch(num_K);
-					std::vector<float> pointKNNSquaredDistance(num_K);
-					Vec3f key4Search;
-					if ( EnvLightLookup->kdtree.nearestKSearch(searchPoint, num_K, pointIdxKNNSearch, pointKNNSquaredDistance) > 0)
-					{
-						float disPoint2Env_min= 10.0f;
-						int targetEnvMapIdx=-1;
-						Vec3f targetEnvMapVal;
-
-						// find the closest control point which domain contains the current point
-						for (std::size_t i = 0; i < pointIdxKNNSearch.size (); ++i) {
-							Vec3f envMap_point((*(EnvLightLookup->ControlpointCloud))[pointIdxKNNSearch[i]].x, (*(EnvLightLookup->ControlpointCloud))[pointIdxKNNSearch[i]].y,
-							                   (*(EnvLightLookup->ControlpointCloud))[pointIdxKNNSearch[i]].z);
-
-							//                        std::cout << "\n------"<<envMap_point.val[0]<< " " << envMap_point.val[1]<< " " << envMap_point.val[2]
-							//                                  << " (squared distance: " << pointKNNSquaredDistance[i] << ")" << std::endl;
-							// 0.004367 is the squared distance of the closest control point
-							if (pointKNNSquaredDistance[i] > 0.004367*3) { continue; }
-
-
-							// calculate control point normal
-							// transform envMap_point to camera coordinate system
-							Eigen::Vector3f envMap_point_c1 = T_c.cast<float>() * Eigen::Vector3f(envMap_point.val[0], envMap_point.val[1], envMap_point.val[2]);
-							// project envMap_point to image plane
-							// float pixel_x = (fx * envMap_point_c1.x()) / envMap_point_c1.z() + cx;
-							// float pixel_y = (fy * envMap_point_c1.y()) / envMap_point_c1.z() + cy;
-
-							Vec2 uv = _calib.project(envMap_point_c1.cast<double>());
-							int r_n = std::round(uv[1]), c_n = std::round(uv[0]);
-							// check if the projected point is in the image
-							if(r_n < B || r_n >= max_rows || c_n < B || c_n >= max_cols) { continue; }
-
-							//							Vec3f ctrlPointNormal =  N_ptr[r_n * width + c_n];//newNormalMap.at<Vec3f>(r, c);
-							Vec3f ctrlPointNormal =  normalMaps[currentFrameIdx].at<Vec3f>(r, c);;//newNormalMap.at<Vec3f>(r, c);
-
-							ctrlPointNormal=cv::normalize(ctrlPointNormal);
-
-							float angle_consine = ctrlPointNormal.dot(N_);
-							if (angle_consine<0.9962){ continue;} // 0.9848 is the cos(10 degree), 0.9962 is the cos(5 degree)
-							float disPoint2Env=  pointKNNSquaredDistance[i]/(ctrlPointNormal.dot(N_));
-							if (disPoint2Env<disPoint2Env_min){
-								disPoint2Env_min=disPoint2Env;
-								targetEnvMapIdx=i;
-								targetEnvMapVal=envMap_point;
-							}
-
-
-						}
-						if (targetEnvMapIdx!=-1){
-							key4Search.val[0] = targetEnvMapVal.val[0];
-							key4Search.val[1] = targetEnvMapVal.val[1];
-							key4Search.val[2] = targetEnvMapVal.val[2];
-						}
-
-					}
-					// if no envMap point is found, skip this point
-					if (key4Search.dot(key4Search)==0){ continue;}
-
-					int ctrlIndex= EnvLightLookup->envLightIdxMap[key4Search];
-					if ( EnvLightLookup->envLightIdxMap.size()==0){std::cerr<<"Error in EnvLight->envLightIdxMap! "<<endl;}
-
-					if (envLightMap_cur.count(ctrlIndex)==0){
-						stringstream ss;
-						string img_idx_str;
-						ss << ctrlIndex;
-						ss >> img_idx_str;
-						string name_prefix = "/envMap";
-						string renderedEnvLightfolder =renderedEnvLight_path + "/envMap" + img_idx_str + "/renderedEnvLight";
-						string renderedEnvLightDiffuse =renderedEnvLight_path + "/envMap" + img_idx_str + "/renderedEnvLightDiffuse";
-						string envMapDiffuse = renderedEnvLightDiffuse + "/envMapDiffuse_" + img_idx_str + ".pfm";
-						PBANL::pointEnvlight pEnv;
-						DSONL::EnvMapLookup *EnvMapLookup = new DSONL::EnvMapLookup();
-						EnvMapLookup->makeMipMap(pEnv.EnvmapSampler,renderedEnvLightfolder); // index_0: prefiltered Env light
-						delete EnvMapLookup;
-
-						//            diffuseMap *diffuseMap = new DSONL::diffuseMap;
-						//            diffuseMap->makeDiffuseMap(pEnv.EnvmapSampler, envMapDiffuse); // index_1: diffuse
-						//            delete diffuseMap;
-
-						envLightMap_cur.insert(make_pair(ctrlIndex, pEnv));
-						//                    cout<<"show size of envLightMap_cur:"<<envLightMap_cur.size()<<endl;
-					}
-					DSONL::prefilteredEnvmapSampler= & ( envLightMap_cur[ctrlIndex].EnvmapSampler[0]);
-					DSONL::brdfSampler_ = & (EnvLightLookup->brdfSampler[0]);
-
-					Sophus::SO3f enterPanoroma;
-					Sophus::SE3d T_c2w(T_w_beta_start.rotation(), T_w_beta_start.translation());
-					// TODO: convert the envmap to current "world coordinate" in advance !!!!!! done
-					Vec3f radiance_beta = ibl_Radiance->solveForRadiance(View_beta, N_, roughness_pixel, image_metallic,
-					                                                     reflectance, baseColor, T_c2w.rotationMatrix(),
-					                                                     enterPanoroma.inverse());
-					Vec3 radiance_beta_(radiance_beta[0],radiance_beta[1],radiance_beta[2]);
-					if (isnan(radiance_beta[0])){ continue ;}
-
-					pt->specularitySequence.insert(make_pair(pt->refFrameId(),Vec3(radiance_beta[0],radiance_beta[1],radiance_beta[2])));
-
-
-					for (int i = 1; i < pt->visibilityList().size(); ++i) {
-						Eigen::Isometry3d T_w_view_2_start_c2w(_trajectory[pt->visibilityList()[i]].matrix());
-						Eigen::Isometry3d T_w_view_2_start_w2c(T_w_view_2_start_c2w.inverse());
-
-						Eigen::Vector3d view_beta_prime_i_c = T_w_view_2_start_w2c*(point_w.cast<double>());
-						view_beta_prime_i_c= - view_beta_prime_i_c.normalized();
-						Vec3f View_beta_i(view_beta_prime_i_c(0), view_beta_prime_i_c(1), view_beta_prime_i_c(2));
-
-						Vec3f radiance_beta_i = ibl_Radiance->solveForRadiance(View_beta_i, N_, roughness_pixel, image_metallic,
-						                                                       reflectance, baseColor, T_c2w.rotationMatrix(),
-						                                                       enterPanoroma.inverse());
-						Vec3 radiance_beta_i_(radiance_beta_i[0],radiance_beta_i[1],radiance_beta_i[2]);
-						pt->specularitySequence.insert(make_pair(pt->visibilityList()[i],Vec3(radiance_beta_i[0],radiance_beta_i[1],radiance_beta_i[2])));
-					}
-
-
-
-
-
 
 					counter_frame2++;
 				}else if(pt->refFrameId()== frame_id_start+2){
 
 					int currentFrameIdx=2;
-					Eigen::Isometry3d T_w_beta_start(_trajectory[pt->refFrameId()].matrix());
-					int r=pt->_x[1];
-					int c=pt->_x[0];
-					const Vec3f normal_pixel = normalMaps[currentFrameIdx].at<Vec3f>(r,c);
-					Vec3f normal = normalize(normal_pixel); //normal in camera coordinate
-					const float roughness_pixel= roughnessMaps[currentFrameIdx].at<float>(r,c);
-					float reflectance = 1.0f;                                   // reflectance
-					int num_K = 3;
-					//					cout<<"check normal and roughness:\n "<<normal_pixel<<", and "<<roughness_pixel<<"and depth:"<<depthMaps[0].at<float>(r,c)<<endl;
-					Eigen::Vector3f point_c= (depthMaps[currentFrameIdx].at<float>(r,c) * _K_inv * Vec3(c, r, 1.0)).cast<float>();
-					Eigen::Vector3f point_w= (T_w_beta_start * Vec3(point_c.x(),point_c.y(), point_c.z())).cast<float>();
-
-					float image_metallic=1e-3;                                  // metallic
-					Eigen::Matrix<float, 3, 1> beta= -point_c;
-					beta= beta.normalized();
-					Vec3f baseColor(0.0, 0.0, 0.0);                             //base color
-					Vec3f N_(normal(0), normal(1), normal(2));
-					Vec3f View_beta(beta(0), beta(1), beta(2));
-
-					pcl::PointXYZ searchPoint(point_w.x(), point_w.y(), point_w.z());
-					std::vector<int> pointIdxKNNSearch(num_K);
-					std::vector<float> pointKNNSquaredDistance(num_K);
-					Vec3f key4Search;
-					if ( EnvLightLookup->kdtree.nearestKSearch(searchPoint, num_K, pointIdxKNNSearch, pointKNNSquaredDistance) > 0)
-					{
-						float disPoint2Env_min= 10.0f;
-						int targetEnvMapIdx=-1;
-						Vec3f targetEnvMapVal;
-
-						// find the closest control point which domain contains the current point
-						for (std::size_t i = 0; i < pointIdxKNNSearch.size (); ++i) {
-							Vec3f envMap_point((*(EnvLightLookup->ControlpointCloud))[pointIdxKNNSearch[i]].x, (*(EnvLightLookup->ControlpointCloud))[pointIdxKNNSearch[i]].y,
-							                   (*(EnvLightLookup->ControlpointCloud))[pointIdxKNNSearch[i]].z);
-
-							//                        std::cout << "\n------"<<envMap_point.val[0]<< " " << envMap_point.val[1]<< " " << envMap_point.val[2]
-							//                                  << " (squared distance: " << pointKNNSquaredDistance[i] << ")" << std::endl;
-							// 0.004367 is the squared distance of the closest control point
-							if (pointKNNSquaredDistance[i] > 0.004367*3) { continue; }
-
-
-							// calculate control point normal
-							// transform envMap_point to camera coordinate system
-							Eigen::Vector3f envMap_point_c1 = T_c.cast<float>() * Eigen::Vector3f(envMap_point.val[0], envMap_point.val[1], envMap_point.val[2]);
-							// project envMap_point to image plane
-							// float pixel_x = (fx * envMap_point_c1.x()) / envMap_point_c1.z() + cx;
-							// float pixel_y = (fy * envMap_point_c1.y()) / envMap_point_c1.z() + cy;
-
-							Vec2 uv = _calib.project(envMap_point_c1.cast<double>());
-							int r_n = std::round(uv[1]), c_n = std::round(uv[0]);
-							// check if the projected point is in the image
-							if(r_n < B || r_n >= max_rows || c_n < B || c_n >= max_cols) { continue; }
-
-							//							Vec3f ctrlPointNormal =  N_ptr[r_n * width + c_n];//newNormalMap.at<Vec3f>(r, c);
-							Vec3f ctrlPointNormal =  normalMaps[currentFrameIdx].at<Vec3f>(r, c);;//newNormalMap.at<Vec3f>(r, c);
-
-							ctrlPointNormal=cv::normalize(ctrlPointNormal);
-
-							float angle_consine = ctrlPointNormal.dot(N_);
-							if (angle_consine<0.9962){ continue;} // 0.9848 is the cos(10 degree), 0.9962 is the cos(5 degree)
-							float disPoint2Env=  pointKNNSquaredDistance[i]/(ctrlPointNormal.dot(N_));
-							if (disPoint2Env<disPoint2Env_min){
-								disPoint2Env_min=disPoint2Env;
-								targetEnvMapIdx=i;
-								targetEnvMapVal=envMap_point;
-							}
-
-
-						}
-						if (targetEnvMapIdx!=-1){
-							key4Search.val[0] = targetEnvMapVal.val[0];
-							key4Search.val[1] = targetEnvMapVal.val[1];
-							key4Search.val[2] = targetEnvMapVal.val[2];
-						}
-
-					}
-					// if no envMap point is found, skip this point
-					if (key4Search.dot(key4Search)==0){ continue;}
-
-					int ctrlIndex= EnvLightLookup->envLightIdxMap[key4Search];
-					if ( EnvLightLookup->envLightIdxMap.size()==0){std::cerr<<"Error in EnvLight->envLightIdxMap! "<<endl;}
-
-					if (envLightMap_cur.count(ctrlIndex)==0){
-						stringstream ss;
-						string img_idx_str;
-						ss << ctrlIndex;
-						ss >> img_idx_str;
-						string name_prefix = "/envMap";
-						string renderedEnvLightfolder =renderedEnvLight_path + "/envMap" + img_idx_str + "/renderedEnvLight";
-						string renderedEnvLightDiffuse =renderedEnvLight_path + "/envMap" + img_idx_str + "/renderedEnvLightDiffuse";
-						string envMapDiffuse = renderedEnvLightDiffuse + "/envMapDiffuse_" + img_idx_str + ".pfm";
-						PBANL::pointEnvlight pEnv;
-						DSONL::EnvMapLookup *EnvMapLookup = new DSONL::EnvMapLookup();
-						EnvMapLookup->makeMipMap(pEnv.EnvmapSampler,renderedEnvLightfolder); // index_0: prefiltered Env light
-						delete EnvMapLookup;
-
-						//            diffuseMap *diffuseMap = new DSONL::diffuseMap;
-						//            diffuseMap->makeDiffuseMap(pEnv.EnvmapSampler, envMapDiffuse); // index_1: diffuse
-						//            delete diffuseMap;
-
-						envLightMap_cur.insert(make_pair(ctrlIndex, pEnv));
-						//                    cout<<"show size of envLightMap_cur:"<<envLightMap_cur.size()<<endl;
-					}
-					DSONL::prefilteredEnvmapSampler= & ( envLightMap_cur[ctrlIndex].EnvmapSampler[0]);
-					DSONL::brdfSampler_ = & (EnvLightLookup->brdfSampler[0]);
-
-					Sophus::SO3f enterPanoroma;
-					Sophus::SE3d T_c2w(T_w_beta_start.rotation(), T_w_beta_start.translation());
-					// TODO: convert the envmap to current "world coordinate" in advance !!!!!! done
-					Vec3f radiance_beta = ibl_Radiance->solveForRadiance(View_beta, N_, roughness_pixel, image_metallic,
-					                                                     reflectance, baseColor, T_c2w.rotationMatrix(),
-					                                                     enterPanoroma.inverse());
-					Vec3 radiance_beta_(radiance_beta[0],radiance_beta[1],radiance_beta[2]);
-					if (isnan(radiance_beta[0])){ continue ;}
-
-					pt->specularitySequence.insert(make_pair(pt->refFrameId(),Vec3(radiance_beta[0],radiance_beta[1],radiance_beta[2])));
-
-
-					for (int i = 1; i < pt->visibilityList().size(); ++i) {
-						Eigen::Isometry3d T_w_view_2_start_c2w(_trajectory[pt->visibilityList()[i]].matrix());
-						Eigen::Isometry3d T_w_view_2_start_w2c(T_w_view_2_start_c2w.inverse());
-
-						Eigen::Vector3d view_beta_prime_i_c = T_w_view_2_start_w2c*(point_w.cast<double>());
-						view_beta_prime_i_c= - view_beta_prime_i_c.normalized();
-						Vec3f View_beta_i(view_beta_prime_i_c(0), view_beta_prime_i_c(1), view_beta_prime_i_c(2));
-
-						Vec3f radiance_beta_i = ibl_Radiance->solveForRadiance(View_beta_i, N_, roughness_pixel, image_metallic,
-						                                                       reflectance, baseColor, T_c2w.rotationMatrix(),
-						                                                       enterPanoroma.inverse());
-						Vec3 radiance_beta_i_(radiance_beta_i[0],radiance_beta_i[1],radiance_beta_i[2]);
-						pt->specularitySequence.insert(make_pair(pt->visibilityList()[i],Vec3(radiance_beta_i[0],radiance_beta_i[1],radiance_beta_i[2])));
-					}
-
 					counter_frame3++;
 				}else if(pt->refFrameId()== frame_id_start+3){
 
 					int currentFrameIdx=3;
-					Eigen::Isometry3d T_w_beta_start(_trajectory[pt->refFrameId()].matrix());
-					int r=pt->_x[1];
-					int c=pt->_x[0];
-					const Vec3f normal_pixel = normalMaps[currentFrameIdx].at<Vec3f>(r,c);
-					Vec3f normal = normalize(normal_pixel); //normal in camera coordinate
-					const float roughness_pixel= roughnessMaps[currentFrameIdx].at<float>(r,c);
-					float reflectance = 1.0f;                                   // reflectance
-					int num_K = 3;
-					//					cout<<"check normal and roughness:\n "<<normal_pixel<<", and "<<roughness_pixel<<"and depth:"<<depthMaps[0].at<float>(r,c)<<endl;
-					Eigen::Vector3f point_c= (depthMaps[currentFrameIdx].at<float>(r,c) * _K_inv * Vec3(c, r, 1.0)).cast<float>();
-					Eigen::Vector3f point_w= (T_w_beta_start * Vec3(point_c.x(),point_c.y(), point_c.z())).cast<float>();
-
-					float image_metallic=1e-3;                                  // metallic
-					Eigen::Matrix<float, 3, 1> beta= -point_c;
-					beta= beta.normalized();
-					Vec3f baseColor(0.0, 0.0, 0.0);                             //base color
-					Vec3f N_(normal(0), normal(1), normal(2));
-					Vec3f View_beta(beta(0), beta(1), beta(2));
-
-					pcl::PointXYZ searchPoint(point_w.x(), point_w.y(), point_w.z());
-					std::vector<int> pointIdxKNNSearch(num_K);
-					std::vector<float> pointKNNSquaredDistance(num_K);
-					Vec3f key4Search;
-					if ( EnvLightLookup->kdtree.nearestKSearch(searchPoint, num_K, pointIdxKNNSearch, pointKNNSquaredDistance) > 0)
-					{
-						float disPoint2Env_min= 10.0f;
-						int targetEnvMapIdx=-1;
-						Vec3f targetEnvMapVal;
-
-						// find the closest control point which domain contains the current point
-						for (std::size_t i = 0; i < pointIdxKNNSearch.size (); ++i) {
-							Vec3f envMap_point((*(EnvLightLookup->ControlpointCloud))[pointIdxKNNSearch[i]].x, (*(EnvLightLookup->ControlpointCloud))[pointIdxKNNSearch[i]].y,
-							                   (*(EnvLightLookup->ControlpointCloud))[pointIdxKNNSearch[i]].z);
-
-							//                        std::cout << "\n------"<<envMap_point.val[0]<< " " << envMap_point.val[1]<< " " << envMap_point.val[2]
-							//                                  << " (squared distance: " << pointKNNSquaredDistance[i] << ")" << std::endl;
-							// 0.004367 is the squared distance of the closest control point
-							if (pointKNNSquaredDistance[i] > 0.004367*3) { continue; }
-
-
-							// calculate control point normal
-							// transform envMap_point to camera coordinate system
-							Eigen::Vector3f envMap_point_c1 = T_c.cast<float>() * Eigen::Vector3f(envMap_point.val[0], envMap_point.val[1], envMap_point.val[2]);
-							// project envMap_point to image plane
-							// float pixel_x = (fx * envMap_point_c1.x()) / envMap_point_c1.z() + cx;
-							// float pixel_y = (fy * envMap_point_c1.y()) / envMap_point_c1.z() + cy;
-
-							Vec2 uv = _calib.project(envMap_point_c1.cast<double>());
-							int r_n = std::round(uv[1]), c_n = std::round(uv[0]);
-							// check if the projected point is in the image
-							if(r_n < B || r_n >= max_rows || c_n < B || c_n >= max_cols) { continue; }
-
-							//							Vec3f ctrlPointNormal =  N_ptr[r_n * width + c_n];//newNormalMap.at<Vec3f>(r, c);
-							Vec3f ctrlPointNormal =  normalMaps[currentFrameIdx].at<Vec3f>(r, c);;//newNormalMap.at<Vec3f>(r, c);
-
-							ctrlPointNormal=cv::normalize(ctrlPointNormal);
-
-							float angle_consine = ctrlPointNormal.dot(N_);
-							if (angle_consine<0.9962){ continue;} // 0.9848 is the cos(10 degree), 0.9962 is the cos(5 degree)
-							float disPoint2Env=  pointKNNSquaredDistance[i]/(ctrlPointNormal.dot(N_));
-							if (disPoint2Env<disPoint2Env_min){
-								disPoint2Env_min=disPoint2Env;
-								targetEnvMapIdx=i;
-								targetEnvMapVal=envMap_point;
-							}
-
-
-						}
-						if (targetEnvMapIdx!=-1){
-							key4Search.val[0] = targetEnvMapVal.val[0];
-							key4Search.val[1] = targetEnvMapVal.val[1];
-							key4Search.val[2] = targetEnvMapVal.val[2];
-						}
-
-					}
-					// if no envMap point is found, skip this point
-					if (key4Search.dot(key4Search)==0){ continue;}
-
-					int ctrlIndex= EnvLightLookup->envLightIdxMap[key4Search];
-					if ( EnvLightLookup->envLightIdxMap.size()==0){std::cerr<<"Error in EnvLight->envLightIdxMap! "<<endl;}
-
-					if (envLightMap_cur.count(ctrlIndex)==0){
-						stringstream ss;
-						string img_idx_str;
-						ss << ctrlIndex;
-						ss >> img_idx_str;
-						string name_prefix = "/envMap";
-						string renderedEnvLightfolder =renderedEnvLight_path + "/envMap" + img_idx_str + "/renderedEnvLight";
-						string renderedEnvLightDiffuse =renderedEnvLight_path + "/envMap" + img_idx_str + "/renderedEnvLightDiffuse";
-						string envMapDiffuse = renderedEnvLightDiffuse + "/envMapDiffuse_" + img_idx_str + ".pfm";
-						PBANL::pointEnvlight pEnv;
-						DSONL::EnvMapLookup *EnvMapLookup = new DSONL::EnvMapLookup();
-						EnvMapLookup->makeMipMap(pEnv.EnvmapSampler,renderedEnvLightfolder); // index_0: prefiltered Env light
-						delete EnvMapLookup;
-
-						//            diffuseMap *diffuseMap = new DSONL::diffuseMap;
-						//            diffuseMap->makeDiffuseMap(pEnv.EnvmapSampler, envMapDiffuse); // index_1: diffuse
-						//            delete diffuseMap;
-
-						envLightMap_cur.insert(make_pair(ctrlIndex, pEnv));
-						//                    cout<<"show size of envLightMap_cur:"<<envLightMap_cur.size()<<endl;
-					}
-					DSONL::prefilteredEnvmapSampler= & ( envLightMap_cur[ctrlIndex].EnvmapSampler[0]);
-					DSONL::brdfSampler_ = & (EnvLightLookup->brdfSampler[0]);
-
-					Sophus::SO3f enterPanoroma;
-					Sophus::SE3d T_c2w(T_w_beta_start.rotation(), T_w_beta_start.translation());
-					// TODO: convert the envmap to current "world coordinate" in advance !!!!!! done
-					Vec3f radiance_beta = ibl_Radiance->solveForRadiance(View_beta, N_, roughness_pixel, image_metallic,
-					                                                     reflectance, baseColor, T_c2w.rotationMatrix(),
-					                                                     enterPanoroma.inverse());
-					Vec3 radiance_beta_(radiance_beta[0],radiance_beta[1],radiance_beta[2]);
-					if (isnan(radiance_beta[0])){ continue ;}
-
-					pt->specularitySequence.insert(make_pair(pt->refFrameId(),Vec3(radiance_beta[0],radiance_beta[1],radiance_beta[2])));
-
-
-					for (int i = 1; i < pt->visibilityList().size(); ++i) {
-						Eigen::Isometry3d T_w_view_2_start_c2w(_trajectory[pt->visibilityList()[i]].matrix());
-						Eigen::Isometry3d T_w_view_2_start_w2c(T_w_view_2_start_c2w.inverse());
-
-						Eigen::Vector3d view_beta_prime_i_c = T_w_view_2_start_w2c*(point_w.cast<double>());
-						view_beta_prime_i_c= - view_beta_prime_i_c.normalized();
-						Vec3f View_beta_i(view_beta_prime_i_c(0), view_beta_prime_i_c(1), view_beta_prime_i_c(2));
-
-						Vec3f radiance_beta_i = ibl_Radiance->solveForRadiance(View_beta_i, N_, roughness_pixel, image_metallic,
-						                                                       reflectance, baseColor, T_c2w.rotationMatrix(),
-						                                                       enterPanoroma.inverse());
-						Vec3 radiance_beta_i_(radiance_beta_i[0],radiance_beta_i[1],radiance_beta_i[2]);
-						pt->specularitySequence.insert(make_pair(pt->visibilityList()[i],Vec3(radiance_beta_i[0],radiance_beta_i[1],radiance_beta_i[2])));
-					}
-
-
 
 					counter_frame4++;
 				}else if(pt->refFrameId()== frame_id_start+4){
 
 					int currentFrameIdx=4;
-					Eigen::Isometry3d T_w_beta_start(_trajectory[pt->refFrameId()].matrix());
-					int r=pt->_x[1];
-					int c=pt->_x[0];
-					const Vec3f normal_pixel = normalMaps[currentFrameIdx].at<Vec3f>(r,c);
-					Vec3f normal = normalize(normal_pixel); //normal in camera coordinate
-					const float roughness_pixel= roughnessMaps[currentFrameIdx].at<float>(r,c);
-					float reflectance = 1.0f;                                   // reflectance
-					int num_K = 3;
-					//					cout<<"check normal and roughness:\n "<<normal_pixel<<", and "<<roughness_pixel<<"and depth:"<<depthMaps[0].at<float>(r,c)<<endl;
-					Eigen::Vector3f point_c= (depthMaps[currentFrameIdx].at<float>(r,c) * _K_inv * Vec3(c, r, 1.0)).cast<float>();
-					Eigen::Vector3f point_w= (T_w_beta_start * Vec3(point_c.x(),point_c.y(), point_c.z())).cast<float>();
-
-					float image_metallic=1e-3;                                  // metallic
-					Eigen::Matrix<float, 3, 1> beta= -point_c;
-					beta= beta.normalized();
-					Vec3f baseColor(0.0, 0.0, 0.0);                             //base color
-					Vec3f N_(normal(0), normal(1), normal(2));
-					Vec3f View_beta(beta(0), beta(1), beta(2));
-
-					pcl::PointXYZ searchPoint(point_w.x(), point_w.y(), point_w.z());
-					std::vector<int> pointIdxKNNSearch(num_K);
-					std::vector<float> pointKNNSquaredDistance(num_K);
-					Vec3f key4Search;
-					if ( EnvLightLookup->kdtree.nearestKSearch(searchPoint, num_K, pointIdxKNNSearch, pointKNNSquaredDistance) > 0)
-					{
-						float disPoint2Env_min= 10.0f;
-						int targetEnvMapIdx=-1;
-						Vec3f targetEnvMapVal;
-
-						// find the closest control point which domain contains the current point
-						for (std::size_t i = 0; i < pointIdxKNNSearch.size (); ++i) {
-							Vec3f envMap_point((*(EnvLightLookup->ControlpointCloud))[pointIdxKNNSearch[i]].x, (*(EnvLightLookup->ControlpointCloud))[pointIdxKNNSearch[i]].y,
-							                   (*(EnvLightLookup->ControlpointCloud))[pointIdxKNNSearch[i]].z);
-
-							//                        std::cout << "\n------"<<envMap_point.val[0]<< " " << envMap_point.val[1]<< " " << envMap_point.val[2]
-							//                                  << " (squared distance: " << pointKNNSquaredDistance[i] << ")" << std::endl;
-							// 0.004367 is the squared distance of the closest control point
-							if (pointKNNSquaredDistance[i] > 0.004367*3) { continue; }
-
-
-							// calculate control point normal
-							// transform envMap_point to camera coordinate system
-							Eigen::Vector3f envMap_point_c1 = T_c.cast<float>() * Eigen::Vector3f(envMap_point.val[0], envMap_point.val[1], envMap_point.val[2]);
-							// project envMap_point to image plane
-							// float pixel_x = (fx * envMap_point_c1.x()) / envMap_point_c1.z() + cx;
-							// float pixel_y = (fy * envMap_point_c1.y()) / envMap_point_c1.z() + cy;
-
-							Vec2 uv = _calib.project(envMap_point_c1.cast<double>());
-							int r_n = std::round(uv[1]), c_n = std::round(uv[0]);
-							// check if the projected point is in the image
-							if(r_n < B || r_n >= max_rows || c_n < B || c_n >= max_cols) { continue; }
-
-							//							Vec3f ctrlPointNormal =  N_ptr[r_n * width + c_n];//newNormalMap.at<Vec3f>(r, c);
-							Vec3f ctrlPointNormal =  normalMaps[currentFrameIdx].at<Vec3f>(r, c);;//newNormalMap.at<Vec3f>(r, c);
-
-							ctrlPointNormal=cv::normalize(ctrlPointNormal);
-
-							float angle_consine = ctrlPointNormal.dot(N_);
-							if (angle_consine<0.9962){ continue;} // 0.9848 is the cos(10 degree), 0.9962 is the cos(5 degree)
-							float disPoint2Env=  pointKNNSquaredDistance[i]/(ctrlPointNormal.dot(N_));
-							if (disPoint2Env<disPoint2Env_min){
-								disPoint2Env_min=disPoint2Env;
-								targetEnvMapIdx=i;
-								targetEnvMapVal=envMap_point;
-							}
-
-
-						}
-						if (targetEnvMapIdx!=-1){
-							key4Search.val[0] = targetEnvMapVal.val[0];
-							key4Search.val[1] = targetEnvMapVal.val[1];
-							key4Search.val[2] = targetEnvMapVal.val[2];
-						}
-
-					}
-					// if no envMap point is found, skip this point
-					if (key4Search.dot(key4Search)==0){ continue;}
-
-					int ctrlIndex= EnvLightLookup->envLightIdxMap[key4Search];
-					if ( EnvLightLookup->envLightIdxMap.size()==0){std::cerr<<"Error in EnvLight->envLightIdxMap! "<<endl;}
-
-					if (envLightMap_cur.count(ctrlIndex)==0){
-						stringstream ss;
-						string img_idx_str;
-						ss << ctrlIndex;
-						ss >> img_idx_str;
-						string name_prefix = "/envMap";
-						string renderedEnvLightfolder =renderedEnvLight_path + "/envMap" + img_idx_str + "/renderedEnvLight";
-						string renderedEnvLightDiffuse =renderedEnvLight_path + "/envMap" + img_idx_str + "/renderedEnvLightDiffuse";
-						string envMapDiffuse = renderedEnvLightDiffuse + "/envMapDiffuse_" + img_idx_str + ".pfm";
-						PBANL::pointEnvlight pEnv;
-						DSONL::EnvMapLookup *EnvMapLookup = new DSONL::EnvMapLookup();
-						EnvMapLookup->makeMipMap(pEnv.EnvmapSampler,renderedEnvLightfolder); // index_0: prefiltered Env light
-						delete EnvMapLookup;
-
-						//            diffuseMap *diffuseMap = new DSONL::diffuseMap;
-						//            diffuseMap->makeDiffuseMap(pEnv.EnvmapSampler, envMapDiffuse); // index_1: diffuse
-						//            delete diffuseMap;
-
-						envLightMap_cur.insert(make_pair(ctrlIndex, pEnv));
-						//                    cout<<"show size of envLightMap_cur:"<<envLightMap_cur.size()<<endl;
-					}
-					DSONL::prefilteredEnvmapSampler= & ( envLightMap_cur[ctrlIndex].EnvmapSampler[0]);
-					DSONL::brdfSampler_ = & (EnvLightLookup->brdfSampler[0]);
-
-					Sophus::SO3f enterPanoroma;
-					Sophus::SE3d T_c2w(T_w_beta_start.rotation(), T_w_beta_start.translation());
-					// TODO: convert the envmap to current "world coordinate" in advance !!!!!! done
-					Vec3f radiance_beta = ibl_Radiance->solveForRadiance(View_beta, N_, roughness_pixel, image_metallic,
-					                                                     reflectance, baseColor, T_c2w.rotationMatrix(),
-					                                                     enterPanoroma.inverse());
-					Vec3 radiance_beta_(radiance_beta[0],radiance_beta[1],radiance_beta[2]);
-					if (isnan(radiance_beta[0])){ continue ;}
-
-					pt->specularitySequence.insert(make_pair(pt->refFrameId(),Vec3(radiance_beta[0],radiance_beta[1],radiance_beta[2])));
-
-
-
-
-					for (int i = 1; i < pt->visibilityList().size(); ++i) {
-						Eigen::Isometry3d T_w_view_2_start_c2w(_trajectory[pt->visibilityList()[i]].matrix());
-						Eigen::Isometry3d T_w_view_2_start_w2c(T_w_view_2_start_c2w.inverse());
-
-						Eigen::Vector3d view_beta_prime_i_c = T_w_view_2_start_w2c*(point_w.cast<double>());
-						view_beta_prime_i_c= - view_beta_prime_i_c.normalized();
-						Vec3f View_beta_i(view_beta_prime_i_c(0), view_beta_prime_i_c(1), view_beta_prime_i_c(2));
-
-						Vec3f radiance_beta_i = ibl_Radiance->solveForRadiance(View_beta_i, N_, roughness_pixel, image_metallic,
-						                                                       reflectance, baseColor, T_c2w.rotationMatrix(),
-						                                                       enterPanoroma.inverse());
-						Vec3 radiance_beta_i_(radiance_beta_i[0],radiance_beta_i[1],radiance_beta_i[2]);
-						pt->specularitySequence.insert(make_pair(pt->visibilityList()[i],Vec3(radiance_beta_i[0],radiance_beta_i[1],radiance_beta_i[2])));
-					}
-
-
 					counter_frame5++;
 				}
 			}
@@ -2267,7 +1839,7 @@ public:
 
 
 
-//		T xw[3];
+//	_calib
 //		T point[3];
 //        ceres::AngleAxisRotatePoint(camera, point, xw);
 //
@@ -2451,6 +2023,8 @@ void PhotometricBundleAdjustment::optimize(Result* result)
 					float specularity_weight = 1.0;
 
 					if(pt->specularitySequence.find(id) != pt->specularitySequence.end()){
+
+						if (pt->specularitySequence[id].x()==666.0f && pt->specularitySequence[id].x()==pt->specularitySequence[id].y()){ continue ;}
 
 						specularity_weight = specularityWeight(pt->specularitySequence[pt->refFrameId()],pt->specularitySequence[id]);
 //

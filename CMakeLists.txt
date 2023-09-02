@@ -277,6 +277,9 @@ add_executable(pba
         include/diffuseMap/diffuse_mask_Renderer.cpp
         include/settings/preComputeSetting.cpp
         include/PhotometricBA/deltaCompution.cpp
+
+        include/pixelSelector.cpp
+        include/settings/setting.cpp
         )
 target_link_libraries(pba
         Eigen3::Eigen

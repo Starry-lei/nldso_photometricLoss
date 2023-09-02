@@ -178,7 +178,7 @@ public:
      * \param result, if not null we store the optmization results in it
      */
 //  void addFrame(const uint8_t* image, const float* depth_map, const Mat44& T, Result* = nullptr);
-	void addFrame(const uint8_t* image, const float* depth_map, const Mat& depthMap,const Mat& N_map, const Mat&  R_map, const Mat44& T, Result* = nullptr);
+	void addFrame(const uint8_t* image, const cv::Mat& grayImg, const float* depth_map, const Mat& depthMap,const Mat& N_map, const Mat&  R_map, const Mat44& T, Result* = nullptr);
 
 
 
