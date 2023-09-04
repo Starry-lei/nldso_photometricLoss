@@ -676,8 +676,8 @@ namespace DSONL {
 
 
 
-        specularityMap_1=specularityMap.clone();
-        specularityMap_2=specularityMap_right.clone();
+        specularityMap_1= specularityMap.clone();
+        specularityMap_2= specularityMap_right.clone();
 
 		double max_n_radiance, min_n_radiance;
 		cv::minMaxLoc(radianceMap_left, &min_n_radiance, &max_n_radiance);

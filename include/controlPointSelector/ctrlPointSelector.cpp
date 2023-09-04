@@ -150,7 +150,7 @@ namespace DSONL {
 //                cout << pair.second[i] << ",";
 //            }
 //        }
-//        writer.write("ControlpointCloud.pcd", *ControlpointCloud, false);// do we need the sensor acquisition origin?
+        writer.write("ControlpointCloud.pcd", *ControlpointCloud, false);// do we need the sensor acquisition origin?
 //        writer.write("nearestPointCloud.pcd", *nearestPointCloud, false);// do we need the sensor acquisition origin?
 //        writer.write("scenePointCloud.pcd", *scenePointCloud, false);// do we need the sensor acquisition origin?
 

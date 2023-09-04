@@ -1259,6 +1259,11 @@ void PhotometricBundleAdjustment::
 
 		std::string renderedEnvLight_path=EnvMapPath;
 
+		Mat specularityMap(_image_size.rows, _image_size.cols, CV_32FC3, Scalar(0));
+		Mat specularityMap_right(_image_size.rows, _image_size.cols, CV_32FC3, Scalar(0));
+
+
+
 		for(auto& pt : _scene_points) {
 
 
@@ -1309,7 +1314,9 @@ void PhotometricBundleAdjustment::
 							//                        std::cout << "\n------"<<envMap_point.val[0]<< " " << envMap_point.val[1]<< " " << envMap_point.val[2]
 							//                                  << " (squared distance: " << pointKNNSquaredDistance[i] << ")" << std::endl;
 							// 0.004367 is the squared distance of the closest control point
-							if (pointKNNSquaredDistance[i] > 0.004367*3) { continue; }
+//							if (pointKNNSquaredDistance[i] > 0.004367*3) { continue; }
+
+							if (pointKNNSquaredDistance[i] > 0.32) { continue; }
 
 
 							// calculate control point normal
@@ -1465,6 +1472,9 @@ void PhotometricBundleAdjustment::
 
 						if (i==4){
 
+							specularityMap.at<Vec3f>(r,c)= radiance_beta;
+							specularityMap_right.at<Vec3f>(pixel_row_right,pixel_col_right)=radiance_beta_i;
+
 							Vec3 specularityChange= Vec3((radiance_beta_i-radiance_beta).val[0],(radiance_beta_i-radiance_beta).val[1],(radiance_beta_i-radiance_beta).val[2]);
 							float specularity= abs(specularityChange.y()/radiance_beta.val[1])+abs(specularityChange.x()/radiance_beta.val[0])+abs(specularityChange.z()/radiance_beta.val[1]);
 							//
@@ -1507,6 +1517,9 @@ void PhotometricBundleAdjustment::
 		cout<<"show counter_frame3:"<<counter_frame3<<endl;
 		cout<<"show counter_frame4:"<<counter_frame4<<endl;
 		cout<<"show counter_frame5:"<<counter_frame5<<endl;
+
+		cv::imshow("specularityMap.png",specularityMap*255.0);
+		cv::imshow("specularityMap_right.png",specularityMap_right*255.0);
 
 		imshow("weightMap",weightMap);
 		waitKey(0);

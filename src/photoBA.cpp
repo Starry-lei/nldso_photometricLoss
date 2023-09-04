@@ -75,7 +75,12 @@ void readCtrlPointPoseData(string fileName, vector<Sophus::SE3f, Eigen::aligned_
 		Eigen::Quaternionf q = Eigen::Quaternionf(qw, qx, qy, qz).normalized();
 		Sophus::SE3f SE3_qt(q, t);
 		pose.push_back(SE3_qt);
+
+
+
 	}
+
+
 
 }
 
@@ -143,6 +148,29 @@ int main(int argc, char** argv)
     // transform env light pose to the coordinate system of the first camera in PBA sequence
 	readCtrlPointPoseData(fileName, trajectoryPoses);
 	Sophus::SE3f frontCamPose_w (trajectoryPoses[0]);
+
+	std::vector<Sophus::SE3f, Eigen::aligned_allocator<Sophus::SE3f>> EnvGTPose;
+	readCtrlPointPoseData(EnvMapPosePath, EnvGTPose);
+	pcl::PointCloud<pcl::PointXYZ>::Ptr ControlpointCloud(new pcl::PointCloud<pcl::PointXYZ>());
+	pcl::PCDWriter writer;
+	int counter_controlpoint = 0;
+	for (size_t i = 1; i <= EnvGTPose.size(); i++) {
+		counter_controlpoint++;
+		cv::Point3f pointBase = Vec3f(EnvGTPose[i - 1].translation().x(),
+		                              EnvGTPose[i - 1].translation().y(),
+		                              EnvGTPose[i - 1].translation().z());
+
+//		cout<<"pointBase: "<<pointBase<<endl;
+		ControlpointCloud->push_back(pcl::PointXYZ(pointBase.x, pointBase.y, pointBase.z));
+	}
+
+	cout<<"counter_controlpoint: "<<counter_controlpoint<<endl;
+	writer.write("ControlpointCloud_complete.pcd", *ControlpointCloud, false);// do we need the sensor acquisition origin?
+
+
+
+
+
 
 	photoba->EnvMapPath=EnvMapPath;
 
