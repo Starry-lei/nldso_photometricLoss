@@ -1393,6 +1393,23 @@ void PhotometricBundleAdjustment::optimize(Result* result)
 
 
 
+//	    // write a for loop
+//	     for(auto& pt : _scene_points) {
+//		    			if(pt->numFrames() >= 3 && pt->refFrameId() >= frame_id_start) {
+//			    					    				for(auto id : pt->visibilityList()) {
+//		    					if(id >= frame_id_start && id <= frame_id_end) {
+//		    					const Eigen::Isometry3d refined_camera_pose_w(_trajectory.atId(pt->refFrameId()));
+//		    					Vec3 X = refined_camera_pose_w * ((pt->ori_depth) * _K_inv * Vec3(pt->_x[0], pt->_x[1], 1.0)); // X in the world frame
+//		    					pt->X() = X;
+//		    					}
+//		    				}
+//		    			}
+//	     }
+
+
+
+
+
 
     // set a side the old points. Since we are doing a sliding window, all points
     // at frame_id_start should go out
