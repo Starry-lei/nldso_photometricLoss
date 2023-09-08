@@ -45,15 +45,20 @@ void specular_Mask_Renderer::init() {
 
   // Initialize shader A   parameter_path="include/preFilter_data/parameters_envmapMask.csv";
 //  shaderSettingsA = loadShaderSettings(FileTools::findFile("include/preFilter_data/parameters_envmapMask.csv"));
+
     shaderSettingsA = loadShaderSettings(FileTools::findFile(parameter_path_));
+
 
   if (shaderSettingsA.nodeClassName == "ImageShaderPluginNode") {
     // for image shaders, no mesh is required but a screen-aligned quad
     meshA.createQuad();
     // for image shaders, only the fragment shader code is required, 
     // the vertex shader is set to default
+
     std::string f = FileTools::findFile("include/shaders/specular_mask_fragment_shader.txt");
+//	cout << "preFilterSpecularMask::checkpoint 2" << endl;
     shaderNodeA.setShaderSourceFromFile("", f);
+//	cout << "preFilterSpecularMask::checkpoint 3" << endl;
   } else {
     // for regular shaders, load the input mesh
     LoadOBJ::load(FileTools::findFile("data/Mesh.obj"), meshA);
@@ -64,8 +69,9 @@ void specular_Mask_Renderer::init() {
   }
   
 //  shaderNodeA.setUniformsFromFile(FileTools::findFile("include/preFilter_data/parameters_envmapMask.csv"));
-
+//  cout << "preFilterSpecularMask::checkpoint 4" << endl;
     shaderNodeA.setUniformsFromFile(FileTools::findFile(parameter_path_));
+//	cout << "preFilterSpecularMask::checkpoint 5" << endl;
   
   // Initialize shader B
   // Shader B is an image shader that renders a screen-aligned quad

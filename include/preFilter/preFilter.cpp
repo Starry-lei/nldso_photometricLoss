@@ -37,7 +37,11 @@ namespace DSONL {
 
     void preFilterSpecularMask::Init(int argc, char **argv,string parameter_path) {
 
+
+
         renderer_specular = new specular_Mask_Renderer(parameter_path);
+
+//		cout << "parameter_path: " << parameter_path << endl;
 
         renderer_specular->roughness = _roughness;
         glutInit(&argc, argv);
@@ -222,7 +226,7 @@ namespace DSONL {
 
 //        string renderedEnvLight_path= "/home/lei/Documents/Research/envMapData/EnvMap_Img04_moreSpecular_260";
 
-        string renderedEnvLight_path= "/home/lei/Documents/Research/envMapData/envMap795";
+        string renderedEnvLight_path= "/home/lei/Documents/Research/envMapData/renderedEnvMaps2095";
 
 
 
@@ -487,7 +491,7 @@ namespace DSONL {
 
 
 //        string renderedEnvLight_path="/home/lei/Documents/Research/envMapData/EnvMap_Img04_moreSpecular_260";
-        string renderedEnvLight_path= "/home/lei/Documents/Research/envMapData/envMap795";
+        string renderedEnvLight_path= "/home/lei/Documents/Research/envMapData/renderedEnvMaps2095";
 
 
 

@@ -127,7 +127,7 @@ namespace DSONL {
 
 		cout << "\n show Image depth:\n"
 		     << im.depth() << "\n show Image channels :\n " << im.channels() << endl;
-		imshow("Image", im);
+//		imshow("Image", im);
 
 		double min_v, max_v;
 		cv::minMaxLoc(im, &min_v, &max_v);
@@ -425,8 +425,8 @@ namespace DSONL {
 			}
 		}
 
-		imshow("orig_show", orig_show);
-		imshow("adj_show", adj_show);
+//		imshow("orig_show", orig_show);
+//		imshow("adj_show", adj_show);
 
 		//          imwrite("orig_show.png",orig_show);
 		//          imwrite("adj_show.png",adj_show);

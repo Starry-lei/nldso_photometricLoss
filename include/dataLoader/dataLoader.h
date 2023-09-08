@@ -128,7 +128,7 @@ namespace DSONL {
 //                cout<<"show camPose1:"<<camPose1.matrix()<<endl;
 
 
-                Mat image_ref =imread(image_ref_path, IMREAD_ANYCOLOR | IMREAD_ANYDEPTH);
+                Mat image_ref = cv::imread(image_ref_path, IMREAD_ANYCOLOR | IMREAD_ANYDEPTH);
                 Mat depth_ref = imread(depth_ref_path, IMREAD_ANYCOLOR | IMREAD_ANYDEPTH);
                 Mat depth_reference(depth_ref.rows, depth_ref.cols, CV_64FC1);
                 for (int j = 0; j < depth_ref.rows; ++j) {

@@ -52,8 +52,7 @@
 #include <fstream>
 
 #include <opencv2/core/core.hpp>
-#include <opencv/highgui.h>
-
+#include <opencv2/highgui/highgui.hpp>
 /**
  * Loads a PFM image stored in little endian and returns the image as an OpenCV Mat.
  * @brief loadPFM

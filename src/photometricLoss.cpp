@@ -73,8 +73,13 @@ int main(int argc, char **argv) {
 //    string controlPointPose_path="/home/lei/Documents/Research/envMapData/2frame0370_02_control_cam_pose_image4.txt";
 
 
-    std::string envMap_Folder="/media/lei/Data/SimulationDataset/formatEnvMap";
-    string controlPointPose_path="/home/lei/Documents/Research/envMapData/control_cam_pose_scene0370_02origins_down795.txt";
+//    std::string envMap_Folder="/media/lei/Data/SimulationDataset/formatEnvMap";
+//    string controlPointPose_path="/home/lei/Documents/Research/envMapData/control_cam_pose_scene0370_02origins_down795.txt";
+
+	std::string envMap_Folder="/home/lei/Documents/Research/envMapData/formattedEnvmap2095";
+	string controlPointPose_path="/home/lei/Documents/Research/envMapData/300frame0370_02_control_cam_pose2095.txt";
+
+
 
 
 
@@ -122,8 +127,8 @@ int main(int argc, char **argv) {
     ctrlPointSelector  * ctrlPoint_Selector= new ctrlPointSelector(dataLoader->camPose1, controlPointPose_path,grayImage_ref, depth_ref_GT,K);
     // TODO(parallelization)
 
-    imshow("grayImage_ref", grayImage_ref);
-    waitKey(0);
+//    imshow("grayImage_ref", grayImage_ref);
+//    waitKey(0);
 
     std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
 
@@ -134,9 +139,9 @@ int main(int argc, char **argv) {
     cout << "construct the envMap: " << time_used.count() << " seconds." << endl;
     cout<<"\n The preComputation of EnvMap is ready!"<<endl;
 
-
-    imshow("temp", grayImage_ref);
-    waitKey(0);
+//
+//    imshow("temp", grayImage_ref);
+//    waitKey(0);
 	// show the depth image with noise
 //	double min_depth_val, max_depth_val;
 //	cv::minMaxLoc(depth_ref, &min_depth_val, &max_depth_val);

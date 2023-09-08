@@ -11,6 +11,12 @@ set(CMAKE_PREFIX_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/eigen3" ${CMAKE
 set(EIGEN_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/eigen")
 set(CERES_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/build-ceres-solver")
 
+option(BUILD_STATIC   "Build static libraries"  ON)
+option(WITH_TBB      "with Intel TBB"          ON)
+option(WITH_OPENMP   "with openmp"             ON)
+option(WITH_OPENCV   "with opencv"             ON)
+option(WITH_MATLAB   "compile with Matlab interface" OFF)
+
 # set(PANGOLIN_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/build-Pangolin/src")
 # set(OPENGV_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/build-opengv")
 # set(g2o_DIR "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/g2o/lib/cmake/g2o")
@@ -78,6 +84,8 @@ include_directories(thirdparty/CLI11/include)
 
 # include_directories(thirdparty/g2o/include)
 include_directories(include)
+#include_directories(/home/lei/Documents/Libraries/openCV3.4x/include/)
+include_directories(/usr/local/include/opencv4/)
 
 # to use link to target "ceres"
 # Note: always link to ceres first, as otherwise a system-wide install might
@@ -101,13 +109,15 @@ message(STATUS "Found TBB ${TBB_VERSION_MAJOR}.${TBB_VERSION_MINOR} (interface v
 
 # to use link to target "OpenCV"
 # NOTE: not specifying version, since 2, 3 or 4 is fine
-find_package(OpenCV 3.3 REQUIRED)
+find_package(OpenCV  REQUIRED)
+
 
 # COMPONENTS core features2d
 message(STATUS "Found OpenCV ${OpenCV_VERSION} headers in: ${OpenCV_INCLUDE_DIRS}")
 add_library(OpenCV INTERFACE IMPORTED)
 set_property(TARGET OpenCV PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${OpenCV_INCLUDE_DIRS})
 set_property(TARGET OpenCV PROPERTY INTERFACE_LINK_LIBRARIES ${OpenCV_LIBS})
+
 
 if(OpenCV_VERSION VERSION_LESS 3)
   set_property(TARGET OpenCV PROPERTY INTERFACE_COMPILE_DEFINITIONS DBATK_OPENCV2)
@@ -191,13 +201,13 @@ set(dsonl_SOURCE_FILES
 
 add_library(dsonl ${dsonl_SOURCE_FILES})
 
-add_executable(photometricLoss src/photometricLoss.cpp)
+add_executable(photometricLoss src/photometricLoss.cpp )
 target_link_libraries(photometricLoss
+  dsonl
   Ceres::ceres
   TBB::tbb
   OpenCV
   ${PCL_LIBRARIES}
-  dsonl
   ${OPENGL_LIBRARIES}
   ${GLUT_LIBRARIES}
   ${GLEW_LIBRARIES}

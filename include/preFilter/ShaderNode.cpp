@@ -29,7 +29,7 @@ namespace gsn {
     if (infoLogLength > 0) {
       infoLog = (char*)malloc(infoLogLength);
       glGetShaderInfoLog(obj, infoLogLength, &returnLength, infoLog);
-      printf("%s\n", infoLog);
+      printf("checking %s\n", infoLog);
       free(infoLog);
       exit(1);
     }
@@ -212,13 +212,19 @@ void ShaderNode::setShaderSource(const std::string& _vertexShader, const std::st
     }
   }
 
+
+
   findAllUniforms(vertexShader);
   findAllUniforms(fragmentShader);
   findRenderOptions(vertexShader + "\n" + fragmentShader);
   findAllRenderTargets(fragmentShader);
 
+
+
   setupShaders();
+
   findAllUniformLocations();
+
 }
 
 
@@ -229,7 +235,9 @@ void ShaderNode::setShaderSourceFromFile(const std::string& vertexShaderFilename
   if (vertexShaderFilename.size() > 0) {
     vertexShader = FileTools::readTextFile(vertexShaderFilename);
   }
+
   string fragmentShader = FileTools::readTextFile(fragmentShaderFilename);
+
   setShaderSource(vertexShader, fragmentShader);
 }
 
@@ -478,12 +486,16 @@ void ShaderNode::findAllRenderTargets(const std::string& code)
 
 void ShaderNode::setupShaders() {
 
+
+
   if (vertID > 0) {
     glDeleteShader(vertID);
   }
   if (fragID > 0) {
     glDeleteShader(fragID);
   }
+
+
 
   // create shader
   vertID = glCreateShader(GL_VERTEX_SHADER);
@@ -499,6 +511,8 @@ void ShaderNode::setupShaders() {
   glCompileShader(vertID);
   glCompileShader(fragID);
 
+//  cout << "preFilterSpecularMask::checkpoint eeeeee" << endl;
+
   // check for errors
   printShaderInfoLog(vertID);
   printShaderInfoLog(fragID);
@@ -507,21 +521,25 @@ void ShaderNode::setupShaders() {
   if (progID > 0) {
     glDeleteProgram(progID);
   }
+//  cout << "preFilterSpecularMask::checkpoint rrrrr" << endl;
 
   // create program and attach shaders
   progID = glCreateProgram();
   glAttachShader(progID, vertID);
   glAttachShader(progID, fragID);
-
+  // cout << "preFilterSpecularMask::checkpoint tttttt" << endl;
   // link the program
   glLinkProgram(progID);
   // output error messages
   printProgramInfoLog(progID);
-
+  // cout << "preFilterSpecularMask::checkpoint yyyyy" << endl;
   positionAttr = glGetAttribLocation(progID, "position");
   normalAttr = glGetAttribLocation(progID, "normal");
   texCoordAttr = glGetAttribLocation(progID, "texcoord");
   colorAttr = glGetAttribLocation(progID, "color");
+
+  // cout << "preFilterSpecularMask::checkpoint uuuuu" << endl;
+
 }
 
 void ShaderNode::resizeFBO(int width, int height) {
@@ -534,13 +552,18 @@ void ShaderNode::resizeFBO(int width, int height) {
     fboHeight = height;
   }
 
+
   for (int r = 0; r < int(renderTargets.size()); r++) {
     RenderTarget& renderTarget = renderTargets[r];
+//	cout << "preFilterSpecularMask::checkpoint 7.5" << endl;
     if (renderTarget.texID > 0) {
       glDeleteTextures(1, &renderTarget.texID);
       renderTarget.texID = 0;
     }
   }
+//  cout << "preFilterSpecularMask::checkpoint 8" << endl;
+
+
 
   if (fbo > 0) {
     glDeleteFramebuffers(1, &fbo);

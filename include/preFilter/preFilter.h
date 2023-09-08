@@ -39,7 +39,7 @@ namespace DSONL {
 		void Init(int argc, char **argv,string parameter_path);// int argc, char** argv
 	private:
 		Eigen::Matrix<float, 2, 1> tc;
-		int samples;
+		int samples=0;
 		float envMapLevel;
 	};
 
