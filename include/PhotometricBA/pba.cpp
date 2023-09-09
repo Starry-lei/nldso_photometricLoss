@@ -703,7 +703,6 @@ void PhotometricBundleAdjustment::
 
 	cv::Mat salientImage(_saliency_map.rows(), _saliency_map.cols(), CV_32F, _saliency_map.data());
 
-    // Display the image using OpenCV
     int count_selectedPoint = 0;
     salientImage.convertTo(salientImage, CV_8UC1);
 
@@ -868,7 +867,6 @@ void PhotometricBundleAdjustment::
     std::move(new_scene_points.begin(), new_scene_points.end(), std::back_inserter(_scene_points));
     _frame_buffer.push_back(DescriptorFramePointer(frame));
 
-
 //	for(int i=0;i<480;i++){
 //		for(int j=0;j<640;j++){
 //			//			if( normalArray[i][j][0]>0 && normalArray[i][j][0]<0.00001){
@@ -884,24 +882,6 @@ void PhotometricBundleAdjustment::
 
 	if(_frame_buffer.full()) {
 
-//		cout<<"show normalMaps size: "<<normalMaps.size()<<endl;
-//
-//		for (int i = 0; i < normalMaps.size(); ++i) {
-//			imshow("roughnessMaps"+ to_string(i),roughnessMaps[i]);
-//			waitKey(0);
-//		}
-
-//		for(int i=0;i<480;i++){
-//			for(int j=0;j<640;j++){
-//				//			if( normalArray[i][j][0]>0 && normalArray[i][j][0]<0.00001){
-//				//				std::cout<<"normalArray[i][j][0]: !!!!"<<normalArray[i][j][0]<<endl;
-//				//			} Vec3f normal_pixel = normal_ptr_map[0][r * width + c];
-//				std::cout<<"frame.N.at<cv::Vec3f>: !!!!"<< normalMaps[0].at<Vec3f>(i,j)<<std::endl;
-//
-//				//  			std:: cout<<"normalArray[i][j][1]: "<<frame.N[i][j][1]<<std::endl;
-//				//  			std:: cout<<"normalArray[i][j][2]: "<<frame.N[i][j][2]<<std::endl;
-//			}
-//		}
 		//
 		std::cout<<"show Scene point size in current round of optimiation : "<<_scene_points.size()<<std::endl;
 		// define a file to save the optimized points and corresponding pixel values
@@ -979,7 +959,7 @@ void PhotometricBundleAdjustment::
 							//                                  << " (squared distance: " << pointKNNSquaredDistance[i] << ")" << std::endl;
 							// 0.004367 is the squared distance of the closest control point
 //							if (pointKNNSquaredDistance[i] > 0.004367*3) { continue; }
-							if (pointKNNSquaredDistance[i] > 0.004367) { continue; }
+							if (pointKNNSquaredDistance[i] > 0.004367*2) { continue; }
 //							if (pointKNNSquaredDistance[i] > 0.32) { continue; }
 
 
@@ -1652,6 +1632,21 @@ void PhotometricBundleAdjustment::
 		}
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 		cout<<"show counter_frame1:"<<counter_frame1<<endl;
 		cout<<"show counter_frame2:"<<counter_frame2<<endl;
 		cout<<"show counter_frame3:"<<counter_frame3<<endl;
@@ -1671,10 +1666,9 @@ void PhotometricBundleAdjustment::
 //		imshow("specularityChange",specularityChangeMap);
 //		imwrite("specularityChange.png",specularityChange*255);
 
-
+//
 //		cvtColor(specularityMap,specularityMap,COLOR_RGB2GRAY);
 //		cvtColor(specularityMap_right,specularityMap_right,COLOR_RGB2GRAY);
-//
 //		cv::imshow("specularityMap.png",specularityMap);
 //		imwrite("specularityMap.png",specularityMap*255);
 //		cv::imshow("specularityMap_right.png",specularityMap_right);
