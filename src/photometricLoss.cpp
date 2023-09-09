@@ -76,15 +76,19 @@ int main(int argc, char **argv) {
 //    std::string envMap_Folder="/media/lei/Data/SimulationDataset/formatEnvMap";
 //    string controlPointPose_path="/home/lei/Documents/Research/envMapData/control_cam_pose_scene0370_02origins_down795.txt";
 
-	std::string envMap_Folder="/home/lei/Documents/Research/envMapData/formattedEnvmap2095";
-	string controlPointPose_path="/home/lei/Documents/Research/envMapData/300frame0370_02_control_cam_pose2095.txt";
+//	std::string envMap_Folder="/home/lei/Documents/Research/envMapData/formattedEnvmap2095";
+//	string controlPointPose_path="/home/lei/Documents/Research/envMapData/300frame0370_02_control_cam_pose2095.txt";
+//
+
+
+	std::string envMap_Folder="/home/lei/Documents/Research/envMapData/formatEnvMap795";
+	string controlPointPose_path="/home/lei/Documents/Research/envMapData/control_cam_pose_scene0370_02origins_down795.txt";
 
 
 
 
 
-
-    Mat grayImage_target, grayImage_ref, depth_ref, depth_target, image_ref_baseColor, image_target_baseColor;
+	Mat grayImage_target, grayImage_ref, depth_ref, depth_target, image_ref_baseColor, image_target_baseColor;
 //    Mat image_ref_metallic = dataLoader->image_ref_metallic;
 //    Mat image_ref_roughness = dataLoader->image_ref_roughness;
 	grayImage_ref = dataLoader->grayImage_ref;

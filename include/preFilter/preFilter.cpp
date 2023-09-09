@@ -226,7 +226,13 @@ namespace DSONL {
 
 //        string renderedEnvLight_path= "/home/lei/Documents/Research/envMapData/EnvMap_Img04_moreSpecular_260";
 
-        string renderedEnvLight_path= "/home/lei/Documents/Research/envMapData/renderedEnvMaps2095";
+//        string renderedEnvLight_path= "/home/lei/Documents/Research/envMapData/renderedEnvMaps2095";
+//
+//
+
+
+
+		string renderedEnvLight_path= "/home/lei/Documents/Research/envMapData/renderedEnvMaps795";
 
 
 
@@ -236,10 +242,7 @@ namespace DSONL {
 
 
 
-
-
-
-        string renderedEnvLightfolder= renderedEnvLight_path+ "/envMap"+lightIdx+"/renderedEnvLight";  //+"/renderedEnvLight";
+		string renderedEnvLightfolder= renderedEnvLight_path+ "/envMap"+lightIdx+"/renderedEnvLight";  //+"/renderedEnvLight";
 
 
         if (boost::filesystem::create_directories(renderedEnvLightfolder)){
@@ -491,9 +494,10 @@ namespace DSONL {
 
 
 //        string renderedEnvLight_path="/home/lei/Documents/Research/envMapData/EnvMap_Img04_moreSpecular_260";
-        string renderedEnvLight_path= "/home/lei/Documents/Research/envMapData/renderedEnvMaps2095";
+//        string renderedEnvLight_path= "/home/lei/Documents/Research/envMapData/renderedEnvMaps2095";
 
 
+		string renderedEnvLight_path= "/home/lei/Documents/Research/envMapData/renderedEnvMaps795";
 
 
 
