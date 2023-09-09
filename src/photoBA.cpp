@@ -92,7 +92,7 @@ int main(int argc, char** argv)
 
 	pbaUtils::ProgramOptions options;
 
-//    utils::ProgramOptions options;
+//  utils::ProgramOptions options;
     options
             ("output,o", "refined_poses_es_absolute.txt", "trajectory output file")
             ("config,c", "../config/tum_rgbd.cfg", "config file")
@@ -111,8 +111,8 @@ int main(int argc, char** argv)
 	// load GT trajectory
 	//	std::string abs_pose= "../data/dataSetPBA_init_poor/Kitti_GT_00.txt";
 	//	std::string abs_pose= "../data/dataSetPBA_init_poor/GT_pose_list_fr3.txt";
-		std::string abs_pose= "../data/dataSetPBA_init_poor/seq12_300_Poses_gt.txt";
-//
+	std::string abs_pose= "../data/dataSetPBA_init_poor/seq12_300_Poses_gt.txt";
+
 //	std::string abs_pose= "../data/dataSetPBA_init_poor/seq12_111_Poses_gt.txt";
 
 
@@ -149,9 +149,7 @@ int main(int argc, char** argv)
 	std::vector<Sophus::SE3f, Eigen::aligned_allocator<Sophus::SE3f>> trajectoryPoses;
 //	string fileName = "/home/lei/Documents/Dataset/dataSetPBA/sequences/02/poses.txt";
 	string fileName = "/home/lei/Documents/Dataset/dataSetPBA/sequences/12/300frame0370_02/cam_interpolated_poses_Env.txt";
-
 //	string fileName = "/home/lei/Documents/Dataset/dataSetPBA/sequences/13/cam_interpolated_poses_Env.txt";
-
 
 
 	// transform env light pose to the coordinate system of the first camera in PBA sequence
@@ -170,14 +168,8 @@ int main(int argc, char** argv)
 		cv::Point3f pointBase = Vec3f(EnvGTPose[i - 1].translation().x(),
 		                              EnvGTPose[i - 1].translation().y(),
 		                              EnvGTPose[i - 1].translation().z());
-
-//		cout<<"pointBase: "<<pointBase<<endl;
 		ControlpointCloud->push_back(pcl::PointXYZ(pointBase.x, pointBase.y, pointBase.z));
 	}
-
-//	cout<<"counter_controlpoint: "<<counter_controlpoint<<endl;
-//	writer.write("ControlpointCloud_complete.pcd", *ControlpointCloud, false);// do we need the sensor acquisition origin?
-
 
 	photoba->EnvMapPath=EnvMapPath;
 
@@ -390,10 +382,10 @@ bool next_step( ){
 	photoba->setImage_size(lvl);
 	photoba->_mask.resize(photoba->_image_size.rows, photoba->_image_size.cols);
 	photoba->_saliency_map.resize(photoba->_image_size.rows, photoba->_image_size.cols);
-	std::cout<<"show photoba->_calib._K_orig()\n "<<photoba->_calib._K_orig.matrix()<<std::endl;
-	std::cout<<"show new photoba->_calib.K():\n "<<photoba->_calib.K().matrix()<<std::endl;
-	std::cout<<"check _K_inv outside addFrame"<< photoba->_calib.K().matrix().inverse()<<std::endl;
-	std::cout <<"show image size: "<<photoba->_image_size.rows<<" "<<photoba->_image_size.cols<<std::endl;
+//	std::cout<<"show photoba->_calib._K_orig()\n "<<photoba->_calib._K_orig.matrix()<<std::endl;
+//	std::cout<<"show new photoba->_calib.K():\n "<<photoba->_calib.K().matrix()<<std::endl;
+//	std::cout<<"check _K_inv outside addFrame"<< photoba->_calib.K().matrix().inverse()<<std::endl;
+//	std::cout <<"show image size: "<<photoba->_image_size.rows<<" "<<photoba->_image_size.cols<<std::endl;
 	photoba->_K_inv = photoba->_calib.K().matrix().inverse().matrix();
 
 
