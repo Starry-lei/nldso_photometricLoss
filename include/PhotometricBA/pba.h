@@ -35,6 +35,8 @@ namespace pbaUtils {
 
 extern bool  optimizeSignal;
 
+extern Sophus::SE3f T_head_frame_c2w;
+
 class PhotometricBundleAdjustment
 {
 public:

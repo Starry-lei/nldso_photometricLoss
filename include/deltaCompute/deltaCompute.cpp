@@ -111,6 +111,12 @@ namespace DSONL {
 		// convert coordinate system
 		Eigen::Vector3f R_w =  enterEnv_Rotatio_inv.matrix()*Camera1_c2w.cast<float>() * R_c_;
 
+		cout<<"R_w:"<<R_w<<endl;
+		cout<<"Camera1_c2w:"<<Camera1_c2w.matrix()<<endl;
+		cout<<"enterEnv_Rotatio_inv:"<<enterEnv_Rotatio_inv.matrix()<<endl;
+		cout<<"R_c_:"<<R_c_<<endl;
+
+
 
 		Vec2f uv = directionToSphericalEnvmap(Vec3f(R_w.x(), R_w.y(), R_w.z()));
 		if (uv.val[0] > 1.0 || uv.val[1] > 1.0) {
@@ -118,7 +124,7 @@ namespace DSONL {
 		}
 
 
-		//      std::cout<<"uv:"<<uv<<"show roughness*float(mipCount)"<<roughness*float(mipCount)<<std::endl;
+		std::cout<<"uv:"<<uv<<"show roughness*float(mipCount)"<<roughness*float(mipCount)<<std::endl;
 		Vec3f prefiltered_Color = prefilteredColor(uv.val[0], uv.val[1], roughness * float(mipCount)
 //                                                   ,pointEnvlight_cur
         );
@@ -127,6 +133,8 @@ namespace DSONL {
 		//          prefiltered_Color:[0.112979, 0.0884759, 0.0929931]
 
 		//      show image_ref_path_PFM  of GSN(293,476)And values: [5.17454, 4.71557, 0.0619548]
+
+		cout<<"show prefiltered_Color!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1"<<prefiltered_Color<<endl;
 
 
 		Vec3f prefiltered_Color_check = prefiltered_Color;
@@ -208,8 +216,8 @@ namespace DSONL {
 		Vec3f kS = F;
 		Vec3f kD = One - kS;
 		kD = kD.mul(One - metallicValue * One);
-		Vec3f specular = specularIBL(f0, roughnessValue, normal, viewDir,Camera1_c2w,enterEnv_Rotation_inv);
-//        Vec3f specular = specularIBL(F, roughnessValue, normal, viewDir,Camera1_c2w,enterEnv_Rotation_inv);// !!!!!
+//		Vec3f specular = specularIBL(f0, roughnessValue, normal, viewDir,Camera1_c2w,enterEnv_Rotation_inv);
+        Vec3f specular = specularIBL(F, roughnessValue, normal, viewDir,Camera1_c2w,enterEnv_Rotation_inv);// !!!!!
         Specularity = specular;
 		//convert from camera to world
 		Eigen::Vector3d normal_c(normal.val[0], normal.val[1], normal.val[2]);
@@ -368,6 +376,8 @@ namespace DSONL {
 //                cout<<"show current index:"<< u<<","<<v<<"pointOfInterest.at<uchar>(u,v)"<<(int)pointOfInterest.at<uchar>(u,v)<<endl;
                 if ( ((int)pointOfInterest.at<uchar>(u,v))!=255){ continue;}
 
+//				if (!(u==414 && v==67)){ continue ;}
+
                 // ===================================RENDERING PARAMETERS:====================================
                 float image_roughnes= image_roughnes_.at<float>(u,v);
 //                cout<<"image_roughnes:"<<image_roughnes<<endl;
@@ -390,6 +400,11 @@ namespace DSONL {
                 point_K = K * p1;
                 int pixel_col_right= std::round(point_K.x() / point_K.z());
                 int pixel_row_right =std::round(point_K.y() / point_K.z());
+
+
+				cout<<"\n show current index:"<< u<<","<<v<<endl;
+				cout<<"pixel_col_right:"<<pixel_col_right<<endl;
+				cout<<"pixel_row_right:"<<pixel_row_right<<endl;
 
                 Eigen::Matrix<int, 2, 1> pt2d(pixel_col_right,pixel_row_right );
                 cv::Point2i pixel_coor (pixel_row_right, pixel_col_right);
@@ -418,6 +433,8 @@ namespace DSONL {
 				// convert normal vector from camera coordinate system to world coordinate system
 				normal = normal.normalized();
 
+				cout<<"normal:"<<normal<<endl;
+
 				// ===================================VIEW-DIRECTION====================================
 				Eigen::Matrix<float, 3, 1> beta, beta_prime;
 				beta = -p_c1;
@@ -425,7 +442,33 @@ namespace DSONL {
 				beta_prime = - Rotation.matrix().transpose().cast<float>() * Translation.cast<float>() - p_c1;
 				beta_prime = beta_prime.normalized();
 
-                // envMapPose_world
+				cout<<"beta:"<<beta<<endl;
+				cout<<"beta_prime:"<<beta_prime<<endl;
+
+//
+//			            beta: 0.309155
+//				        -0.108533
+//				        -0.944798
+//				        beta_prime: 0.348181
+//				        -0.132241
+//				        -0.928053
+//				        beta: 0.286594
+//				        -0.109337
+//				        -0.951793
+//				        beta_prime:  0.32627
+//				        -0.133434
+//				        -0.935811
+//
+//				        show specularityMap_left:[0.0470487, 0.0411333, 0.0301246]
+//
+//				                                   show specularityMap_right:[0.0737205, 0.063109, 0.0497172]
+
+
+
+
+
+
+				                                                               // envMapPose_world
 				// ===================================BASE-COLOR=============================================
 //                 Vec3f baseColor(image_baseColor.at<Vec3f>(u, v)[2], image_baseColor.at<Vec3f>(u, v)[1], image_baseColor.at<Vec3f>(u, v)[0]);
 //                Vec3f baseColor(std::pow(image_baseColor.at<Vec3f>(u, v)[2], 2.2), std::pow(image_baseColor.at<Vec3f>(u, v)[1], 2.2), std::pow(image_baseColor.at<Vec3f>(u, v)[0], 2.2));
@@ -490,7 +533,7 @@ namespace DSONL {
                         // calculate the euclidean distance between shader point and envMap point
                         //float disPoint2EnvPoint_squa= powf(envMap_point.val[0]-p_c1_w.x(),2)+powf(envMap_point.val[1]-p_c1_w.y(),2)+powf(envMap_point.val[2]-p_c1_w.z(),2);
 
-                        float disPoint2Env=  pointKNNSquaredDistance[i]/(ctrlPointNormal.dot(N_));
+                        float disPoint2Env =  pointKNNSquaredDistance[i]/(ctrlPointNormal.dot(N_));
                         if (disPoint2Env<disPoint2Env_min){
                             disPoint2Env_min=disPoint2Env;
                             targetEnvMapIdx=i;
@@ -579,6 +622,8 @@ namespace DSONL {
                 }
 
 
+				cout<<"show env ctrlIndex :"<<ctrlIndex<<endl;
+
 //                prefilteredEnvmapSampler= & (pEnv.EnvmapSampler[0]);
 //                brdfSampler_ = & (EnvLightLookup->brdfSampler[0]);
 //				diffuseSampler = & (pEnv.EnvmapSampler[1]);
@@ -586,6 +631,10 @@ namespace DSONL {
                 prefilteredEnvmapSampler= & ( envLightMap_cur[ctrlIndex].EnvmapSampler[0]);
                 brdfSampler_ = & (EnvLightLookup->brdfSampler[0]);
 				diffuseSampler = & (envLightMap_cur[ctrlIndex].EnvmapSampler[1]);
+
+
+				cout<<"check normal and roughness:\n "<<N_<<", and "<<image_roughnes<<"and depth:"<<1/iDepth<<endl;
+				cout<<"show Camera1_c2w"<<Camera1_c2w.matrix()<<endl;
 
 				// ===================================RADIANCE-COMPUTATION====================================
 				IBL_Radiance *ibl_Radiance = new IBL_Radiance;
@@ -602,6 +651,8 @@ namespace DSONL {
 //                    <<ibl_Radiance->Specularity<< "ibl_Radiance->diffusity\n"<<ibl_Radiance->diffusity <<endl;
 
                 specularityMap.at<Vec3f>(u,v)=ibl_Radiance->Specularity;
+
+				Vec3f specularityMap_left=ibl_Radiance->Specularity;
                 DiffuseMap.at<Vec3f>(u,v)=ibl_Radiance->diffusity;
                 Vec3f radiance_beta_prime = ibl_Radiance->solveForRadiance(View_beta_prime, N_, image_roughnes, image_metallic,
                                                                            reflectance, baseColor, Camera1_c2w.rotationMatrix(),enterPanoroma.inverse());
@@ -612,6 +663,11 @@ namespace DSONL {
 
 
                 specularityMap_right.at<Vec3f>(pixel_row_right,pixel_col_right)=ibl_Radiance->Specularity;
+				Vec3f specularityMap_right=ibl_Radiance->Specularity;
+
+
+				cout<<"\n show specularityMap_left:"<<specularityMap_left<<endl;
+				cout<<"\n show specularityMap_right:"<<specularityMap_right<<endl;
 
 				// ===================================SAVE-RADIANCE===========================================
 				radianceMap_left.at<Vec3f>(u, v) = radiance_beta;
@@ -633,9 +689,9 @@ namespace DSONL {
 //				float delta_g = radiance_beta_prime.val[1] / radiance_beta.val[1];
 //				float delta_r = radiance_beta_prime.val[2] / radiance_beta.val[2];
 
-                float delta_b = abs(radiance_beta_prime.val[0] - radiance_beta.val[0]);
-                float delta_g = abs(radiance_beta_prime.val[1] - radiance_beta.val[1]);
-                float delta_r = abs(radiance_beta_prime.val[2] - radiance_beta.val[2]);
+                float delta_b = abs(specularityMap_left.val[0] - specularityMap_right.val[0]);
+                float delta_g = abs(specularityMap_left.val[1] - specularityMap_right.val[1]);
+                float delta_r = abs(specularityMap_left.val[2] - specularityMap_right.val[2]);
 
 //                float delta_b = (radiance_beta_prime.val[0] - radiance_beta.val[0]);
 //                float delta_g = (radiance_beta_prime.val[1] - radiance_beta.val[1]);

@@ -119,24 +119,31 @@ namespace DSONL {
 //                    image_ref_path =            "../data/exp_image0405/rgb/image_04.png"; // LDR
 //                }
 
-                image_ref_path =            "../data/exp_image0405/rgb/image_04.png"; // LDR
-                depth_ref_path =            "../data/exp_image0405/depth/origdepth_4.png";
-                image_ref_roughness_path =  "../data/exp_image0405/roughness/origroughness_4.pfm";
-                image_normal_GT_path =      "../data/exp_image0405/normal/orignormal_4.dat";
+//                image_ref_path =            "../data/exp_image0405/rgb/image_04.png"; // LDR
+//                depth_ref_path =            "../data/exp_image0405/depth/origdepth_4.png";
+//                image_ref_roughness_path =  "../data/exp_image0405/roughness/origroughness_4.pfm";
+//                image_normal_GT_path =      "../data/exp_image0405/normal/orignormal_4.dat";
 
-//				image_ref_path =            "../data/exp_image0405/rgb/orig_0.png"; // LDR
-//				depth_ref_path =            "../data/exp_image0405/depth/orig_0.png";
-//				image_ref_roughness_path =  "../data/exp_image0405/roughness/orig_0.pfm";
-//				image_normal_GT_path =      "../data/exp_image0405/normal/orig_0.dat";
+				image_ref_path =            "../data/exp_image0405/rgb/10006.299937.png"; // LDR
+				depth_ref_path =            "../data/exp_image0405/depth/10006.299937.png";
+				image_ref_roughness_path =  "../data/exp_image0405/roughness/10006.299937.pfm";
+				image_normal_GT_path =      "../data/exp_image0405/normal/10006.299937.dat";
 
 				Eigen::Matrix3d R1_w_l, R1_w_r;// left-handed and right-handed
 				Eigen::Vector3d t1_w_l;
 
-                t1_w_l << -2.028000000000000025e+00, 2.909999999999999809e-01, 4.580000000000000182e-01;
-                Eigen::Quaternion<double> quaternionR1( 3.240576711995502568e-01, 8.840463478731088731e-01, -1.607721687495677065e-01, 2.959746446986679658e-01);
+//                t1_w_l << -2.028000000000000025e+00, 2.909999999999999809e-01, 4.580000000000000182e-01;
+//                Eigen::Quaternion<double> quaternionR1( 3.240576711995502568e-01, 8.840463478731088731e-01, -1.607721687495677065e-01, 2.959746446986679658e-01);
 
 //				t1_w_l << -2.430000000000000160e+00, 1.910000000000000031e-01, -4.700000000000000011e-02;
 //				Eigen::Quaternion<double> quaternionR1( 3.927464691781548112e-01, 6.853992409529787722e-01, -2.270529157487038985e-01, 5.695832379022273129e-01);
+
+				t1_w_l << -1.818999999999999950e+00, 2.959999999999999853e-01, 4.580000000000000182e-01;
+				Eigen::Quaternion<double> quaternionR1(3.436204737874016257e-01, 8.866985314332327395e-01, -1.828691090846619738e-01, 2.494986438657570693e-01);
+
+
+
+
 
 
 
@@ -179,18 +186,24 @@ namespace DSONL {
 				string depth_target_path;
 
 				if (options_.baseline == 0) {
-                    image_target_path = "../data/exp_image0405/rgb/orig_4.png"; // LDR
-                    depth_target_path = "../data/exp_image0405/depth/orig_4.png";
+
+//                    image_target_path = "../data/exp_image0405/rgb/image_05.png"; // LDR
+//                    depth_target_path = "../data/exp_image0405/depth/origdepth_5.png";
+
+					image_target_path = "../data/exp_image0405/rgb/10006.433269.png"; // LDR
+					depth_target_path = "../data/exp_image0405/depth/10006.433269.png";
+
+
 					Eigen::Matrix3d R2_w_l, R1_w_r, R2_w_r;
 					Eigen::Vector3d t2_w_l;
 //					3.884317943989691324e-01 7.004744852568917102e-01 -2.241244128640721145e-01 5.551796863740825483e-01 -2.431999999999999940e+00 1.920000000000000040e-01 -4.000000000000000083e-03
-                    t2_w_l << -1.927999999999999936e+00, 2.909999999999999809e-01, 4.580000000000000182e-01;
-                    Eigen::Quaterniond quaternionR2( 3.422245493889712886e-01, 8.881539550587902454e-01, -1.783207945754678725e-01, 2.495327716571872079e-01);
+//                    t2_w_l << -1.927999999999999936e+00, 2.909999999999999809e-01, 4.580000000000000182e-01;
+//                    Eigen::Quaterniond quaternionR2( 3.422245493889712886e-01, 8.881539550587902454e-01, -1.783207945754678725e-01, 2.495327716571872079e-01);
 //
 
-//					t2_w_l << -2.431999999999999940e+00, 1.920000000000000040e-01, -4.000000000000000083e-03;
-//					Eigen::Quaterniond quaternionR2( 3.884317943989691324e-01, 7.004744852568917102e-01, -2.241244128640721145e-01, 5.551796863740825483e-01);
-//
+					t2_w_l << -1.840999999999999970e+00, 2.540000000000000036e-01, 4.580000000000000182e-01;
+					Eigen::Quaterniond quaternionR2( 3.380680956742070364e-01, 8.994228415534024634e-01, -1.519275406648818993e-01, 2.316603918816053653e-01 );
+
 
 
 					R2 = quaternionR2.toRotationMatrix();

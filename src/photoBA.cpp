@@ -111,7 +111,11 @@ int main(int argc, char** argv)
 	// load GT trajectory
 	//	std::string abs_pose= "../data/dataSetPBA_init_poor/Kitti_GT_00.txt";
 	//	std::string abs_pose= "../data/dataSetPBA_init_poor/GT_pose_list_fr3.txt";
-		std::string abs_pose= "../data/dataSetPBA_init_poor/seq12_300_Poses_gt.txt";
+//		std::string abs_pose= "../data/dataSetPBA_init_poor/seq12_300_Poses_gt.txt";
+
+	std::string abs_pose= "../data/dataSetPBA_init_poor/seq12_111_Poses_gt.txt";
+
+
 //	std::string abs_pose= "../data/dataSetPBA_init_poor/scene0370_02_seq_01_tumRGBD_segmented_reseted.txt";
 	    cout<<"dataset created! "<<endl;
 
@@ -144,10 +148,17 @@ int main(int argc, char** argv)
 	// convert environment light pose the coordinate system of the first camera in PBA sequence
 	std::vector<Sophus::SE3f, Eigen::aligned_allocator<Sophus::SE3f>> trajectoryPoses;
 //	string fileName = "/home/lei/Documents/Dataset/dataSetPBA/sequences/02/poses.txt";
-	string fileName = "/home/lei/Documents/Dataset/dataSetPBA/sequences/12/300frame0370_02/cam_interpolated_poses_Env.txt";
-    // transform env light pose to the coordinate system of the first camera in PBA sequence
+//	string fileName = "/home/lei/Documents/Dataset/dataSetPBA/sequences/12/300frame0370_02/cam_interpolated_poses_Env.txt";
+
+	string fileName = "/home/lei/Documents/Dataset/dataSetPBA/sequences/13/cam_interpolated_poses_Env.txt";
+
+
+
+	// transform env light pose to the coordinate system of the first camera in PBA sequence
 	readCtrlPointPoseData(fileName, trajectoryPoses);
 	Sophus::SE3f frontCamPose_w (trajectoryPoses[0]);
+
+	T_head_frame_c2w = frontCamPose_w;
 
 	std::vector<Sophus::SE3f, Eigen::aligned_allocator<Sophus::SE3f>> EnvGTPose;
 	readCtrlPointPoseData(EnvMapPosePath, EnvGTPose);
@@ -164,8 +175,8 @@ int main(int argc, char** argv)
 		ControlpointCloud->push_back(pcl::PointXYZ(pointBase.x, pointBase.y, pointBase.z));
 	}
 
-	cout<<"counter_controlpoint: "<<counter_controlpoint<<endl;
-	writer.write("ControlpointCloud_complete.pcd", *ControlpointCloud, false);// do we need the sensor acquisition origin?
+//	cout<<"counter_controlpoint: "<<counter_controlpoint<<endl;
+//	writer.write("ControlpointCloud_complete.pcd", *ControlpointCloud, false);// do we need the sensor acquisition origin?
 
 
 
@@ -379,7 +390,6 @@ bool next_step( ){
 
 	std::string dataFolder="/home/lei/Documents/Research/nldso_photometricLoss/dataAnalysis/seq01/lvl_1_pose/";
 
-
 	int lvl=0;
 
 	photoba->lvl = lvl;
@@ -396,6 +406,8 @@ bool next_step( ){
 
 
 	for(; (frame = dataset->getFrame(fid, lvl)) && !gStop; ++fid ){
+
+
 		if (fid==T_init.size()-4) {
 			std::cout <<"End of dataset reached\n";
 			auto output_fn = dataFolder+ "refined_poses_es_tum_abs_pose"+ std::to_string(lvl)+ ".txt";
@@ -404,8 +416,8 @@ bool next_step( ){
 		}
 		printf("Frame %05d\n", fid);
 
-		cv::imshow("frame->image()",frame->image());
-		cv::waitKey(0);
+//		cv::imshow("frame->image()",frame->image());
+//		cv::waitKey(0);
 
 		const uint8_t* I = frame->image().ptr<const uint8_t>();
 		float* Z =frame->depth().ptr<float>();

@@ -92,7 +92,7 @@ namespace PBANL{
     }
 
     Vec3f IBL_Radiance::specularIBL(Vec3f F0, float roughness, Vec3f N, Vec3f V, const Eigen::Matrix3d Camera1_c2w,
-                                    Sophus::SO3f enterEnv_Rotatio_inv
+                                    Sophus::SE3f enterEnv_Rotatio_inv
     ) {
 
         float NoV = clamp(_dot(N, V), 0.0, 1.0);
@@ -105,23 +105,32 @@ namespace PBANL{
         // -0.927108467, 0.132981807, -0.350408018
         Eigen::Matrix<float, 3, 1> R_c_(R_c.val[0], R_c.val[1], R_c.val[2]);
         // convert coordinate system
-        Eigen::Vector3f R_w =  enterEnv_Rotatio_inv.matrix()*Camera1_c2w.cast<float>() * R_c_;
+
+        Eigen::Vector3f R_w =  enterEnv_Rotatio_inv.rotationMatrix() * (Camera1_c2w.cast<float>() * R_c_);
 
 
-        Vec2f uv = directionToSphericalEnvmap(Vec3f(R_w.x(), R_w.y(), R_w.z()));
+//		cout<<"R_w:"<<R_w<<endl;
+//		cout<<"Camera1_c2w:"<<Camera1_c2w.matrix()<<endl;
+//		cout<<"enterEnv_Rotatio_inv:"<< enterEnv_Rotatio_inv.rotationMatrix()<<endl;
+//		cout<<"R_c_:"<<R_c_<<endl;
+
+
+		Vec2f uv = directionToSphericalEnvmap(Vec3f(R_w.x(), R_w.y(), R_w.z()));
         if (uv.val[0] > 1.0 || uv.val[1] > 1.0) {
             std::cerr << "\n===specularIBL=======Show UV=================:" << uv << std::endl;
         }
 
 
-        //      std::cout<<"uv:"<<uv<<"show roughness*float(mipCount)"<<roughness*float(mipCount)<<std::endl;
+//		std::cout<<"uv:"<<uv<<"show roughness*float(mipCount)"<<roughness*float(mipCount)<<std::endl;
+
         Vec3f prefiltered_Color = prefilteredColor(uv.val[0], uv.val[1], roughness * float(mipCount)
 //                                                   ,pointEnvlight_cur
         );
 
+
+//		cout<<"show prefiltered_Color!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1"<<prefiltered_Color<<endl;
         //    uv:[0.179422, 0.400616]show roughness*float(mipCount)1.5
         //          prefiltered_Color:[0.112979, 0.0884759, 0.0929931]
-
         //      show image_ref_path_PFM  of GSN(293,476)And values: [5.17454, 4.71557, 0.0619548]
 
 
@@ -193,7 +202,7 @@ namespace PBANL{
                                          const float &reflectance,
                                          const Vec3f &baseColorValue,
                                          const Eigen::Matrix3d Camera1_c2w,
-                                         Sophus::SO3f enterEnv_Rotation_inv) {
+                                         Sophus::SE3f enterEnv_Rotation_inv) {
 
         // !!!!!!!!  vec3 baseCol = pow(texture(baseColorTexture, texScale*tc).rgb, vec3(2.2)); // this is gamma correction!
         Vec3f One = Vec3f(1.0f, 1.0f, 1.0f);
@@ -203,8 +212,8 @@ namespace PBANL{
         Vec3f kS = F;
         Vec3f kD = One - kS;
         kD = kD.mul(One - metallicValue * One);
-        Vec3f specular = specularIBL(f0, roughnessValue, normal, viewDir,Camera1_c2w,enterEnv_Rotation_inv);
-//        Vec3f specular = specularIBL(F, roughnessValue, normal, viewDir,Camera1_c2w,enterEnv_Rotation_inv);// !!!!!
+//        Vec3f specular = specularIBL(f0, roughnessValue, normal, viewDir,Camera1_c2w,enterEnv_Rotation_inv);
+        Vec3f specular = specularIBL(F, roughnessValue, normal, viewDir,Camera1_c2w,enterEnv_Rotation_inv);// !!!!!
         Specularity = specular;
         //convert from camera to world
         Eigen::Vector3d normal_c(normal.val[0], normal.val[1], normal.val[2]);
@@ -212,7 +221,7 @@ namespace PBANL{
 		// Vec3f diffuse = diffuseIBL(normal_w);
 		// diffusity=diffuse;
         // only focus on specular property
-        Vec3f diffuse=Vec3f(0.0,0.0,0.0);
+        Vec3f diffuse= Vec3f(0.0,0.0,0.0);
 		//cout<<"Checking kD:"<<kD<<endl;
         // shading front-facing
         Vec3f color = pow(kD.mul(baseColorValue.mul(diffuse)) + specular, 1.0 / 2.2 * One);

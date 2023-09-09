@@ -33,9 +33,17 @@ int main(int argc, char **argv) {
     //    string controlPointPose_path= "/home/lei/Documents/Research/envMapData/2frame0370_02_control_cam_pose156.txt";
     //    string  renderedEnvMapPath=   "/home/lei/Documents/Research/envMapData/EnvMap_156ctrlPoints";
 
-    std:: string envMap_Folder=    "/home/lei/Documents/Research/envMapData/EnvMap_Img04_260";
-    string controlPointPose_path= "/home/lei/Documents/Research/envMapData/2frame0370_02_control_cam_pose_image4.txt";
-    string  renderedEnvMapPath=   "/home/lei/Documents/Research/envMapData/EnvMap_Img04_260";
+
+
+
+//    std:: string envMap_Folder=    "/home/lei/Documents/Research/envMapData/EnvMap_Img04_260";
+//    string controlPointPose_path= "/home/lei/Documents/Research/envMapData/2frame0370_02_control_cam_pose_image4.txt";
+//    string  renderedEnvMapPath=   "/home/lei/Documents/Research/envMapData/EnvMap_Img04_260";
+
+	std:: string envMap_Folder=    "/home/lei/Documents/Research/envMapData/renderedEnvMaps2095";
+	string controlPointPose_path= "/home/lei/Documents/Research/envMapData/300frame0370_02_control_cam_pose2095.txt";
+	string  renderedEnvMapPath=   "/home/lei/Documents/Research/envMapData/renderedEnvMaps2095";
+
 //    std::string envMap_Folder=    "/home/lei/Documents/Research/envMapData/EnvMap_Img04_moreSpecular_260";
 //    string controlPointPose_path= "/home/lei/Documents/Research/envMapData/2frame0370_02_control_cam_pose_image4.txt";
 //    string  renderedEnvMapPath=   "/home/lei/Documents/Research/envMapData/EnvMap_Img04_moreSpecular_260";

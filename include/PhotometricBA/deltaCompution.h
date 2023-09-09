@@ -62,7 +62,7 @@ namespace PBANL
         Vec2f brdfIntegration(float NoV,float roughness );
         Vec2f directionToSphericalEnvmap(Vec3f dir);
         Vec3f specularIBL(Vec3f F0, float roughness, Vec3f N, Vec3f V, const Eigen::Matrix3d Camera1_c2w,
-                          Sophus::SO3f enterEnv_Rotation
+                          Sophus::SE3f enterEnv_Rotation
 //                                  ,
 //                                  pointEnvlight pointEnvlight_cur
         );
@@ -83,7 +83,7 @@ namespace PBANL
                                const float &reflectance,
                                const Vec3f& baseColorValue,
                                const Eigen::Matrix3d Transformation_wc,
-                               Sophus::SO3f enterEnv_Rotation
+                               Sophus::SE3f enterEnv_Rotation
 //                                       ,
 //                                       pointEnvlight pointEnvlight_cur
         );
