@@ -243,7 +243,6 @@ target_link_libraries(photometricLoss
   TBB::tbb
   OpenCV
   ${PCL_LIBRARIES}
-
   ${OPENGL_LIBRARIES}
   ${GLUT_LIBRARIES}
   ${GLEW_LIBRARIES}
