@@ -28,7 +28,7 @@ inline std::string to_string(std::string s) { return s; }
 
 
 
-namespace utils {
+namespace pbaUtils {
 
 template <typename T> inline void UNUSED(T&&) {}
 
@@ -243,7 +243,7 @@ struct Error : public std::logic_error
 
 
 #define THROW_ERROR(msg) \
-    throw utils::Error(utils::Format("[ %s:%04d ] %s", MYFILE, __LINE__, msg))
+    throw pbaUtils::Error(pbaUtils::Format("[ %s:%04d ] %s", MYFILE, __LINE__, msg))
 
 #define THROW_ERROR_IF(cond, msg) if( !!(cond) ) THROW_ERROR( (msg) )
 

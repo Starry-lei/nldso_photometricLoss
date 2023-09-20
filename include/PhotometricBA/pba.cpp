@@ -61,11 +61,11 @@ const int PATTERN_OFFSETS[PATTERN_SIZE][2] = {{0, 0}, {1, -1}, {-1, 1}, {-1, -1}
 static PhotometricBundleAdjustment::Options::DescriptorType
 DescriptorTypeFromString(std::string s)
 {
-    if(utils::icompare("Intensity", s))
+    if(pbaUtils::icompare("Intensity", s))
         return PhotometricBundleAdjustment::Options::DescriptorType::Intensity;
-    else if(utils::icompare("IntensityAndGradient", s))
+    else if(pbaUtils::icompare("IntensityAndGradient", s))
         return PhotometricBundleAdjustment::Options::DescriptorType::IntensityAndGradient;
-    else if(utils::icompare("BitPlanes", s))
+    else if(pbaUtils::icompare("BitPlanes", s))
         return PhotometricBundleAdjustment::Options::DescriptorType::BitPlanes;
     else {
         Warn("Unknown descriptorType '%s'\n", s.c_str());
@@ -104,13 +104,13 @@ bool PhotometricBundleAdjustment::Result::Writer::add(const Result& result)
     ret = true;
   }
 #else
-    utils::UNUSED(result);
+	pbaUtils::UNUSED(result);
 #endif
 
     return ret;
 }
 
-PhotometricBundleAdjustment::Options::Options(const utils::ConfigFile& cf)
+PhotometricBundleAdjustment::Options::Options(const pbaUtils::ConfigFile& cf)
         : maxNumPoints(cf.get<int>("maxNumPoints", 4096)),
           slidingWindowSize(cf.get<int>("slidingWindowSize", 5)),
           patchRadius(cf.get<int>("patchRadius", 2)),
@@ -522,6 +522,12 @@ PhotometricBundleAdjustment::PhotometricBundleAdjustment(
 	_calib._K_orig=_calib.K();
 	_image_size_orig=_image_size;
 
+	Eigen::Matrix3f camera_intrinsics;
+	camera_intrinsics<<_calib.K()(0,0),_calib.K()(0,1),_calib.K()(0,2),
+	        _calib.K()(1,0),_calib.K()(1,1),_calib.K()(1,2),
+	        _calib.K()(2,0),_calib.K()(2,1),_calib.K()(2,2);
+	DSONL::setGlobalCalib(_image_size.cols,_image_size.rows,camera_intrinsics);
+
 
     _mask.resize(_image_size.rows, _image_size.cols);
     _saliency_map.resize(_image_size.rows, _image_size.cols);
@@ -575,7 +581,7 @@ static Mat_<double,4,4> ParamsToPose_test(const double* p)
 
 
 void PhotometricBundleAdjustment::
-addFrame(const uint8_t* I_ptr, const float* Z_ptr, const Mat44& T, Result* result)
+addFrame(const uint8_t* I_ptr, const cv::Mat& grayImg, const float* Z_ptr, const Mat44& T, Result* result)
 {
     _trajectory.push_back(T, _frame_id);
     const Eigen::Isometry3d T_w(_trajectory.back());
@@ -698,31 +704,94 @@ addFrame(const uint8_t* I_ptr, const float* Z_ptr, const Mat44& T, Result* resul
     typedef IsLocalMax_<decltype(_saliency_map), decltype(_mask)> IsLocalMax;
     const IsLocalMax is_local_max(_saliency_map, _mask, _options.nonMaxSuppRadius);
 
+	// cmu pixel selector
+//    for(int y = B; y < max_rows; ++y) {
+//        for(int x = B; x < max_cols; ++x) {
+//
+//            double z = Z(y,x);
+//            if(z >= _options.minValidDepth && z <= _options.maxValidDepth) {
+//
+//                if(is_local_max(y, x)) {
+//                    Vec3 X = T_w * (z * _K_inv * Vec3(x, y, 1.0)); // X in the world frame
+//                    std::unique_ptr<ScenePoint> p = make_unique<ScenePoint>(X, _frame_id);// associate a new scene point with its frame id
+//                    Vec_<int,2> xy(x, y);
+//                    p->setZnccPach( I, xy );
+//                    p->descriptor().resize(descriptor_dim);
+//                    p->setSaliency( _saliency_map(y,x) );
+//                    p->setFirstProjection(xy);
+//					p->ori_depth = z; // added by lei
+//					p->inv_depth = 1.0f/z; // added by lei
+//                    new_scene_points.push_back(std::move(p));
+//                }
+//            }
+//
+//
+//        }
+//    }
+
+	// dso pixel selector
+	DSONL::FrameHessian* newFrame_ref=NULL;
+	float* color_ref=NULL;
+	int  npts_lvl_ref[0];
+	DSONL::FrameHessian* frame_ref= new DSONL::FrameHessian();
+	DSONL::PixelSelector* pixelSelector_lvl= new DSONL::PixelSelector(640,480);
+	float* color_ref_lvl= new float[640*480];
+	float* statusMapPoints_ref= new float[640*480];
+	float densities[] = {1,0.5,0.15,0.05,0.03}; // 不同层取得点密度
 
 
-    for(int y = B; y < max_rows; ++y) {
-        for(int x = B; x < max_cols; ++x) {
+	for (int row = 0; row < 480; ++row) {
+		const uchar *pixel_ref_lvl= grayImg.ptr<uchar>(row);//  IRef.ptr<uchar>(row);
+		for (int col = 0; col < 640; ++col) {
+			color_ref_lvl[row*640+col]= (float) pixel_ref_lvl[col];
+		}
+	}
+	frame_ref->makeImages(color_ref_lvl);
+	pixelSelector_lvl->currentPotential= 3;
+	npts_lvl_ref[0]=  pixelSelector_lvl->makeMaps(frame_ref, statusMapPoints_ref, densities[0] * 640 * 480, 1, false, 2);
+	std::cout << "\n npts_lvl_ref[i]: " << npts_lvl_ref[0] << "\n densities[i-1]*wG[0]*hG[0]:" << densities[0] *640 * 480 <<std:: endl;
 
-            double z = Z(y,x);
-            if(z >= _options.minValidDepth && z <= _options.maxValidDepth) {
+	cv::Mat dsoSelectedPointMask(grayImg.rows,  grayImg.cols, CV_8UC1, cv::Scalar(0));
+	int dso_point_counter=0;
 
-                if(is_local_max(y, x)) {
-                    Vec3 X = T_w * (z * _K_inv * Vec3(x, y, 1.0)); // X in the world frame
-                    std::unique_ptr<ScenePoint> p = make_unique<ScenePoint>(X, _frame_id);// associate a new scene point with its frame id
-                    Vec_<int,2> xy(x, y);
-                    p->setZnccPach( I, xy );
-                    p->descriptor().resize(descriptor_dim);
-                    p->setSaliency( _saliency_map(y,x) );
-                    p->setFirstProjection(xy);
+
+	for(int y = B; y < max_rows; ++y) {
+		for(int x = B; x < max_cols; ++x) {
+
+			double z = Z(y,x);
+			if(z >= _options.minValidDepth && z <= _options.maxValidDepth) {
+				if((statusMapPoints_ref!=NULL && statusMapPoints_ref[y*grayImg.cols+x]!=0)) { // dso condition for pixel selector
+					//if(is_local_max(y, x)) { // orginal for pixel selector
+					dso_point_counter+=1;
+					dsoSelectedPointMask.at<uchar>(y,x)= 255;
+					Vec3 X = T_w * (z * _K_inv * Vec3(x, y, 1.0)); // X in the world frame
+					std::unique_ptr<ScenePoint> p = std::make_unique<ScenePoint>(X, _frame_id);// associate a new scene point with its frame id
+					Vec_<int,2> xy(x, y);
+					p->setZnccPach( I, xy );
+					p->descriptor().resize(descriptor_dim);
+					p->setSaliency( _saliency_map(y,x) );
+					p->setFirstProjection(xy);
 					p->ori_depth = z; // added by lei
 					p->inv_depth = 1.0f/z; // added by lei
-                    new_scene_points.push_back(std::move(p));
-                }
-            }
+					new_scene_points.push_back(std::move(p));
+				}
+			}
+
+		}
+	}
 
 
-        }
-    }
+
+
+	delete newFrame_ref;
+	delete frame_ref;
+	delete pixelSelector_lvl;
+	delete[] color_ref;
+	delete[] statusMapPoints_ref;
+	delete[] color_ref_lvl;
+
+
+
 
     std::cout<<"new scene points size: "<<new_scene_points.size()<<std::endl;
 	// keep the best N points
@@ -1134,11 +1203,6 @@ private:
 
 
 }; // DescriptorError
-
-
-
-
-
 
 
 

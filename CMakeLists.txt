@@ -252,6 +252,8 @@ add_subdirectory(include/PhotometricBA)
 
 add_executable(pba src/photoBA.cpp include/PhotometricBA/pba.cpp include/PhotometricBA/utils.cpp include/PhotometricBA/trajectory.cpp include/PhotometricBA/pose_utils.cpp
         include/PhotometricBA/imgproc.cpp include/PhotometricBA/dataset.cpp  include/PhotometricBA/file_loader.cpp
+        include/pixelSelector.cpp
+        include/settings/setting.cpp
 #        include/PhotometricBA/stereo_algorithm.cpp
         )
 target_link_libraries(pba

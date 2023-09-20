@@ -62,13 +62,13 @@ int main(int argc, char** argv)
 {
 	bool show_gui = true;
     signal(SIGINT, sigHandler);
-    utils::ProgramOptions options;
+    pbaUtils::ProgramOptions options;
     options
             ("output,o", "refined_poses_es_absolute.txt", "trajectory output file")
             ("config,c", "../config/tum_rgbd.cfg", "config file")
             .parse(argc, argv);
 
-    utils::ConfigFile cf(options.get<std::string>("config"));
+	pbaUtils::ConfigFile cf(options.get<std::string>("config"));
 	dataset = Dataset::Create(options.get<std::string>("config"));
 	//// load initial trajectory
 	T_init = loadPosesTumRGBDFormat(cf.get<std::string>("trajectory"));
@@ -76,7 +76,7 @@ int main(int argc, char** argv)
 	// load GT trajectory
 	//	std::string abs_pose= "../data/dataSetPBA_init_poor/Kitti_GT_00.txt";
 	//	std::string abs_pose= "../data/dataSetPBA_init_poor/GT_pose_list_fr3.txt";
-		std::string abs_pose= "../data/dataSetPBA_init_poor/seq12_300_Poses_gt.txt";
+	std::string abs_pose= "../data/dataSetPBA_init_poor/seq12_300_Poses_gt.txt";
 //	std::string abs_pose= "../data/dataSetPBA_init_poor/scene0370_02_seq_01_tumRGBD_segmented_reseted.txt";
 
 
@@ -301,7 +301,7 @@ bool next_step( ){
 
 		const uint8_t* I = frame->image().ptr<const uint8_t>();
 		float* Z =frame->depth().ptr<float>();
-		photoba->addFrame(I, Z, T_init[fid],  &result);
+		photoba->addFrame(I, frame->image(), Z, T_init[fid],  &result);
 
 		if(optimizeSignal) {
 			optimizeSignal=false;

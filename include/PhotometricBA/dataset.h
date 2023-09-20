@@ -6,7 +6,7 @@
 #include "calibration.h"
 #include <opencv2/core/core.hpp>
 
-namespace utils {
+namespace pbaUtils {
 class ConfigFile;
 }; // utils
 
@@ -203,7 +203,7 @@ protected:
 //	float _depth_scale= 1.0f;
     std::vector<std::string> timestamps;
 
-    virtual bool init(const utils::ConfigFile&);
+    virtual bool init(const pbaUtils::ConfigFile&);
 }; // RGBDDataset
 
 class tumRGBDDataset : public RGBDDataset
@@ -219,7 +219,7 @@ public:
 protected:
     Calibration _calib;
 
-    bool init(const utils::ConfigFile&);
+    bool init(const pbaUtils::ConfigFile&);
     bool loadCalibration(std::string calib_fn);
 
 

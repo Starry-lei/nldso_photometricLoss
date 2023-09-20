@@ -9,7 +9,7 @@
 #include <fstream>
 #include <vector>
 
-using namespace utils;
+using namespace pbaUtils;
 
 static void toGray(const cv::Mat& src, cv::Mat& ret)
 {
@@ -164,7 +164,7 @@ UniquePointer<DatasetFrame> RGBDDataset::getFrame(int f_i, int lvl) const
 //    return std::vector<std::string>();
 //}
 
-bool RGBDDataset::init(const utils::ConfigFile & cf) {
+bool RGBDDataset::init(const pbaUtils::ConfigFile & cf) {
 
     try
     {
@@ -239,7 +239,7 @@ namespace {
 
     static inline Mat_<double,3,4> set_kitti_camera_from_line(std::string line)
 {
-  auto tokens = utils::splitstr(line);
+  auto tokens = pbaUtils::splitstr(line);
   THROW_ERROR_IF( tokens.empty() || tokens[0].empty() || tokens[0][0] != 'P',
                  "invalid calibration line");
   THROW_ERROR_IF( tokens.size() != 13, "wrong line length" );
@@ -304,7 +304,7 @@ tumRGBDDataset::~tumRGBDDataset(){}
 //  return true;
 //}
 
-bool tumRGBDDataset::init(const utils::ConfigFile &cf) {
+bool tumRGBDDataset::init(const pbaUtils::ConfigFile &cf) {
 
     try
     {
