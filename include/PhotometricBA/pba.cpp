@@ -901,231 +901,479 @@ void PhotometricBundleAdjustment::
 
 
 //
-//		std::string renderedEnvLight_path=EnvMapPath;
-//		Mat specularityMap(_image_size.rows, _image_size.cols, CV_32FC3, Scalar(0,0,0));
-//		Mat specularityMap_right(_image_size.rows, _image_size.cols, CV_32FC3, Scalar(0,0,0));
-//		Mat specularityChangeMap(_image_size.rows, _image_size.cols, CV_32FC3, Scalar(0,0,0));
+		std::string renderedEnvLight_path=EnvMapPath;
+		Mat specularityMap(_image_size.rows, _image_size.cols, CV_32FC3, Scalar(0,0,0));
+		Mat specularityMap_right(_image_size.rows, _image_size.cols, CV_32FC3, Scalar(0,0,0));
+		Mat specularityChangeMap(_image_size.rows, _image_size.cols, CV_32FC3, Scalar(0,0,0));
+
+		for(auto& pt : _scene_points) {
+
+			if(pt->numFrames() >= 3 && pt->refFrameId() >= frame_id_start) {
+
+				if (pt->refFrameId()== frame_id_start){
+
+					std::unordered_map<cv::Point2i, float, DSONL::hash2d<cv::Point2i>, DSONL::equalTo2D<cv::Point2i>> pixelDepthMap_1;
+					std::unordered_map<cv::Point2i, float, DSONL::hash2d<cv::Point2i>, DSONL::equalTo2D<cv::Point2i>> pixelDepthMap_2;
+					std::unordered_map<cv::Point2i, float, DSONL::hash2d<cv::Point2i>, DSONL::equalTo2D<cv::Point2i>> pixelDepthMap_3;
+					std::unordered_map<cv::Point2i, float, DSONL::hash2d<cv::Point2i>, DSONL::equalTo2D<cv::Point2i>> pixelDepthMap_4;
+
+					Eigen::Isometry3d T_w_beta_start(_trajectory[pt->refFrameId()].matrix());
+					int r=pt->_x[1];
+					int c=pt->_x[0];
+
+//					if (!(r==414 && c==67)){ continue ;}
+
+					const Vec3f normal_pixel = normalMaps[0].at<Vec3f>(r,c);
+					Vec3f normal = normalize(normal_pixel); //normal in camera coordinate
+					const float roughness_pixel= roughnessMaps[0].at<float>(r,c);
+					float reflectance = 1.0f;                                   // reflectance
+					int num_K = 5;
+//					cout<<"check normal and roughness:\n "<<normal_pixel<<", and "<<roughness_pixel<<"and depth:"<<depthMaps[0].at<float>(r,c)<<endl;
+					Eigen::Vector3f point_c= (depthMaps[0].at<float>(r,c) * _K_inv * Vec3(c, r, 1.0)).cast<float>();
+					Eigen::Vector3f point_w= (T_w_beta_start * Vec3(point_c.x(),point_c.y(), point_c.z())).cast<float>();
+
+					float image_metallic=1e-3;                                  // metallic
+					Eigen::Matrix<float, 3, 1> beta= -point_c;
+					beta= beta.normalized();
+					Vec3f baseColor(0.0, 0.0, 0.0);                             //base color
+					Vec3f N_(normal(0), normal(1), normal(2));
+//					cout<<"check normal and roughness:\n "<<N_<<", and "<<roughness_pixel<<"and depth:"<<depthMaps[0].at<float>(r,c)<<endl;
+					Vec3f View_beta(beta(0), beta(1), beta(2));
+
+					pcl::PointXYZ searchPoint(point_w.x(), point_w.y(), point_w.z());
+					std::vector<int> pointIdxKNNSearch(num_K);
+					std::vector<float> pointKNNSquaredDistance(num_K);
+					Vec3f key4Search;
+					if ( EnvLightLookup->kdtree.nearestKSearch(searchPoint, num_K, pointIdxKNNSearch, pointKNNSquaredDistance) > 0)
+					{
+						float disPoint2Env_min= 10.0f;
+						int targetEnvMapIdx=-1;
+						Vec3f targetEnvMapVal;
+
+						// find the closest control point which domain contains the current point
+						for (std::size_t i = 0; i < pointIdxKNNSearch.size (); ++i) {
+							Vec3f envMap_point((*(EnvLightLookup->ControlpointCloud))[pointIdxKNNSearch[i]].x, (*(EnvLightLookup->ControlpointCloud))[pointIdxKNNSearch[i]].y,
+							                   (*(EnvLightLookup->ControlpointCloud))[pointIdxKNNSearch[i]].z);
+
+							//                        std::cout << "\n------"<<envMap_point.val[0]<< " " << envMap_point.val[1]<< " " << envMap_point.val[2]
+							//                                  << " (squared distance: " << pointKNNSquaredDistance[i] << ")" << std::endl;
+							// 0.004367 is the squared distance of the closest control point
+//							if (pointKNNSquaredDistance[i] > 0.004367*3) { continue; }
+							if (pointKNNSquaredDistance[i] > 0.004367*2) { continue; }
+//							if (pointKNNSquaredDistance[i] > 0.32) { continue; }
+
+
+							// calculate control point normal
+							// transform envMap_point to camera coordinate system
+							Eigen::Vector3f envMap_point_c1 = T_w_beta_start.inverse().cast<float>() * Eigen::Vector3f(envMap_point.val[0], envMap_point.val[1], envMap_point.val[2]);
+							// project envMap_point to image plane
+							// float pixel_x = (fx * envMap_point_c1.x()) / envMap_point_c1.z() + cx;
+							// float pixel_y = (fy * envMap_point_c1.y()) / envMap_point_c1.z() + cy;
+
+							Vec2 uv((_calib.fx() * envMap_point_c1.x()) / envMap_point_c1.z() + _calib.cx(), (_calib.fy() * envMap_point_c1.y()) / envMap_point_c1.z() + _calib.cy());
+							int r_n = std::round(uv[1]), c_n = std::round(uv[0]);
+
+							// check if the projected point is in the image
+							if(r_n < B || r_n >= max_rows || c_n < B || c_n >= max_cols) { continue; }
+
+//							Vec3f ctrlPointNormal =  N_ptr[r_n * width + c_n];//newNormalMap.at<Vec3f>(r, c);
+							Vec3f ctrlPointNormal =  normalMaps[0].at<Vec3f>(r_n, c_n);;//newNormalMap.at<Vec3f>(r, c);
+
+							ctrlPointNormal=cv::normalize(ctrlPointNormal);
+
+							float angle_consine = ctrlPointNormal.dot(N_);
+							if (angle_consine<0.9962){ continue;} // 0.9848 is the cos(10 degree), 0.9962 is the cos(5 degree)
+							float disPoint2Env=  pointKNNSquaredDistance[i]/(ctrlPointNormal.dot(N_));
+							if (disPoint2Env<disPoint2Env_min){
+								disPoint2Env_min=disPoint2Env;
+								targetEnvMapIdx=i;
+								targetEnvMapVal=envMap_point;
+							}
+						}
+						if (targetEnvMapIdx!=-1){
+							key4Search.val[0] = targetEnvMapVal.val[0];
+							key4Search.val[1] = targetEnvMapVal.val[1];
+							key4Search.val[2] = targetEnvMapVal.val[2];
+						}
+
+					}
+					// if no envMap point is found, skip this point
+					if (key4Search.dot(key4Search)==0){ continue;}
+
+					int ctrlIndex= EnvLightLookup->envLightIdxMap[key4Search];
+					if ( EnvLightLookup->envLightIdxMap.size()==0){std::cerr<<"Error in EnvLight->envLightIdxMap! "<<endl;}
+
+					if (envLightMap_cur.count(ctrlIndex)==0){
+						stringstream ss;
+						string img_idx_str;
+						ss << ctrlIndex;
+						ss >> img_idx_str;
+						string name_prefix = "/envMap";
+						string renderedEnvLightfolder =renderedEnvLight_path + "/envMap" + img_idx_str + "/renderedEnvLight";
+						string renderedEnvLightDiffuse =renderedEnvLight_path + "/envMap" + img_idx_str + "/renderedEnvLightDiffuse";
+						string envMapDiffuse = renderedEnvLightDiffuse + "/envMapDiffuse_" + img_idx_str + ".pfm";
+						PBANL::pointEnvlight pEnv;
+						DSONL::EnvMapLookup *EnvMapLookup = new DSONL::EnvMapLookup();
+						EnvMapLookup->makeMipMap(pEnv.EnvmapSampler,renderedEnvLightfolder); // index_0: prefiltered Env light
+						delete EnvMapLookup;
+						envLightMap_cur.insert(make_pair(ctrlIndex, pEnv));
+					}
+
+//					cout<<"show env ctrlIndex :"<<ctrlIndex<<endl;
+					DSONL::prefilteredEnvmapSampler= & ( envLightMap_cur[ctrlIndex].EnvmapSampler[0]);
+					DSONL::brdfSampler_ = & (EnvLightLookup->brdfSampler[0]);
+
+					Sophus::SE3f enterPanoroma(T_head_frame_c2w);
+					Sophus::SE3d T_c2w( T_w_beta_start.rotation(), T_w_beta_start.translation());
+
+
+					// TODO: convert the envmap to current "world coordinate" in advance
+					Vec3f radiance_beta = ibl_Radiance->solveForRadiance(View_beta, N_, roughness_pixel, image_metallic,
+					                                                     reflectance, baseColor, T_c2w.rotationMatrix(),
+					                                                     enterPanoroma);
+
+					Vec3 specularity(radiance_beta[0],radiance_beta[1],radiance_beta[2]);
+					if (isnan(specularity[0])){ continue ;}
+
+					if (specularity[0]>10){
+						cout<<"radiance_beta[0]:"<<specularity[0]<<endl;
+						cout<<"show pixel coordinate:"<<endl;
+						cout<<"r:"<<r<<", c:"<<c<<endl;
+					}
+
+					pt->specularitySequence.insert(make_pair(pt->refFrameId(),Vec3(specularity[0],specularity[1],specularity[2])));
+
+					for (int i = 1; i < pt->visibilityList().size(); ++i) {
+						Eigen::Isometry3d T_w_view_2_start_c2w(_trajectory[pt->visibilityList()[i]].matrix());
+						Eigen::Isometry3d T_w_view_2_start_w2c(T_w_view_2_start_c2w.inverse());
+
+						Eigen::Matrix3d R12 = (T_w_view_2_start_c2w.rotation().transpose()* T_w_beta_start.rotation());
+						Eigen::Vector3d t12 = T_w_view_2_start_c2w.rotation().transpose()*(T_w_beta_start.translation()-T_w_view_2_start_c2w.translation());
+
+						Eigen::Vector3d View_beta_i = - R12*t12 - point_c.cast<double>();
+						View_beta_i=View_beta_i.normalized();
+
+						Vec3f View_beta_i_f(View_beta_i[0],View_beta_i[1],View_beta_i[2]);
+
+						Eigen::Vector3d view_beta_prime_i_c = T_w_view_2_start_w2c*(point_w.cast<double>());
+
+						Eigen::Vector3d view_beta_prime_i_c_n = - view_beta_prime_i_c.normalized();
+
+
+						Vec2 uv((_calib.fx() * view_beta_prime_i_c.x()) / view_beta_prime_i_c.z() + _calib.cx(), (_calib.fy() * view_beta_prime_i_c.y()) / view_beta_prime_i_c.z() + _calib.cy());
+//						int r_n = std::round(uv[1]), c_n = std::round(uv[0]);
+						int pixel_col_right= std::round(uv(0));
+						int pixel_row_right =std::round(uv(1));
+
+
+						Eigen::Matrix<int, 2, 1> pt2d(pixel_col_right,pixel_row_right);
+						cv::Point2i pixel_coor (pixel_row_right, pixel_col_right);
+
+						if (i==1){
+							// for occlusion problem on the second view
+							if (pixelDepthMap_1.count(pixel_coor)!=0 ){
+								if( view_beta_prime_i_c.z()<pixelDepthMap_1[pixel_coor]){
+									pixelDepthMap_1.insert(make_pair(pixel_coor,view_beta_prime_i_c.z()));
+								} else{
+									pt->specularitySequence.insert(make_pair(pt->visibilityList()[i],Vec3(-666.0f,-666.0f,-666.0f)));
+								}
+							}
+							pixelDepthMap_1.insert(make_pair(pixel_coor,view_beta_prime_i_c.z()));
+
+						}else if (i==2){
+							// for occlusion problem on the third view
+							if (pixelDepthMap_2.count(pixel_coor)!=0 ){
+								if( view_beta_prime_i_c.z()<pixelDepthMap_2[pixel_coor]){
+									pixelDepthMap_2.insert(make_pair(pixel_coor,view_beta_prime_i_c.z()));
+								} else{
+									pt->specularitySequence.insert(make_pair(pt->visibilityList()[i],Vec3(-666.0f,-666.0f,-666.0f)));
+								}
+							}
+							pixelDepthMap_2.insert(make_pair(pixel_coor,view_beta_prime_i_c.z()));
+						}else if(i==3) {
+							// for occlusion problem on the fourth view
+							if (pixelDepthMap_3.count(pixel_coor) != 0) {
+								if (view_beta_prime_i_c.z() < pixelDepthMap_3[pixel_coor]) {
+									pixelDepthMap_3.insert(make_pair(pixel_coor, view_beta_prime_i_c.z()));
+								} else {
+									pt->specularitySequence.insert(make_pair(pt->visibilityList()[i], Vec3(-666.0f, -666.0f, -666.0f)));
+								}
+							}
+							pixelDepthMap_3.insert(make_pair(pixel_coor, view_beta_prime_i_c.z()));
+						}else if(i==4) {
+							// for occlusion problem on the fifth view
+							if (pixelDepthMap_4.count(pixel_coor) != 0) {
+								if (view_beta_prime_i_c.z() < pixelDepthMap_4[pixel_coor]) {
+									pixelDepthMap_4.insert(make_pair(pixel_coor, view_beta_prime_i_c.z()));
+								} else {
+									pt->specularitySequence.insert(make_pair(pt->visibilityList()[i], Vec3(-666.0f, -666.0f, -666.0f)));
+								}
+							}
+							pixelDepthMap_4.insert(make_pair(pixel_coor, view_beta_prime_i_c.z()));
+						}
+
+
+						//	view_beta_prime_i_c= - view_beta_prime_i_c.normalized();
+
+						Vec3f radiance_beta_i = ibl_Radiance->solveForRadiance(View_beta_i_f, N_, roughness_pixel, image_metallic,
+						                                                     reflectance, baseColor, T_c2w.rotationMatrix(),
+						                                                     enterPanoroma);
+
+						Vec3 specularity_visibility(radiance_beta_i[0],radiance_beta_i[1],radiance_beta_i[2]);
+
+						pt->specularitySequence.insert(make_pair(pt->visibilityList()[i],Vec3(specularity_visibility[0],specularity_visibility[1],specularity_visibility[2])));
+
+						if (i==4){
+
 //
-//		for(auto& pt : _scene_points) {
-//
-//			if(pt->numFrames() >= 3 && pt->refFrameId() >= frame_id_start) {
-//
-//				if (pt->refFrameId()== frame_id_start){
-//
-//					std::unordered_map<cv::Point2i, float, DSONL::hash2d<cv::Point2i>, DSONL::equalTo2D<cv::Point2i>> pixelDepthMap_1;
-//					std::unordered_map<cv::Point2i, float, DSONL::hash2d<cv::Point2i>, DSONL::equalTo2D<cv::Point2i>> pixelDepthMap_2;
-//					std::unordered_map<cv::Point2i, float, DSONL::hash2d<cv::Point2i>, DSONL::equalTo2D<cv::Point2i>> pixelDepthMap_3;
+							Vec3f spec_1= Vec3f(specularity[0],specularity[1],specularity[2]) ;
+							Vec3f spec_2= Vec3f(specularity_visibility[0],specularity_visibility[1],specularity_visibility[2]) ;
+
+							float delta_b = abs(spec_1.val[0] - spec_2.val[0]);
+							float delta_g = abs(spec_1.val[1] - spec_2.val[1]);
+							float delta_r = abs(spec_1.val[2] - spec_2.val[2]);
+							if (std::isnan(delta_g)){continue;}
+
+							specularityChangeMap.at<Vec3f>(r,c)= Vec3f(delta_b,delta_g,delta_r);
+
+							specularityMap.at<Vec3f>(r,c)= spec_1;
+							specularityMap_right.at<Vec3f>(pixel_row_right,pixel_col_right)=spec_2;
+							float specularityChange=  0.587*delta_g+0.114*delta_b+0.299*delta_r;
+//							float specularity=  0.587*abs(specularityChange.val[1])/(spec_1.val[1])+ 0.114*abs(specularityChange.val[0])/(spec_1.val[0])+0.299*abs(specularityChange.val[2])/(spec_1.val[2]);
+//							double sumWeight= 0.587* abs(deltaSpecularity.y()/refSpecularity.y())+0.114* abs(deltaSpecularity.x()/refSpecularity.x())+0.299* abs(deltaSpecularity.z()/refSpecularity.z());
+//							if (sumWeight==0.0f){
+//								return -1.0;}
+//							else{
+//								float y = exp(-4.8f*sumWeight);
+//								return y;
+//							}
+//							Vec3f diff((radiance_beta_i-radiance_beta));
+//							cout<<"show radiance_beta_i:\n"<<radiance_beta_i<<endl;
+//							cout<<"show radiance_beta:\n "<<radiance_beta<<endl;
+//							float sumWeight= 0.587* abs(diff.val[1])+0.114* abs(diff.val[0])+0.299* abs(diff.val[2]);
+//							float orig= 0.587*radiance_beta.val[1]+0.114* radiance_beta.val[0]+0.299* radiance_beta.val[2];
+//							weightMap.at<float>(r,c)=  exp(-15.0f*specularityChange);
+							weightMap.at<float>(r,c)=  specularityChange;
+						}
+
+
+					}
+					counter_frame1++;
+
+				}else if(pt->refFrameId()== frame_id_start+1){
+
+					int currentFrameIdx=1;
+
+
+					std::unordered_map<cv::Point2i, float, DSONL::hash2d<cv::Point2i>, DSONL::equalTo2D<cv::Point2i>> pixelDepthMap_1;
+					std::unordered_map<cv::Point2i, float, DSONL::hash2d<cv::Point2i>, DSONL::equalTo2D<cv::Point2i>> pixelDepthMap_2;
+					std::unordered_map<cv::Point2i, float, DSONL::hash2d<cv::Point2i>, DSONL::equalTo2D<cv::Point2i>> pixelDepthMap_3;
 //					std::unordered_map<cv::Point2i, float, DSONL::hash2d<cv::Point2i>, DSONL::equalTo2D<cv::Point2i>> pixelDepthMap_4;
-//
-//					Eigen::Isometry3d T_w_beta_start(_trajectory[pt->refFrameId()].matrix());
-//					int r=pt->_x[1];
-//					int c=pt->_x[0];
-//
-////					if (!(r==414 && c==67)){ continue ;}
-//
-//					const Vec3f normal_pixel = normalMaps[0].at<Vec3f>(r,c);
-//					Vec3f normal = normalize(normal_pixel); //normal in camera coordinate
-//					const float roughness_pixel= roughnessMaps[0].at<float>(r,c);
-//					float reflectance = 1.0f;                                   // reflectance
-//					int num_K = 5;
-////					cout<<"check normal and roughness:\n "<<normal_pixel<<", and "<<roughness_pixel<<"and depth:"<<depthMaps[0].at<float>(r,c)<<endl;
-//					Eigen::Vector3f point_c= (depthMaps[0].at<float>(r,c) * _K_inv * Vec3(c, r, 1.0)).cast<float>();
-//					Eigen::Vector3f point_w= (T_w_beta_start * Vec3(point_c.x(),point_c.y(), point_c.z())).cast<float>();
-//
-//					float image_metallic=1e-3;                                  // metallic
-//					Eigen::Matrix<float, 3, 1> beta= -point_c;
-//					beta= beta.normalized();
-//					Vec3f baseColor(0.0, 0.0, 0.0);                             //base color
-//					Vec3f N_(normal(0), normal(1), normal(2));
-////					cout<<"check normal and roughness:\n "<<N_<<", and "<<roughness_pixel<<"and depth:"<<depthMaps[0].at<float>(r,c)<<endl;
-//					Vec3f View_beta(beta(0), beta(1), beta(2));
-//
-//					pcl::PointXYZ searchPoint(point_w.x(), point_w.y(), point_w.z());
-//					std::vector<int> pointIdxKNNSearch(num_K);
-//					std::vector<float> pointKNNSquaredDistance(num_K);
-//					Vec3f key4Search;
-//					if ( EnvLightLookup->kdtree.nearestKSearch(searchPoint, num_K, pointIdxKNNSearch, pointKNNSquaredDistance) > 0)
-//					{
-//						float disPoint2Env_min= 10.0f;
-//						int targetEnvMapIdx=-1;
-//						Vec3f targetEnvMapVal;
-//
-//						// find the closest control point which domain contains the current point
-//						for (std::size_t i = 0; i < pointIdxKNNSearch.size (); ++i) {
-//							Vec3f envMap_point((*(EnvLightLookup->ControlpointCloud))[pointIdxKNNSearch[i]].x, (*(EnvLightLookup->ControlpointCloud))[pointIdxKNNSearch[i]].y,
-//							                   (*(EnvLightLookup->ControlpointCloud))[pointIdxKNNSearch[i]].z);
-//
-//							//                        std::cout << "\n------"<<envMap_point.val[0]<< " " << envMap_point.val[1]<< " " << envMap_point.val[2]
-//							//                                  << " (squared distance: " << pointKNNSquaredDistance[i] << ")" << std::endl;
-//							// 0.004367 is the squared distance of the closest control point
-////							if (pointKNNSquaredDistance[i] > 0.004367*3) { continue; }
-//							if (pointKNNSquaredDistance[i] > 0.004367*2) { continue; }
-////							if (pointKNNSquaredDistance[i] > 0.32) { continue; }
-//
-//
-//							// calculate control point normal
-//							// transform envMap_point to camera coordinate system
-//							Eigen::Vector3f envMap_point_c1 = T_w_beta_start.inverse().cast<float>() * Eigen::Vector3f(envMap_point.val[0], envMap_point.val[1], envMap_point.val[2]);
-//							// project envMap_point to image plane
-//							// float pixel_x = (fx * envMap_point_c1.x()) / envMap_point_c1.z() + cx;
-//							// float pixel_y = (fy * envMap_point_c1.y()) / envMap_point_c1.z() + cy;
-//
-//							Vec2 uv((_calib.fx() * envMap_point_c1.x()) / envMap_point_c1.z() + _calib.cx(), (_calib.fy() * envMap_point_c1.y()) / envMap_point_c1.z() + _calib.cy());
-//							int r_n = std::round(uv[1]), c_n = std::round(uv[0]);
-//
-//							// check if the projected point is in the image
-//							if(r_n < B || r_n >= max_rows || c_n < B || c_n >= max_cols) { continue; }
-//
-////							Vec3f ctrlPointNormal =  N_ptr[r_n * width + c_n];//newNormalMap.at<Vec3f>(r, c);
-//							Vec3f ctrlPointNormal =  normalMaps[0].at<Vec3f>(r_n, c_n);;//newNormalMap.at<Vec3f>(r, c);
-//
-//							ctrlPointNormal=cv::normalize(ctrlPointNormal);
-//
-//							float angle_consine = ctrlPointNormal.dot(N_);
-//							if (angle_consine<0.9962){ continue;} // 0.9848 is the cos(10 degree), 0.9962 is the cos(5 degree)
-//							float disPoint2Env=  pointKNNSquaredDistance[i]/(ctrlPointNormal.dot(N_));
-//							if (disPoint2Env<disPoint2Env_min){
-//								disPoint2Env_min=disPoint2Env;
-//								targetEnvMapIdx=i;
-//								targetEnvMapVal=envMap_point;
-//							}
-//						}
-//						if (targetEnvMapIdx!=-1){
-//							key4Search.val[0] = targetEnvMapVal.val[0];
-//							key4Search.val[1] = targetEnvMapVal.val[1];
-//							key4Search.val[2] = targetEnvMapVal.val[2];
-//						}
-//
-//					}
-//					// if no envMap point is found, skip this point
-//					if (key4Search.dot(key4Search)==0){ continue;}
-//
-//					int ctrlIndex= EnvLightLookup->envLightIdxMap[key4Search];
-//					if ( EnvLightLookup->envLightIdxMap.size()==0){std::cerr<<"Error in EnvLight->envLightIdxMap! "<<endl;}
-//
-//					if (envLightMap_cur.count(ctrlIndex)==0){
-//						stringstream ss;
-//						string img_idx_str;
-//						ss << ctrlIndex;
-//						ss >> img_idx_str;
-//						string name_prefix = "/envMap";
-//						string renderedEnvLightfolder =renderedEnvLight_path + "/envMap" + img_idx_str + "/renderedEnvLight";
-//						string renderedEnvLightDiffuse =renderedEnvLight_path + "/envMap" + img_idx_str + "/renderedEnvLightDiffuse";
-//						string envMapDiffuse = renderedEnvLightDiffuse + "/envMapDiffuse_" + img_idx_str + ".pfm";
-//						PBANL::pointEnvlight pEnv;
-//						DSONL::EnvMapLookup *EnvMapLookup = new DSONL::EnvMapLookup();
-//						EnvMapLookup->makeMipMap(pEnv.EnvmapSampler,renderedEnvLightfolder); // index_0: prefiltered Env light
-//						delete EnvMapLookup;
-//						envLightMap_cur.insert(make_pair(ctrlIndex, pEnv));
-//					}
-//
-////					cout<<"show env ctrlIndex :"<<ctrlIndex<<endl;
-//					DSONL::prefilteredEnvmapSampler= & ( envLightMap_cur[ctrlIndex].EnvmapSampler[0]);
-//					DSONL::brdfSampler_ = & (EnvLightLookup->brdfSampler[0]);
-//
-//					Sophus::SE3f enterPanoroma(T_head_frame_c2w);
-//					Sophus::SE3d T_c2w( T_w_beta_start.rotation(), T_w_beta_start.translation());
-//
-//
-//					// TODO: convert the envmap to current "world coordinate" in advance
-//					Vec3f radiance_beta = ibl_Radiance->solveForRadiance(View_beta, N_, roughness_pixel, image_metallic,
-//					                                                     reflectance, baseColor, T_c2w.rotationMatrix(),
-//					                                                     enterPanoroma);
-//
-//					Vec3 specularity(radiance_beta[0],radiance_beta[1],radiance_beta[2]);
-//					if (isnan(specularity[0])){ continue ;}
-//
-//					if (specularity[0]>10){
-//						cout<<"radiance_beta[0]:"<<specularity[0]<<endl;
-//						cout<<"show pixel coordinate:"<<endl;
-//						cout<<"r:"<<r<<", c:"<<c<<endl;
-//					}
-//
-//					pt->specularitySequence.insert(make_pair(pt->refFrameId(),Vec3(specularity[0],specularity[1],specularity[2])));
-//
-//					for (int i = 1; i < pt->visibilityList().size(); ++i) {
-//						Eigen::Isometry3d T_w_view_2_start_c2w(_trajectory[pt->visibilityList()[i]].matrix());
-//						Eigen::Isometry3d T_w_view_2_start_w2c(T_w_view_2_start_c2w.inverse());
-//
-//						Eigen::Matrix3d R12 = (T_w_view_2_start_c2w.rotation().transpose()* T_w_beta_start.rotation());
-//						Eigen::Vector3d t12 = T_w_view_2_start_c2w.rotation().transpose()*(T_w_beta_start.translation()-T_w_view_2_start_c2w.translation());
-//
-//						Eigen::Vector3d View_beta_i = - R12*t12 - point_c.cast<double>();
-//						View_beta_i=View_beta_i.normalized();
-//
-//						Vec3f View_beta_i_f(View_beta_i[0],View_beta_i[1],View_beta_i[2]);
-//
-//						Eigen::Vector3d view_beta_prime_i_c = T_w_view_2_start_w2c*(point_w.cast<double>());
-//
-//						Eigen::Vector3d view_beta_prime_i_c_n = - view_beta_prime_i_c.normalized();
-//
-//
-//						Vec2 uv((_calib.fx() * view_beta_prime_i_c.x()) / view_beta_prime_i_c.z() + _calib.cx(), (_calib.fy() * view_beta_prime_i_c.y()) / view_beta_prime_i_c.z() + _calib.cy());
-////						int r_n = std::round(uv[1]), c_n = std::round(uv[0]);
-//						int pixel_col_right= std::round(uv(0));
-//						int pixel_row_right =std::round(uv(1));
-//
-//
-//						Eigen::Matrix<int, 2, 1> pt2d(pixel_col_right,pixel_row_right);
-//						cv::Point2i pixel_coor (pixel_row_right, pixel_col_right);
-//
-//						if (i==1){
-//							// for occlusion problem on the second view
-//							if (pixelDepthMap_1.count(pixel_coor)!=0 ){
-//								if( view_beta_prime_i_c.z()<pixelDepthMap_1[pixel_coor]){
-//									pixelDepthMap_1.insert(make_pair(pixel_coor,view_beta_prime_i_c.z()));
-//								} else{
-//									pt->specularitySequence.insert(make_pair(pt->visibilityList()[i],Vec3(-666.0f,-666.0f,-666.0f)));
-//								}
-//							}
-//							pixelDepthMap_1.insert(make_pair(pixel_coor,view_beta_prime_i_c.z()));
-//
-//						}else if (i==2){
-//							// for occlusion problem on the third view
-//							if (pixelDepthMap_2.count(pixel_coor)!=0 ){
-//								if( view_beta_prime_i_c.z()<pixelDepthMap_2[pixel_coor]){
-//									pixelDepthMap_2.insert(make_pair(pixel_coor,view_beta_prime_i_c.z()));
-//								} else{
-//									pt->specularitySequence.insert(make_pair(pt->visibilityList()[i],Vec3(-666.0f,-666.0f,-666.0f)));
-//								}
-//							}
-//							pixelDepthMap_2.insert(make_pair(pixel_coor,view_beta_prime_i_c.z()));
-//						}else if(i==3) {
-//							// for occlusion problem on the fourth view
-//							if (pixelDepthMap_3.count(pixel_coor) != 0) {
-//								if (view_beta_prime_i_c.z() < pixelDepthMap_3[pixel_coor]) {
-//									pixelDepthMap_3.insert(make_pair(pixel_coor, view_beta_prime_i_c.z()));
-//								} else {
-//									pt->specularitySequence.insert(make_pair(pt->visibilityList()[i], Vec3(-666.0f, -666.0f, -666.0f)));
-//								}
-//							}
-//							pixelDepthMap_3.insert(make_pair(pixel_coor, view_beta_prime_i_c.z()));
-//						}else if(i==4) {
-//							// for occlusion problem on the fifth view
-//							if (pixelDepthMap_4.count(pixel_coor) != 0) {
-//								if (view_beta_prime_i_c.z() < pixelDepthMap_4[pixel_coor]) {
-//									pixelDepthMap_4.insert(make_pair(pixel_coor, view_beta_prime_i_c.z()));
-//								} else {
-//									pt->specularitySequence.insert(make_pair(pt->visibilityList()[i], Vec3(-666.0f, -666.0f, -666.0f)));
-//								}
-//							}
-//							pixelDepthMap_4.insert(make_pair(pixel_coor, view_beta_prime_i_c.z()));
-//						}
-//
-//
-//						//	view_beta_prime_i_c= - view_beta_prime_i_c.normalized();
-//
-//						Vec3f radiance_beta_i = ibl_Radiance->solveForRadiance(View_beta_i_f, N_, roughness_pixel, image_metallic,
-//						                                                     reflectance, baseColor, T_c2w.rotationMatrix(),
-//						                                                     enterPanoroma);
-//
-//						Vec3 specularity_visibility(radiance_beta_i[0],radiance_beta_i[1],radiance_beta_i[2]);
-//
-//						pt->specularitySequence.insert(make_pair(pt->visibilityList()[i],Vec3(specularity_visibility[0],specularity_visibility[1],specularity_visibility[2])));
-//
+
+					Eigen::Isometry3d T_w_beta_start(_trajectory[pt->refFrameId()].matrix());
+					int r=pt->_x[1];
+					int c=pt->_x[0];
+
+					const Vec3f normal_pixel = normalMaps[currentFrameIdx].at<Vec3f>(r,c);
+					Vec3f normal = normalize(normal_pixel); //normal in camera coordinate
+					const float roughness_pixel= roughnessMaps[currentFrameIdx].at<float>(r,c);
+					float reflectance = 1.0f;                                   // reflectance
+					int num_K = 5;
+					Eigen::Vector3f point_c= (depthMaps[currentFrameIdx].at<float>(r,c) * _K_inv * Vec3(c, r, 1.0)).cast<float>();
+					Eigen::Vector3f point_w= (T_w_beta_start * Vec3(point_c.x(),point_c.y(), point_c.z())).cast<float>();
+
+					float image_metallic=1e-3;                                  // metallic
+					Eigen::Matrix<float, 3, 1> beta= -point_c;
+					beta= beta.normalized();
+					Vec3f baseColor(0.0, 0.0, 0.0);                             //base color
+					Vec3f N_(normal(0), normal(1), normal(2));
+					//					cout<<"check normal and roughness:\n "<<N_<<", and "<<roughness_pixel<<"and depth:"<<depthMaps[0].at<float>(r,c)<<endl;
+					Vec3f View_beta(beta(0), beta(1), beta(2));
+
+					pcl::PointXYZ searchPoint(point_w.x(), point_w.y(), point_w.z());
+					std::vector<int> pointIdxKNNSearch(num_K);
+					std::vector<float> pointKNNSquaredDistance(num_K);
+					Vec3f key4Search;
+					if ( EnvLightLookup->kdtree.nearestKSearch(searchPoint, num_K, pointIdxKNNSearch, pointKNNSquaredDistance) > 0)
+					{
+						float disPoint2Env_min= 10.0f;
+						int targetEnvMapIdx=-1;
+						Vec3f targetEnvMapVal;
+
+						// find the closest control point which domain contains the current point
+						for (std::size_t i = 0; i < pointIdxKNNSearch.size (); ++i) {
+							Vec3f envMap_point((*(EnvLightLookup->ControlpointCloud))[pointIdxKNNSearch[i]].x, (*(EnvLightLookup->ControlpointCloud))[pointIdxKNNSearch[i]].y,
+							                   (*(EnvLightLookup->ControlpointCloud))[pointIdxKNNSearch[i]].z);
+
+							//                        std::cout << "\n------"<<envMap_point.val[0]<< " " << envMap_point.val[1]<< " " << envMap_point.val[2]
+							//                                  << " (squared distance: " << pointKNNSquaredDistance[i] << ")" << std::endl;
+							// 0.004367 is the squared distance of the closest control point
+							//							if (pointKNNSquaredDistance[i] > 0.004367*3) { continue; }
+							if (pointKNNSquaredDistance[i] > 0.004367) { continue; }
+							//							if (pointKNNSquaredDistance[i] > 0.32) { continue; }
+
+
+							// calculate control point normal
+							// transform envMap_point to camera coordinate system
+							Eigen::Vector3f envMap_point_c1 = T_w_beta_start.inverse().cast<float>() * Eigen::Vector3f(envMap_point.val[0], envMap_point.val[1], envMap_point.val[2]);
+
+							Vec2 uv((_calib.fx() * envMap_point_c1.x()) / envMap_point_c1.z() + _calib.cx(), (_calib.fy() * envMap_point_c1.y()) / envMap_point_c1.z() + _calib.cy());
+							int r_n = std::round(uv[1]), c_n = std::round(uv[0]);
+
+							// check if the projected point is in the image
+							if(r_n < B || r_n >= max_rows || c_n < B || c_n >= max_cols) { continue; }
+
+							//							Vec3f ctrlPointNormal =  N_ptr[r_n * width + c_n];//newNormalMap.at<Vec3f>(r, c);
+							Vec3f ctrlPointNormal =  normalMaps[currentFrameIdx].at<Vec3f>(r_n, c_n);;//newNormalMap.at<Vec3f>(r, c);
+
+							ctrlPointNormal=cv::normalize(ctrlPointNormal);
+
+							float angle_consine = ctrlPointNormal.dot(N_);
+							if (angle_consine<0.9962){ continue;} // 0.9848 is the cos(10 degree), 0.9962 is the cos(5 degree)
+							float disPoint2Env=  pointKNNSquaredDistance[i]/(ctrlPointNormal.dot(N_));
+							if (disPoint2Env<disPoint2Env_min){
+								disPoint2Env_min=disPoint2Env;
+								targetEnvMapIdx=i;
+								targetEnvMapVal=envMap_point;
+							}
+						}
+						if (targetEnvMapIdx!=-1){
+							key4Search.val[0] = targetEnvMapVal.val[0];
+							key4Search.val[1] = targetEnvMapVal.val[1];
+							key4Search.val[2] = targetEnvMapVal.val[2];
+						}
+
+					}
+					// if no envMap point is found, skip this point
+					if (key4Search.dot(key4Search)==0){ continue;}
+
+					int ctrlIndex= EnvLightLookup->envLightIdxMap[key4Search];
+					if ( EnvLightLookup->envLightIdxMap.size()==0){std::cerr<<"Error in EnvLight->envLightIdxMap! "<<endl;}
+
+					if (envLightMap_cur.count(ctrlIndex)==0){
+						stringstream ss;
+						string img_idx_str;
+						ss << ctrlIndex;
+						ss >> img_idx_str;
+						string name_prefix = "/envMap";
+						string renderedEnvLightfolder =renderedEnvLight_path + "/envMap" + img_idx_str + "/renderedEnvLight";
+						string renderedEnvLightDiffuse =renderedEnvLight_path + "/envMap" + img_idx_str + "/renderedEnvLightDiffuse";
+						string envMapDiffuse = renderedEnvLightDiffuse + "/envMapDiffuse_" + img_idx_str + ".pfm";
+						PBANL::pointEnvlight pEnv;
+						DSONL::EnvMapLookup *EnvMapLookup = new DSONL::EnvMapLookup();
+						EnvMapLookup->makeMipMap(pEnv.EnvmapSampler,renderedEnvLightfolder); // index_0: prefiltered Env light
+						delete EnvMapLookup;
+						envLightMap_cur.insert(make_pair(ctrlIndex, pEnv));
+					}
+
+					//					cout<<"show env ctrlIndex :"<<ctrlIndex<<endl;
+					DSONL::prefilteredEnvmapSampler= & ( envLightMap_cur[ctrlIndex].EnvmapSampler[0]);
+					DSONL::brdfSampler_ = & (EnvLightLookup->brdfSampler[0]);
+
+					Sophus::SE3f enterPanoroma(T_head_frame_c2w);
+					Sophus::SE3d T_c2w( T_w_beta_start.rotation(), T_w_beta_start.translation());
+
+
+					// TODO: convert the envmap to current "world coordinate" in advance
+					Vec3f radiance_beta = ibl_Radiance->solveForRadiance(View_beta, N_, roughness_pixel, image_metallic,
+					                                                     reflectance, baseColor, T_c2w.rotationMatrix(),
+					                                                     enterPanoroma);
+
+					Vec3 specularity(radiance_beta[0],radiance_beta[1],radiance_beta[2]);
+					if (isnan(specularity[0])){ continue ;}
+
+					if (specularity[0]>10){
+						cout<<"radiance_beta[0]:"<<specularity[0]<<endl;
+						cout<<"show pixel coordinate:"<<endl;
+						cout<<"r:"<<r<<", c:"<<c<<endl;
+					}
+
+					pt->specularitySequence.insert(make_pair(pt->refFrameId(),Vec3(specularity[0],specularity[1],specularity[2])));
+
+					for (int i = 1; i < pt->visibilityList().size(); ++i) {
+						Eigen::Isometry3d T_w_view_2_start_c2w(_trajectory[pt->visibilityList()[i]].matrix());
+						Eigen::Isometry3d T_w_view_2_start_w2c(T_w_view_2_start_c2w.inverse());
+
+						Eigen::Matrix3d R12 = (T_w_view_2_start_c2w.rotation().transpose()* T_w_beta_start.rotation());
+						Eigen::Vector3d t12 = T_w_view_2_start_c2w.rotation().transpose()*(T_w_beta_start.translation()-T_w_view_2_start_c2w.translation());
+
+						Eigen::Vector3d View_beta_i = - R12*t12 - point_c.cast<double>();
+						View_beta_i=View_beta_i.normalized();
+
+						Vec3f View_beta_i_f(View_beta_i[0],View_beta_i[1],View_beta_i[2]);
+
+						Eigen::Vector3d view_beta_prime_i_c = T_w_view_2_start_w2c*(point_w.cast<double>());
+
+						Eigen::Vector3d view_beta_prime_i_c_n = - view_beta_prime_i_c.normalized();
+
+
+						Vec2 uv((_calib.fx() * view_beta_prime_i_c.x()) / view_beta_prime_i_c.z() + _calib.cx(), (_calib.fy() * view_beta_prime_i_c.y()) / view_beta_prime_i_c.z() + _calib.cy());
+						//						int r_n = std::round(uv[1]), c_n = std::round(uv[0]);
+						int pixel_col_right= std::round(uv(0));
+						int pixel_row_right =std::round(uv(1));
+
+						//						cout<<"pixel_col_right:"<<pixel_col_right<<endl;
+						//						cout<<"pixel_row_right:"<<pixel_row_right<<endl;
+
+						Eigen::Matrix<int, 2, 1> pt2d(pixel_col_right,pixel_row_right);
+						cv::Point2i pixel_coor (pixel_row_right, pixel_col_right);
+
+						if (i==1){
+							// for occlusion problem on the second view
+							if (pixelDepthMap_1.count(pixel_coor)!=0 ){
+								if( view_beta_prime_i_c.z()<pixelDepthMap_1[pixel_coor]){
+									pixelDepthMap_1.insert(make_pair(pixel_coor,view_beta_prime_i_c.z()));
+								} else{
+									pt->specularitySequence.insert(make_pair(pt->visibilityList()[i],Vec3(-666.0f,-666.0f,-666.0f)));
+								}
+							}
+							pixelDepthMap_1.insert(make_pair(pixel_coor,view_beta_prime_i_c.z()));
+
+						}else if (i==2){
+							// for occlusion problem on the third view
+							if (pixelDepthMap_2.count(pixel_coor)!=0 ){
+								if( view_beta_prime_i_c.z()<pixelDepthMap_2[pixel_coor]){
+									pixelDepthMap_2.insert(make_pair(pixel_coor,view_beta_prime_i_c.z()));
+								} else{
+									pt->specularitySequence.insert(make_pair(pt->visibilityList()[i],Vec3(-666.0f,-666.0f,-666.0f)));
+								}
+							}
+							pixelDepthMap_2.insert(make_pair(pixel_coor,view_beta_prime_i_c.z()));
+						}else if(i==3) {
+							// for occlusion problem on the fourth view
+							if (pixelDepthMap_3.count(pixel_coor) != 0) {
+								if (view_beta_prime_i_c.z() < pixelDepthMap_3[pixel_coor]) {
+									pixelDepthMap_3.insert(make_pair(pixel_coor, view_beta_prime_i_c.z()));
+								} else {
+									pt->specularitySequence.insert(make_pair(pt->visibilityList()[i], Vec3(-666.0f, -666.0f, -666.0f)));
+								}
+							}
+							pixelDepthMap_3.insert(make_pair(pixel_coor, view_beta_prime_i_c.z()));
+						}
+
+						Vec3f radiance_beta_i = ibl_Radiance->solveForRadiance(View_beta_i_f, N_, roughness_pixel, image_metallic,
+						                                                       reflectance, baseColor, T_c2w.rotationMatrix(),
+						                                                       enterPanoroma);
+
+						Vec3 specularity_visibility(radiance_beta_i[0],radiance_beta_i[1],radiance_beta_i[2]);
+
+						pt->specularitySequence.insert(make_pair(pt->visibilityList()[i],Vec3(specularity_visibility[0],specularity_visibility[1],specularity_visibility[2])));
+
 //						if (i==4){
 //
-////
+//							//							for (int i = 0; i < pt->visibilityList().size(); ++i) {
+//							//
+//							//								cout<<"show pt->visibilityList:"<< pt->visibilityList()[i];
+//							//
+//							//							}
+//
+//							//							cout<<"show pt->T_w_view_2_start_c2w:"<<endl;
+//							//							cout<<T_w_view_2_start_c2w.matrix()<<endl;
+//							//
+//							//							cout<<"show r,c: "<<r<<","<<c<<endl;
+//							//
+//							//							cout<<"show View_beta:\n"<<beta<<endl;
+//							//							cout<<"show View_beta_i_f:\n"<<View_beta_i_f<<endl;
 //							Vec3f spec_1= Vec3f(specularity[0],specularity[1],specularity[2]) ;
 //							Vec3f spec_2= Vec3f(specularity_visibility[0],specularity_visibility[1],specularity_visibility[2]) ;
 //
@@ -1139,494 +1387,246 @@ void PhotometricBundleAdjustment::
 //							specularityMap.at<Vec3f>(r,c)= spec_1;
 //							specularityMap_right.at<Vec3f>(pixel_row_right,pixel_col_right)=spec_2;
 //							float specularityChange=  0.587*delta_g+0.114*delta_b+0.299*delta_r;
-////							float specularity=  0.587*abs(specularityChange.val[1])/(spec_1.val[1])+ 0.114*abs(specularityChange.val[0])/(spec_1.val[0])+0.299*abs(specularityChange.val[2])/(spec_1.val[2]);
-////							double sumWeight= 0.587* abs(deltaSpecularity.y()/refSpecularity.y())+0.114* abs(deltaSpecularity.x()/refSpecularity.x())+0.299* abs(deltaSpecularity.z()/refSpecularity.z());
-////							if (sumWeight==0.0f){
-////								return -1.0;}
-////							else{
-////								float y = exp(-4.8f*sumWeight);
-////								return y;
-////							}
-////							Vec3f diff((radiance_beta_i-radiance_beta));
-////							cout<<"show radiance_beta_i:\n"<<radiance_beta_i<<endl;
-////							cout<<"show radiance_beta:\n "<<radiance_beta<<endl;
-////							float sumWeight= 0.587* abs(diff.val[1])+0.114* abs(diff.val[0])+0.299* abs(diff.val[2]);
-////							float orig= 0.587*radiance_beta.val[1]+0.114* radiance_beta.val[0]+0.299* radiance_beta.val[2];
-////							weightMap.at<float>(r,c)=  exp(-15.0f*specularityChange);
+//							//							float specularity=  0.587*abs(specularityChange.val[1])/(spec_1.val[1])+ 0.114*abs(specularityChange.val[0])/(spec_1.val[0])+0.299*abs(specularityChange.val[2])/(spec_1.val[2]);
+//							//							double sumWeight= 0.587* abs(deltaSpecularity.y()/refSpecularity.y())+0.114* abs(deltaSpecularity.x()/refSpecularity.x())+0.299* abs(deltaSpecularity.z()/refSpecularity.z());
+//							//							if (sumWeight==0.0f){
+//							//								return -1.0;}
+//							//							else{
+//							//								float y = exp(-4.8f*sumWeight);
+//							//								return y;
+//							//							}
+//							//							Vec3f diff((radiance_beta_i-radiance_beta));
+//							//							cout<<"show radiance_beta_i:\n"<<radiance_beta_i<<endl;
+//							//							cout<<"show radiance_beta:\n "<<radiance_beta<<endl;
+//							//							float sumWeight= 0.587* abs(diff.val[1])+0.114* abs(diff.val[0])+0.299* abs(diff.val[2]);
+//							//							float orig= 0.587*radiance_beta.val[1]+0.114* radiance_beta.val[0]+0.299* radiance_beta.val[2];
+//							//							weightMap.at<float>(r,c)=  exp(-15.0f*specularity);
 //							weightMap.at<float>(r,c)=  specularityChange;
 //						}
 //
-//
-//					}
-//					counter_frame1++;
-//
-//				}else if(pt->refFrameId()== frame_id_start+1){
-//
-//					int currentFrameIdx=1;
-//
-//
-//					std::unordered_map<cv::Point2i, float, DSONL::hash2d<cv::Point2i>, DSONL::equalTo2D<cv::Point2i>> pixelDepthMap_1;
-//					std::unordered_map<cv::Point2i, float, DSONL::hash2d<cv::Point2i>, DSONL::equalTo2D<cv::Point2i>> pixelDepthMap_2;
+
+					}
+
+
+					counter_frame2++;
+				}else
+				        if(pt->refFrameId()== frame_id_start+2){
+
+					int currentFrameIdx=2;
+
+					std::unordered_map<cv::Point2i, float, DSONL::hash2d<cv::Point2i>, DSONL::equalTo2D<cv::Point2i>> pixelDepthMap_1;
+					std::unordered_map<cv::Point2i, float, DSONL::hash2d<cv::Point2i>, DSONL::equalTo2D<cv::Point2i>> pixelDepthMap_2;
 //					std::unordered_map<cv::Point2i, float, DSONL::hash2d<cv::Point2i>, DSONL::equalTo2D<cv::Point2i>> pixelDepthMap_3;
-////					std::unordered_map<cv::Point2i, float, DSONL::hash2d<cv::Point2i>, DSONL::equalTo2D<cv::Point2i>> pixelDepthMap_4;
-//
-//					Eigen::Isometry3d T_w_beta_start(_trajectory[pt->refFrameId()].matrix());
-//					int r=pt->_x[1];
-//					int c=pt->_x[0];
-//
-//					const Vec3f normal_pixel = normalMaps[currentFrameIdx].at<Vec3f>(r,c);
-//					Vec3f normal = normalize(normal_pixel); //normal in camera coordinate
-//					const float roughness_pixel= roughnessMaps[currentFrameIdx].at<float>(r,c);
-//					float reflectance = 1.0f;                                   // reflectance
-//					int num_K = 5;
-//					Eigen::Vector3f point_c= (depthMaps[currentFrameIdx].at<float>(r,c) * _K_inv * Vec3(c, r, 1.0)).cast<float>();
-//					Eigen::Vector3f point_w= (T_w_beta_start * Vec3(point_c.x(),point_c.y(), point_c.z())).cast<float>();
-//
-//					float image_metallic=1e-3;                                  // metallic
-//					Eigen::Matrix<float, 3, 1> beta= -point_c;
-//					beta= beta.normalized();
-//					Vec3f baseColor(0.0, 0.0, 0.0);                             //base color
-//					Vec3f N_(normal(0), normal(1), normal(2));
-//					//					cout<<"check normal and roughness:\n "<<N_<<", and "<<roughness_pixel<<"and depth:"<<depthMaps[0].at<float>(r,c)<<endl;
-//					Vec3f View_beta(beta(0), beta(1), beta(2));
-//
-//					pcl::PointXYZ searchPoint(point_w.x(), point_w.y(), point_w.z());
-//					std::vector<int> pointIdxKNNSearch(num_K);
-//					std::vector<float> pointKNNSquaredDistance(num_K);
-//					Vec3f key4Search;
-//					if ( EnvLightLookup->kdtree.nearestKSearch(searchPoint, num_K, pointIdxKNNSearch, pointKNNSquaredDistance) > 0)
-//					{
-//						float disPoint2Env_min= 10.0f;
-//						int targetEnvMapIdx=-1;
-//						Vec3f targetEnvMapVal;
-//
-//						// find the closest control point which domain contains the current point
-//						for (std::size_t i = 0; i < pointIdxKNNSearch.size (); ++i) {
-//							Vec3f envMap_point((*(EnvLightLookup->ControlpointCloud))[pointIdxKNNSearch[i]].x, (*(EnvLightLookup->ControlpointCloud))[pointIdxKNNSearch[i]].y,
-//							                   (*(EnvLightLookup->ControlpointCloud))[pointIdxKNNSearch[i]].z);
-//
-//							//                        std::cout << "\n------"<<envMap_point.val[0]<< " " << envMap_point.val[1]<< " " << envMap_point.val[2]
-//							//                                  << " (squared distance: " << pointKNNSquaredDistance[i] << ")" << std::endl;
-//							// 0.004367 is the squared distance of the closest control point
-//							//							if (pointKNNSquaredDistance[i] > 0.004367*3) { continue; }
-//							if (pointKNNSquaredDistance[i] > 0.004367) { continue; }
-//							//							if (pointKNNSquaredDistance[i] > 0.32) { continue; }
-//
-//
-//							// calculate control point normal
-//							// transform envMap_point to camera coordinate system
-//							Eigen::Vector3f envMap_point_c1 = T_w_beta_start.inverse().cast<float>() * Eigen::Vector3f(envMap_point.val[0], envMap_point.val[1], envMap_point.val[2]);
-//
-//							Vec2 uv((_calib.fx() * envMap_point_c1.x()) / envMap_point_c1.z() + _calib.cx(), (_calib.fy() * envMap_point_c1.y()) / envMap_point_c1.z() + _calib.cy());
-//							int r_n = std::round(uv[1]), c_n = std::round(uv[0]);
-//
-//							// check if the projected point is in the image
-//							if(r_n < B || r_n >= max_rows || c_n < B || c_n >= max_cols) { continue; }
-//
-//							//							Vec3f ctrlPointNormal =  N_ptr[r_n * width + c_n];//newNormalMap.at<Vec3f>(r, c);
-//							Vec3f ctrlPointNormal =  normalMaps[currentFrameIdx].at<Vec3f>(r_n, c_n);;//newNormalMap.at<Vec3f>(r, c);
-//
-//							ctrlPointNormal=cv::normalize(ctrlPointNormal);
-//
-//							float angle_consine = ctrlPointNormal.dot(N_);
-//							if (angle_consine<0.9962){ continue;} // 0.9848 is the cos(10 degree), 0.9962 is the cos(5 degree)
-//							float disPoint2Env=  pointKNNSquaredDistance[i]/(ctrlPointNormal.dot(N_));
-//							if (disPoint2Env<disPoint2Env_min){
-//								disPoint2Env_min=disPoint2Env;
-//								targetEnvMapIdx=i;
-//								targetEnvMapVal=envMap_point;
-//							}
-//						}
-//						if (targetEnvMapIdx!=-1){
-//							key4Search.val[0] = targetEnvMapVal.val[0];
-//							key4Search.val[1] = targetEnvMapVal.val[1];
-//							key4Search.val[2] = targetEnvMapVal.val[2];
-//						}
-//
-//					}
-//					// if no envMap point is found, skip this point
-//					if (key4Search.dot(key4Search)==0){ continue;}
-//
-//					int ctrlIndex= EnvLightLookup->envLightIdxMap[key4Search];
-//					if ( EnvLightLookup->envLightIdxMap.size()==0){std::cerr<<"Error in EnvLight->envLightIdxMap! "<<endl;}
-//
-//					if (envLightMap_cur.count(ctrlIndex)==0){
-//						stringstream ss;
-//						string img_idx_str;
-//						ss << ctrlIndex;
-//						ss >> img_idx_str;
-//						string name_prefix = "/envMap";
-//						string renderedEnvLightfolder =renderedEnvLight_path + "/envMap" + img_idx_str + "/renderedEnvLight";
-//						string renderedEnvLightDiffuse =renderedEnvLight_path + "/envMap" + img_idx_str + "/renderedEnvLightDiffuse";
-//						string envMapDiffuse = renderedEnvLightDiffuse + "/envMapDiffuse_" + img_idx_str + ".pfm";
-//						PBANL::pointEnvlight pEnv;
-//						DSONL::EnvMapLookup *EnvMapLookup = new DSONL::EnvMapLookup();
-//						EnvMapLookup->makeMipMap(pEnv.EnvmapSampler,renderedEnvLightfolder); // index_0: prefiltered Env light
-//						delete EnvMapLookup;
-//						envLightMap_cur.insert(make_pair(ctrlIndex, pEnv));
-//					}
-//
-//					//					cout<<"show env ctrlIndex :"<<ctrlIndex<<endl;
-//					DSONL::prefilteredEnvmapSampler= & ( envLightMap_cur[ctrlIndex].EnvmapSampler[0]);
-//					DSONL::brdfSampler_ = & (EnvLightLookup->brdfSampler[0]);
-//
-//					Sophus::SE3f enterPanoroma(T_head_frame_c2w);
-//					Sophus::SE3d T_c2w( T_w_beta_start.rotation(), T_w_beta_start.translation());
-//
-//
-//					// TODO: convert the envmap to current "world coordinate" in advance
-//					Vec3f radiance_beta = ibl_Radiance->solveForRadiance(View_beta, N_, roughness_pixel, image_metallic,
-//					                                                     reflectance, baseColor, T_c2w.rotationMatrix(),
-//					                                                     enterPanoroma);
-//
-//					Vec3 specularity(radiance_beta[0],radiance_beta[1],radiance_beta[2]);
-//					if (isnan(specularity[0])){ continue ;}
-//
-//					if (specularity[0]>10){
-//						cout<<"radiance_beta[0]:"<<specularity[0]<<endl;
-//						cout<<"show pixel coordinate:"<<endl;
-//						cout<<"r:"<<r<<", c:"<<c<<endl;
-//					}
-//
-//					pt->specularitySequence.insert(make_pair(pt->refFrameId(),Vec3(specularity[0],specularity[1],specularity[2])));
-//
-//					for (int i = 1; i < pt->visibilityList().size(); ++i) {
-//						Eigen::Isometry3d T_w_view_2_start_c2w(_trajectory[pt->visibilityList()[i]].matrix());
-//						Eigen::Isometry3d T_w_view_2_start_w2c(T_w_view_2_start_c2w.inverse());
-//
-//						Eigen::Matrix3d R12 = (T_w_view_2_start_c2w.rotation().transpose()* T_w_beta_start.rotation());
-//						Eigen::Vector3d t12 = T_w_view_2_start_c2w.rotation().transpose()*(T_w_beta_start.translation()-T_w_view_2_start_c2w.translation());
-//
-//						Eigen::Vector3d View_beta_i = - R12*t12 - point_c.cast<double>();
-//						View_beta_i=View_beta_i.normalized();
-//
-//						Vec3f View_beta_i_f(View_beta_i[0],View_beta_i[1],View_beta_i[2]);
-//
-//						Eigen::Vector3d view_beta_prime_i_c = T_w_view_2_start_w2c*(point_w.cast<double>());
-//
-//						Eigen::Vector3d view_beta_prime_i_c_n = - view_beta_prime_i_c.normalized();
-//
-//
-//						Vec2 uv((_calib.fx() * view_beta_prime_i_c.x()) / view_beta_prime_i_c.z() + _calib.cx(), (_calib.fy() * view_beta_prime_i_c.y()) / view_beta_prime_i_c.z() + _calib.cy());
-//						//						int r_n = std::round(uv[1]), c_n = std::round(uv[0]);
-//						int pixel_col_right= std::round(uv(0));
-//						int pixel_row_right =std::round(uv(1));
-//
-//						//						cout<<"pixel_col_right:"<<pixel_col_right<<endl;
-//						//						cout<<"pixel_row_right:"<<pixel_row_right<<endl;
-//
-//						Eigen::Matrix<int, 2, 1> pt2d(pixel_col_right,pixel_row_right);
-//						cv::Point2i pixel_coor (pixel_row_right, pixel_col_right);
-//
-//						if (i==1){
-//							// for occlusion problem on the second view
-//							if (pixelDepthMap_1.count(pixel_coor)!=0 ){
-//								if( view_beta_prime_i_c.z()<pixelDepthMap_1[pixel_coor]){
-//									pixelDepthMap_1.insert(make_pair(pixel_coor,view_beta_prime_i_c.z()));
-//								} else{
-//									pt->specularitySequence.insert(make_pair(pt->visibilityList()[i],Vec3(-666.0f,-666.0f,-666.0f)));
-//								}
-//							}
-//							pixelDepthMap_1.insert(make_pair(pixel_coor,view_beta_prime_i_c.z()));
-//
-//						}else if (i==2){
-//							// for occlusion problem on the third view
-//							if (pixelDepthMap_2.count(pixel_coor)!=0 ){
-//								if( view_beta_prime_i_c.z()<pixelDepthMap_2[pixel_coor]){
-//									pixelDepthMap_2.insert(make_pair(pixel_coor,view_beta_prime_i_c.z()));
-//								} else{
-//									pt->specularitySequence.insert(make_pair(pt->visibilityList()[i],Vec3(-666.0f,-666.0f,-666.0f)));
-//								}
-//							}
-//							pixelDepthMap_2.insert(make_pair(pixel_coor,view_beta_prime_i_c.z()));
-//						}else if(i==3) {
-//							// for occlusion problem on the fourth view
-//							if (pixelDepthMap_3.count(pixel_coor) != 0) {
-//								if (view_beta_prime_i_c.z() < pixelDepthMap_3[pixel_coor]) {
-//									pixelDepthMap_3.insert(make_pair(pixel_coor, view_beta_prime_i_c.z()));
-//								} else {
-//									pt->specularitySequence.insert(make_pair(pt->visibilityList()[i], Vec3(-666.0f, -666.0f, -666.0f)));
-//								}
-//							}
-//							pixelDepthMap_3.insert(make_pair(pixel_coor, view_beta_prime_i_c.z()));
-//						}
-//
-//						Vec3f radiance_beta_i = ibl_Radiance->solveForRadiance(View_beta_i_f, N_, roughness_pixel, image_metallic,
-//						                                                       reflectance, baseColor, T_c2w.rotationMatrix(),
-//						                                                       enterPanoroma);
-//
-//						Vec3 specularity_visibility(radiance_beta_i[0],radiance_beta_i[1],radiance_beta_i[2]);
-//
-//						pt->specularitySequence.insert(make_pair(pt->visibilityList()[i],Vec3(specularity_visibility[0],specularity_visibility[1],specularity_visibility[2])));
-//
-////						if (i==4){
-////
-////							//							for (int i = 0; i < pt->visibilityList().size(); ++i) {
-////							//
-////							//								cout<<"show pt->visibilityList:"<< pt->visibilityList()[i];
-////							//
-////							//							}
-////
-////							//							cout<<"show pt->T_w_view_2_start_c2w:"<<endl;
-////							//							cout<<T_w_view_2_start_c2w.matrix()<<endl;
-////							//
-////							//							cout<<"show r,c: "<<r<<","<<c<<endl;
-////							//
-////							//							cout<<"show View_beta:\n"<<beta<<endl;
-////							//							cout<<"show View_beta_i_f:\n"<<View_beta_i_f<<endl;
-////							Vec3f spec_1= Vec3f(specularity[0],specularity[1],specularity[2]) ;
-////							Vec3f spec_2= Vec3f(specularity_visibility[0],specularity_visibility[1],specularity_visibility[2]) ;
-////
-////							float delta_b = abs(spec_1.val[0] - spec_2.val[0]);
-////							float delta_g = abs(spec_1.val[1] - spec_2.val[1]);
-////							float delta_r = abs(spec_1.val[2] - spec_2.val[2]);
-////							if (std::isnan(delta_g)){continue;}
-////
-////							specularityChangeMap.at<Vec3f>(r,c)= Vec3f(delta_b,delta_g,delta_r);
-////
-////							specularityMap.at<Vec3f>(r,c)= spec_1;
-////							specularityMap_right.at<Vec3f>(pixel_row_right,pixel_col_right)=spec_2;
-////							float specularityChange=  0.587*delta_g+0.114*delta_b+0.299*delta_r;
-////							//							float specularity=  0.587*abs(specularityChange.val[1])/(spec_1.val[1])+ 0.114*abs(specularityChange.val[0])/(spec_1.val[0])+0.299*abs(specularityChange.val[2])/(spec_1.val[2]);
-////							//							double sumWeight= 0.587* abs(deltaSpecularity.y()/refSpecularity.y())+0.114* abs(deltaSpecularity.x()/refSpecularity.x())+0.299* abs(deltaSpecularity.z()/refSpecularity.z());
-////							//							if (sumWeight==0.0f){
-////							//								return -1.0;}
-////							//							else{
-////							//								float y = exp(-4.8f*sumWeight);
-////							//								return y;
-////							//							}
-////							//							Vec3f diff((radiance_beta_i-radiance_beta));
-////							//							cout<<"show radiance_beta_i:\n"<<radiance_beta_i<<endl;
-////							//							cout<<"show radiance_beta:\n "<<radiance_beta<<endl;
-////							//							float sumWeight= 0.587* abs(diff.val[1])+0.114* abs(diff.val[0])+0.299* abs(diff.val[2]);
-////							//							float orig= 0.587*radiance_beta.val[1]+0.114* radiance_beta.val[0]+0.299* radiance_beta.val[2];
-////							//							weightMap.at<float>(r,c)=  exp(-15.0f*specularity);
-////							weightMap.at<float>(r,c)=  specularityChange;
-////						}
-////
-//
-//					}
-//
-//
-//					counter_frame2++;
-//				}else
-//				        if(pt->refFrameId()== frame_id_start+2){
-//
-//					int currentFrameIdx=2;
-//
-//					std::unordered_map<cv::Point2i, float, DSONL::hash2d<cv::Point2i>, DSONL::equalTo2D<cv::Point2i>> pixelDepthMap_1;
-//					std::unordered_map<cv::Point2i, float, DSONL::hash2d<cv::Point2i>, DSONL::equalTo2D<cv::Point2i>> pixelDepthMap_2;
-////					std::unordered_map<cv::Point2i, float, DSONL::hash2d<cv::Point2i>, DSONL::equalTo2D<cv::Point2i>> pixelDepthMap_3;
-//					//					std::unordered_map<cv::Point2i, float, DSONL::hash2d<cv::Point2i>, DSONL::equalTo2D<cv::Point2i>> pixelDepthMap_4;
-//
-//					Eigen::Isometry3d T_w_beta_start(_trajectory[pt->refFrameId()].matrix());
-//					int r=pt->_x[1];
-//					int c=pt->_x[0];
-//
-//					const Vec3f normal_pixel = normalMaps[currentFrameIdx].at<Vec3f>(r,c);
-//					Vec3f normal = normalize(normal_pixel); //normal in camera coordinate
-//					const float roughness_pixel= roughnessMaps[currentFrameIdx].at<float>(r,c);
-//					float reflectance = 1.0f;                                   // reflectance
-//					int num_K = 5;
-//					Eigen::Vector3f point_c= (depthMaps[currentFrameIdx].at<float>(r,c) * _K_inv * Vec3(c, r, 1.0)).cast<float>();
-//					Eigen::Vector3f point_w= (T_w_beta_start * Vec3(point_c.x(),point_c.y(), point_c.z())).cast<float>();
-//
-//					float image_metallic=1e-3;                                  // metallic
-//					Eigen::Matrix<float, 3, 1> beta= -point_c;
-//					beta= beta.normalized();
-//					Vec3f baseColor(0.0, 0.0, 0.0);                             //base color
-//					Vec3f N_(normal(0), normal(1), normal(2));
-//					//					cout<<"check normal and roughness:\n "<<N_<<", and "<<roughness_pixel<<"and depth:"<<depthMaps[0].at<float>(r,c)<<endl;
-//					Vec3f View_beta(beta(0), beta(1), beta(2));
-//
-//					pcl::PointXYZ searchPoint(point_w.x(), point_w.y(), point_w.z());
-//					std::vector<int> pointIdxKNNSearch(num_K);
-//					std::vector<float> pointKNNSquaredDistance(num_K);
-//					Vec3f key4Search;
-//					if ( EnvLightLookup->kdtree.nearestKSearch(searchPoint, num_K, pointIdxKNNSearch, pointKNNSquaredDistance) > 0)
-//					{
-//						float disPoint2Env_min= 10.0f;
-//						int targetEnvMapIdx=-1;
-//						Vec3f targetEnvMapVal;
-//
-//						// find the closest control point which domain contains the current point
-//						for (std::size_t i = 0; i < pointIdxKNNSearch.size (); ++i) {
-//							Vec3f envMap_point((*(EnvLightLookup->ControlpointCloud))[pointIdxKNNSearch[i]].x, (*(EnvLightLookup->ControlpointCloud))[pointIdxKNNSearch[i]].y,
-//							                   (*(EnvLightLookup->ControlpointCloud))[pointIdxKNNSearch[i]].z);
-//
-//							//                        std::cout << "\n------"<<envMap_point.val[0]<< " " << envMap_point.val[1]<< " " << envMap_point.val[2]
-//							//                                  << " (squared distance: " << pointKNNSquaredDistance[i] << ")" << std::endl;
-//							// 0.004367 is the squared distance of the closest control point
-//							//							if (pointKNNSquaredDistance[i] > 0.004367*3) { continue; }
-//							if (pointKNNSquaredDistance[i] > 0.004367) { continue; }
-//							//							if (pointKNNSquaredDistance[i] > 0.32) { continue; }
-//
-//
-//							// calculate control point normal
-//							// transform envMap_point to camera coordinate system
-//							Eigen::Vector3f envMap_point_c1 = T_w_beta_start.inverse().cast<float>() * Eigen::Vector3f(envMap_point.val[0], envMap_point.val[1], envMap_point.val[2]);
-//
-//							Vec2 uv((_calib.fx() * envMap_point_c1.x()) / envMap_point_c1.z() + _calib.cx(), (_calib.fy() * envMap_point_c1.y()) / envMap_point_c1.z() + _calib.cy());
-//							int r_n = std::round(uv[1]), c_n = std::round(uv[0]);
-//
-//							// check if the projected point is in the image
-//							if(r_n < B || r_n >= max_rows || c_n < B || c_n >= max_cols) { continue; }
-//
-//							//							Vec3f ctrlPointNormal =  N_ptr[r_n * width + c_n];//newNormalMap.at<Vec3f>(r, c);
-//							Vec3f ctrlPointNormal =  normalMaps[currentFrameIdx].at<Vec3f>(r_n, c_n);;//newNormalMap.at<Vec3f>(r, c);
-//
-//							ctrlPointNormal=cv::normalize(ctrlPointNormal);
-//
-//							float angle_consine = ctrlPointNormal.dot(N_);
-//							if (angle_consine<0.9962){ continue;} // 0.9848 is the cos(10 degree), 0.9962 is the cos(5 degree)
-//							float disPoint2Env=  pointKNNSquaredDistance[i]/(ctrlPointNormal.dot(N_));
-//							if (disPoint2Env<disPoint2Env_min){
-//								disPoint2Env_min=disPoint2Env;
-//								targetEnvMapIdx=i;
-//								targetEnvMapVal=envMap_point;
-//							}
-//						}
-//						if (targetEnvMapIdx!=-1){
-//							key4Search.val[0] = targetEnvMapVal.val[0];
-//							key4Search.val[1] = targetEnvMapVal.val[1];
-//							key4Search.val[2] = targetEnvMapVal.val[2];
-//						}
-//
-//					}
-//					// if no envMap point is found, skip this point
-//					if (key4Search.dot(key4Search)==0){ continue;}
-//
-//					int ctrlIndex= EnvLightLookup->envLightIdxMap[key4Search];
-//					if ( EnvLightLookup->envLightIdxMap.size()==0){std::cerr<<"Error in EnvLight->envLightIdxMap! "<<endl;}
-//
-//					if (envLightMap_cur.count(ctrlIndex)==0){
-//						stringstream ss;
-//						string img_idx_str;
-//						ss << ctrlIndex;
-//						ss >> img_idx_str;
-//						string name_prefix = "/envMap";
-//						string renderedEnvLightfolder =renderedEnvLight_path + "/envMap" + img_idx_str + "/renderedEnvLight";
-//						string renderedEnvLightDiffuse =renderedEnvLight_path + "/envMap" + img_idx_str + "/renderedEnvLightDiffuse";
-//						string envMapDiffuse = renderedEnvLightDiffuse + "/envMapDiffuse_" + img_idx_str + ".pfm";
-//						PBANL::pointEnvlight pEnv;
-//						DSONL::EnvMapLookup *EnvMapLookup = new DSONL::EnvMapLookup();
-//						EnvMapLookup->makeMipMap(pEnv.EnvmapSampler,renderedEnvLightfolder); // index_0: prefiltered Env light
-//						delete EnvMapLookup;
-//						envLightMap_cur.insert(make_pair(ctrlIndex, pEnv));
-//					}
-//
-//					//					cout<<"show env ctrlIndex :"<<ctrlIndex<<endl;
-//					DSONL::prefilteredEnvmapSampler= & ( envLightMap_cur[ctrlIndex].EnvmapSampler[0]);
-//					DSONL::brdfSampler_ = & (EnvLightLookup->brdfSampler[0]);
-//
-//					Sophus::SE3f enterPanoroma(T_head_frame_c2w);
-//					Sophus::SE3d T_c2w( T_w_beta_start.rotation(), T_w_beta_start.translation());
-//
-//
-//					// TODO: convert the envmap to current "world coordinate" in advance
-//					Vec3f radiance_beta = ibl_Radiance->solveForRadiance(View_beta, N_, roughness_pixel, image_metallic,
-//					                                                     reflectance, baseColor, T_c2w.rotationMatrix(),
-//					                                                     enterPanoroma);
-//
-//					Vec3 specularity(radiance_beta[0],radiance_beta[1],radiance_beta[2]);
-//					if (isnan(specularity[0])){ continue ;}
-//
-//					if (specularity[0]>10){
-//						cout<<"radiance_beta[0]:"<<specularity[0]<<endl;
-//						cout<<"show pixel coordinate:"<<endl;
-//						cout<<"r:"<<r<<", c:"<<c<<endl;
-//					}
-//
-//					pt->specularitySequence.insert(make_pair(pt->refFrameId(),Vec3(specularity[0],specularity[1],specularity[2])));
-//
-//					for (int i = 1; i < pt->visibilityList().size(); ++i) {
-//						Eigen::Isometry3d T_w_view_2_start_c2w(_trajectory[pt->visibilityList()[i]].matrix());
-//						Eigen::Isometry3d T_w_view_2_start_w2c(T_w_view_2_start_c2w.inverse());
-//
-//						Eigen::Matrix3d R12 = (T_w_view_2_start_c2w.rotation().transpose()* T_w_beta_start.rotation());
-//						Eigen::Vector3d t12 = T_w_view_2_start_c2w.rotation().transpose()*(T_w_beta_start.translation()-T_w_view_2_start_c2w.translation());
-//
-//						Eigen::Vector3d View_beta_i = - R12*t12 - point_c.cast<double>();
-//						View_beta_i=View_beta_i.normalized();
-//
-//						Vec3f View_beta_i_f(View_beta_i[0],View_beta_i[1],View_beta_i[2]);
-//
-//						Eigen::Vector3d view_beta_prime_i_c = T_w_view_2_start_w2c*(point_w.cast<double>());
-//
-//						Eigen::Vector3d view_beta_prime_i_c_n = - view_beta_prime_i_c.normalized();
-//
-//
-//						Vec2 uv((_calib.fx() * view_beta_prime_i_c.x()) / view_beta_prime_i_c.z() + _calib.cx(), (_calib.fy() * view_beta_prime_i_c.y()) / view_beta_prime_i_c.z() + _calib.cy());
-//						//						int r_n = std::round(uv[1]), c_n = std::round(uv[0]);
-//						int pixel_col_right= std::round(uv(0));
-//						int pixel_row_right =std::round(uv(1));
-//
-//						//						cout<<"pixel_col_right:"<<pixel_col_right<<endl;
-//						//						cout<<"pixel_row_right:"<<pixel_row_right<<endl;
-//
-//						Eigen::Matrix<int, 2, 1> pt2d(pixel_col_right,pixel_row_right);
-//						cv::Point2i pixel_coor (pixel_row_right, pixel_col_right);
-//
-//						if (i==1){
-//							// for occlusion problem on the second view
-//							if (pixelDepthMap_1.count(pixel_coor)!=0 ){
-//								if( view_beta_prime_i_c.z()<pixelDepthMap_1[pixel_coor]){
-//									pixelDepthMap_1.insert(make_pair(pixel_coor,view_beta_prime_i_c.z()));
-//								} else{
-//									pt->specularitySequence.insert(make_pair(pt->visibilityList()[i],Vec3(-666.0f,-666.0f,-666.0f)));
-//								}
-//							}
-//							pixelDepthMap_1.insert(make_pair(pixel_coor,view_beta_prime_i_c.z()));
-//
-//						}else if (i==2){
-//							// for occlusion problem on the third view
-//							if (pixelDepthMap_2.count(pixel_coor)!=0 ){
-//								if( view_beta_prime_i_c.z()<pixelDepthMap_2[pixel_coor]){
-//									pixelDepthMap_2.insert(make_pair(pixel_coor,view_beta_prime_i_c.z()));
-//								} else{
-//									pt->specularitySequence.insert(make_pair(pt->visibilityList()[i],Vec3(-666.0f,-666.0f,-666.0f)));
-//								}
-//							}
-//							pixelDepthMap_2.insert(make_pair(pixel_coor,view_beta_prime_i_c.z()));
-//						}
-//
-//						Vec3f radiance_beta_i = ibl_Radiance->solveForRadiance(View_beta_i_f, N_, roughness_pixel, image_metallic,
-//						                                                       reflectance, baseColor, T_c2w.rotationMatrix(),
-//						                                                       enterPanoroma);
-//
-//						Vec3 specularity_visibility(radiance_beta_i[0],radiance_beta_i[1],radiance_beta_i[2]);
-//
-//						pt->specularitySequence.insert(make_pair(pt->visibilityList()[i],Vec3(specularity_visibility[0],specularity_visibility[1],specularity_visibility[2])));
-//
-//
-//					}
-//
-//
-//					counter_frame3++;
-//				}else
-//				        if(pt->refFrameId()== frame_id_start+3){
-//
-//					int currentFrameIdx=3;
-//
-//					counter_frame4++;
-//				}else
-//				        if(pt->refFrameId()== frame_id_start+4){
-//
-//					int currentFrameIdx=4;
-//					counter_frame5++;
-//				}
-//			}
-//		}
-//		cout<<"show counter_frame1:"<<counter_frame1<<endl;
-//		cout<<"show counter_frame2:"<<counter_frame2<<endl;
-//		cout<<"show counter_frame3:"<<counter_frame3<<endl;
-//		cout<<"show counter_frame4:"<<counter_frame4<<endl;
-//		cout<<"show counter_frame5:"<<counter_frame5<<endl;
-//		Mat specularityChange;
-////		Mat  W_specularity = Mat::zeros(sumChannel.rows, sumChannel.cols, CV_32FC1); // not specular points and specular points
-////		Mat  W_values = Mat::zeros(sumChannel.rows, sumChannel.cols, CV_32FC1); // not specular points and specular points
-//		cv::normalize(weightMap, specularityChange, 0, 1, cv::NORM_MINMAX, CV_32FC1);
-//
+					//					std::unordered_map<cv::Point2i, float, DSONL::hash2d<cv::Point2i>, DSONL::equalTo2D<cv::Point2i>> pixelDepthMap_4;
+
+					Eigen::Isometry3d T_w_beta_start(_trajectory[pt->refFrameId()].matrix());
+					int r=pt->_x[1];
+					int c=pt->_x[0];
+
+					const Vec3f normal_pixel = normalMaps[currentFrameIdx].at<Vec3f>(r,c);
+					Vec3f normal = normalize(normal_pixel); //normal in camera coordinate
+					const float roughness_pixel= roughnessMaps[currentFrameIdx].at<float>(r,c);
+					float reflectance = 1.0f;                                   // reflectance
+					int num_K = 5;
+					Eigen::Vector3f point_c= (depthMaps[currentFrameIdx].at<float>(r,c) * _K_inv * Vec3(c, r, 1.0)).cast<float>();
+					Eigen::Vector3f point_w= (T_w_beta_start * Vec3(point_c.x(),point_c.y(), point_c.z())).cast<float>();
+
+					float image_metallic=1e-3;                                  // metallic
+					Eigen::Matrix<float, 3, 1> beta= -point_c;
+					beta= beta.normalized();
+					Vec3f baseColor(0.0, 0.0, 0.0);                             //base color
+					Vec3f N_(normal(0), normal(1), normal(2));
+					//					cout<<"check normal and roughness:\n "<<N_<<", and "<<roughness_pixel<<"and depth:"<<depthMaps[0].at<float>(r,c)<<endl;
+					Vec3f View_beta(beta(0), beta(1), beta(2));
+
+					pcl::PointXYZ searchPoint(point_w.x(), point_w.y(), point_w.z());
+					std::vector<int> pointIdxKNNSearch(num_K);
+					std::vector<float> pointKNNSquaredDistance(num_K);
+					Vec3f key4Search;
+					if ( EnvLightLookup->kdtree.nearestKSearch(searchPoint, num_K, pointIdxKNNSearch, pointKNNSquaredDistance) > 0)
+					{
+						float disPoint2Env_min= 10.0f;
+						int targetEnvMapIdx=-1;
+						Vec3f targetEnvMapVal;
+
+						// find the closest control point which domain contains the current point
+						for (std::size_t i = 0; i < pointIdxKNNSearch.size (); ++i) {
+							Vec3f envMap_point((*(EnvLightLookup->ControlpointCloud))[pointIdxKNNSearch[i]].x, (*(EnvLightLookup->ControlpointCloud))[pointIdxKNNSearch[i]].y,
+							                   (*(EnvLightLookup->ControlpointCloud))[pointIdxKNNSearch[i]].z);
+
+							//                        std::cout << "\n------"<<envMap_point.val[0]<< " " << envMap_point.val[1]<< " " << envMap_point.val[2]
+							//                                  << " (squared distance: " << pointKNNSquaredDistance[i] << ")" << std::endl;
+							// 0.004367 is the squared distance of the closest control point
+							//							if (pointKNNSquaredDistance[i] > 0.004367*3) { continue; }
+							if (pointKNNSquaredDistance[i] > 0.004367) { continue; }
+							//							if (pointKNNSquaredDistance[i] > 0.32) { continue; }
+
+
+							// calculate control point normal
+							// transform envMap_point to camera coordinate system
+							Eigen::Vector3f envMap_point_c1 = T_w_beta_start.inverse().cast<float>() * Eigen::Vector3f(envMap_point.val[0], envMap_point.val[1], envMap_point.val[2]);
+
+							Vec2 uv((_calib.fx() * envMap_point_c1.x()) / envMap_point_c1.z() + _calib.cx(), (_calib.fy() * envMap_point_c1.y()) / envMap_point_c1.z() + _calib.cy());
+							int r_n = std::round(uv[1]), c_n = std::round(uv[0]);
+
+							// check if the projected point is in the image
+							if(r_n < B || r_n >= max_rows || c_n < B || c_n >= max_cols) { continue; }
+
+							//							Vec3f ctrlPointNormal =  N_ptr[r_n * width + c_n];//newNormalMap.at<Vec3f>(r, c);
+							Vec3f ctrlPointNormal =  normalMaps[currentFrameIdx].at<Vec3f>(r_n, c_n);;//newNormalMap.at<Vec3f>(r, c);
+
+							ctrlPointNormal=cv::normalize(ctrlPointNormal);
+
+							float angle_consine = ctrlPointNormal.dot(N_);
+							if (angle_consine<0.9962){ continue;} // 0.9848 is the cos(10 degree), 0.9962 is the cos(5 degree)
+							float disPoint2Env=  pointKNNSquaredDistance[i]/(ctrlPointNormal.dot(N_));
+							if (disPoint2Env<disPoint2Env_min){
+								disPoint2Env_min=disPoint2Env;
+								targetEnvMapIdx=i;
+								targetEnvMapVal=envMap_point;
+							}
+						}
+						if (targetEnvMapIdx!=-1){
+							key4Search.val[0] = targetEnvMapVal.val[0];
+							key4Search.val[1] = targetEnvMapVal.val[1];
+							key4Search.val[2] = targetEnvMapVal.val[2];
+						}
+
+					}
+					// if no envMap point is found, skip this point
+					if (key4Search.dot(key4Search)==0){ continue;}
+
+					int ctrlIndex= EnvLightLookup->envLightIdxMap[key4Search];
+					if ( EnvLightLookup->envLightIdxMap.size()==0){std::cerr<<"Error in EnvLight->envLightIdxMap! "<<endl;}
+
+					if (envLightMap_cur.count(ctrlIndex)==0){
+						stringstream ss;
+						string img_idx_str;
+						ss << ctrlIndex;
+						ss >> img_idx_str;
+						string name_prefix = "/envMap";
+						string renderedEnvLightfolder =renderedEnvLight_path + "/envMap" + img_idx_str + "/renderedEnvLight";
+						string renderedEnvLightDiffuse =renderedEnvLight_path + "/envMap" + img_idx_str + "/renderedEnvLightDiffuse";
+						string envMapDiffuse = renderedEnvLightDiffuse + "/envMapDiffuse_" + img_idx_str + ".pfm";
+						PBANL::pointEnvlight pEnv;
+						DSONL::EnvMapLookup *EnvMapLookup = new DSONL::EnvMapLookup();
+						EnvMapLookup->makeMipMap(pEnv.EnvmapSampler,renderedEnvLightfolder); // index_0: prefiltered Env light
+						delete EnvMapLookup;
+						envLightMap_cur.insert(make_pair(ctrlIndex, pEnv));
+					}
+
+					//					cout<<"show env ctrlIndex :"<<ctrlIndex<<endl;
+					DSONL::prefilteredEnvmapSampler= & ( envLightMap_cur[ctrlIndex].EnvmapSampler[0]);
+					DSONL::brdfSampler_ = & (EnvLightLookup->brdfSampler[0]);
+
+					Sophus::SE3f enterPanoroma(T_head_frame_c2w);
+					Sophus::SE3d T_c2w( T_w_beta_start.rotation(), T_w_beta_start.translation());
+
+
+					// TODO: convert the envmap to current "world coordinate" in advance
+					Vec3f radiance_beta = ibl_Radiance->solveForRadiance(View_beta, N_, roughness_pixel, image_metallic,
+					                                                     reflectance, baseColor, T_c2w.rotationMatrix(),
+					                                                     enterPanoroma);
+
+					Vec3 specularity(radiance_beta[0],radiance_beta[1],radiance_beta[2]);
+					if (isnan(specularity[0])){ continue ;}
+
+					if (specularity[0]>10){
+						cout<<"radiance_beta[0]:"<<specularity[0]<<endl;
+						cout<<"show pixel coordinate:"<<endl;
+						cout<<"r:"<<r<<", c:"<<c<<endl;
+					}
+
+					pt->specularitySequence.insert(make_pair(pt->refFrameId(),Vec3(specularity[0],specularity[1],specularity[2])));
+
+					for (int i = 1; i < pt->visibilityList().size(); ++i) {
+						Eigen::Isometry3d T_w_view_2_start_c2w(_trajectory[pt->visibilityList()[i]].matrix());
+						Eigen::Isometry3d T_w_view_2_start_w2c(T_w_view_2_start_c2w.inverse());
+
+						Eigen::Matrix3d R12 = (T_w_view_2_start_c2w.rotation().transpose()* T_w_beta_start.rotation());
+						Eigen::Vector3d t12 = T_w_view_2_start_c2w.rotation().transpose()*(T_w_beta_start.translation()-T_w_view_2_start_c2w.translation());
+
+						Eigen::Vector3d View_beta_i = - R12*t12 - point_c.cast<double>();
+						View_beta_i=View_beta_i.normalized();
+
+						Vec3f View_beta_i_f(View_beta_i[0],View_beta_i[1],View_beta_i[2]);
+
+						Eigen::Vector3d view_beta_prime_i_c = T_w_view_2_start_w2c*(point_w.cast<double>());
+
+						Eigen::Vector3d view_beta_prime_i_c_n = - view_beta_prime_i_c.normalized();
+
+
+						Vec2 uv((_calib.fx() * view_beta_prime_i_c.x()) / view_beta_prime_i_c.z() + _calib.cx(), (_calib.fy() * view_beta_prime_i_c.y()) / view_beta_prime_i_c.z() + _calib.cy());
+						//						int r_n = std::round(uv[1]), c_n = std::round(uv[0]);
+						int pixel_col_right= std::round(uv(0));
+						int pixel_row_right =std::round(uv(1));
+
+						//						cout<<"pixel_col_right:"<<pixel_col_right<<endl;
+						//						cout<<"pixel_row_right:"<<pixel_row_right<<endl;
+
+						Eigen::Matrix<int, 2, 1> pt2d(pixel_col_right,pixel_row_right);
+						cv::Point2i pixel_coor (pixel_row_right, pixel_col_right);
+
+						if (i==1){
+							// for occlusion problem on the second view
+							if (pixelDepthMap_1.count(pixel_coor)!=0 ){
+								if( view_beta_prime_i_c.z()<pixelDepthMap_1[pixel_coor]){
+									pixelDepthMap_1.insert(make_pair(pixel_coor,view_beta_prime_i_c.z()));
+								} else{
+									pt->specularitySequence.insert(make_pair(pt->visibilityList()[i],Vec3(-666.0f,-666.0f,-666.0f)));
+								}
+							}
+							pixelDepthMap_1.insert(make_pair(pixel_coor,view_beta_prime_i_c.z()));
+
+						}else if (i==2){
+							// for occlusion problem on the third view
+							if (pixelDepthMap_2.count(pixel_coor)!=0 ){
+								if( view_beta_prime_i_c.z()<pixelDepthMap_2[pixel_coor]){
+									pixelDepthMap_2.insert(make_pair(pixel_coor,view_beta_prime_i_c.z()));
+								} else{
+									pt->specularitySequence.insert(make_pair(pt->visibilityList()[i],Vec3(-666.0f,-666.0f,-666.0f)));
+								}
+							}
+							pixelDepthMap_2.insert(make_pair(pixel_coor,view_beta_prime_i_c.z()));
+						}
+
+						Vec3f radiance_beta_i = ibl_Radiance->solveForRadiance(View_beta_i_f, N_, roughness_pixel, image_metallic,
+						                                                       reflectance, baseColor, T_c2w.rotationMatrix(),
+						                                                       enterPanoroma);
+
+						Vec3 specularity_visibility(radiance_beta_i[0],radiance_beta_i[1],radiance_beta_i[2]);
+
+						pt->specularitySequence.insert(make_pair(pt->visibilityList()[i],Vec3(specularity_visibility[0],specularity_visibility[1],specularity_visibility[2])));
+
+
+					}
+
+
+					counter_frame3++;
+				}else
+				        if(pt->refFrameId()== frame_id_start+3){
+
+					int currentFrameIdx=3;
+
+					counter_frame4++;
+				}else
+				        if(pt->refFrameId()== frame_id_start+4){
+
+					int currentFrameIdx=4;
+					counter_frame5++;
+				}
+			}
+		}
+		cout<<"show counter_frame1:"<<counter_frame1<<endl;
+		cout<<"show counter_frame2:"<<counter_frame2<<endl;
+		cout<<"show counter_frame3:"<<counter_frame3<<endl;
+		cout<<"show counter_frame4:"<<counter_frame4<<endl;
+		cout<<"show counter_frame5:"<<counter_frame5<<endl;
+		Mat specularityChange;
+//		Mat  W_specularity = Mat::zeros(sumChannel.rows, sumChannel.cols, CV_32FC1); // not specular points and specular points
+//		Mat  W_values = Mat::zeros(sumChannel.rows, sumChannel.cols, CV_32FC1); // not specular points and specular points
+		cv::normalize(weightMap, specularityChange, 0, 1, cv::NORM_MINMAX, CV_32FC1);
+
 //		imshow("specularityChange",specularityChangeMap*255);
 //		imwrite("specularityChange.png",specularityChange*255);
 //
@@ -1637,9 +1637,9 @@ void PhotometricBundleAdjustment::
 //		cv::imshow("specularityMap_right"+ to_string(frame_id_end),specularityMap_right);
 //		imwrite("specularityMap_right.png",specularityMap_right*255);
 //		waitKey(0);
-//		cout<<"======================show envLightMap_cur size: "<<envLightMap_cur.size()<<"===========================:\n"<<endl;
-//
-//
+		cout<<"======================show envLightMap_cur size: "<<envLightMap_cur.size()<<"===========================:\n"<<endl;
+
+
 //
 //
 
@@ -2150,36 +2150,36 @@ void PhotometricBundleAdjustment::optimize(Result* result)
 
 
 
-//					if(pt->specularitySequence.find(id) != pt->specularitySequence.end()){
+					if(pt->specularitySequence.find(id) != pt->specularitySequence.end()){
+
+						if (pt->specularitySequence[id].x()==666.0f && pt->specularitySequence[id].x()==pt->specularitySequence[id].y()){ continue ;}
+
+						specularity_weight = specularityWeight(pt->specularitySequence[pt->refFrameId()],pt->specularitySequence[id]);
+
+						cout<<"show specularity_weight"<<	specularity_weight <<endl;
 //
-//						if (pt->specularitySequence[id].x()==666.0f && pt->specularitySequence[id].x()==pt->specularitySequence[id].y()){ continue ;}
+//						if (pt->refFrameId()==3 && id==7){
 //
-//						specularity_weight = specularityWeight(pt->specularitySequence[pt->refFrameId()],pt->specularitySequence[id]);
+//							cout<<"show pt->specularitySequence[pt->refFrameId()]:"<<	pt->specularitySequence[pt->refFrameId()]<<endl;
+//							cout<<"show pt->specularitySequence[id]:"<<	pt->specularitySequence[id]<<endl;
 //
-//						cout<<"show specularity_weight"<<	specularity_weight <<endl;
-////
-////						if (pt->refFrameId()==3 && id==7){
-////
-////							cout<<"show pt->specularitySequence[pt->refFrameId()]:"<<	pt->specularitySequence[pt->refFrameId()]<<endl;
-////							cout<<"show pt->specularitySequence[id]:"<<	pt->specularitySequence[id]<<endl;
-////
-////							Vec3 specularityChange= (pt->specularitySequence[pt->refFrameId()] - pt->specularitySequence[id]);
-////							float specularity= abs(specularityChange.y()/pt->specularitySequence[pt->refFrameId()].y())+abs(specularityChange.x()/pt->specularitySequence[pt->refFrameId()].x())+abs(specularityChange.z()/pt->specularitySequence[pt->refFrameId()].z());
-//////							std::cout<<"specularity change: "<<specularity<<endl;
-////							if ((specularity)>3){
-////								cout<<"show pixel position: "<<pt->_x[0]<<" "<<pt->_x[1]<<endl;
-////								cout<<"specularity change: "<<specularity<<endl;
-////								continue ;
-////							}
-////							Change.at<float>(pt->_x[1], pt->_x[0]) = (specularity);
-////							std::cout<<"specularity_weight: "<<specularity_weight<<std::endl;
-////						}
-//						if (isnan(specularity_weight)){
-//							continue ;
+//							Vec3 specularityChange= (pt->specularitySequence[pt->refFrameId()] - pt->specularitySequence[id]);
+//							float specularity= abs(specularityChange.y()/pt->specularitySequence[pt->refFrameId()].y())+abs(specularityChange.x()/pt->specularitySequence[pt->refFrameId()].x())+abs(specularityChange.z()/pt->specularitySequence[pt->refFrameId()].z());
+////							std::cout<<"specularity change: "<<specularity<<endl;
+//							if ((specularity)>3){
+//								cout<<"show pixel position: "<<pt->_x[0]<<" "<<pt->_x[1]<<endl;
+//								cout<<"specularity change: "<<specularity<<endl;
+//								continue ;
+//							}
+//							Change.at<float>(pt->_x[1], pt->_x[0]) = (specularity);
+//							std::cout<<"specularity_weight: "<<specularity_weight<<std::endl;
 //						}
-////
-//					}
-////
+						if (isnan(specularity_weight)){
+							continue ;
+						}
+//
+					}
+//
 
 
 
