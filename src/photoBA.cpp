@@ -76,7 +76,7 @@ int main(int argc, char** argv)
 	// load GT trajectory
 	//	std::string abs_pose= "../data/dataSetPBA_init_poor/Kitti_GT_00.txt";
 	//	std::string abs_pose= "../data/dataSetPBA_init_poor/GT_pose_list_fr3.txt";
-	std::string abs_pose= "../data/dataSetPBA_init_poor/seq12_300_Poses_gt.txt";
+	std::string abs_pose= "../data/dataSetPBA_init_poor/GT_Trajectory_seq15_650frames_WorldAtFirstFrame.txt";
 //	std::string abs_pose= "../data/dataSetPBA_init_poor/scene0370_02_seq_01_tumRGBD_segmented_reseted.txt";
 
 
