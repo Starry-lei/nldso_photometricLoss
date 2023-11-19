@@ -99,12 +99,18 @@ int main(int argc, char** argv)
             .parse(argc, argv);
 
 	pbaUtils::ConfigFile cf(options.get<std::string>("config"));
+
 	dataset = Dataset::Create(options.get<std::string>("config"));
+
+
+
 	// check if dataset is empty
 	if(dataset == nullptr) {
 		std::cerr<<"Failed to create dataset\n";
 		return -1;
 	}
+	cout<<"pba run here 1! "<<endl;
+
 	// load initial trajectory
 	T_init = loadPosesTumRGBDFormat(cf.get<std::string>("trajectory"));
 	//	T_init = loadPosesKittiFormat(cf.get<std::string>("trajectory"));
@@ -117,7 +123,7 @@ int main(int argc, char** argv)
 
 
 //	std::string abs_pose= "../data/dataSetPBA_init_poor/scene0370_02_seq_01_tumRGBD_segmented_reseted.txt";
-	    cout<<"dataset created! "<<endl;
+	cout<<"dataset created! "<<endl;
 
 	T_init_abs_pose = loadPosesTumRGBDFormat(abs_pose);
 
