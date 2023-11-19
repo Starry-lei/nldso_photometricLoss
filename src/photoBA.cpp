@@ -111,7 +111,7 @@ int main(int argc, char** argv)
 	// load GT trajectory
 	//	std::string abs_pose= "../data/dataSetPBA_init_poor/Kitti_GT_00.txt";
 	//	std::string abs_pose= "../data/dataSetPBA_init_poor/GT_pose_list_fr3.txt";
-	std::string abs_pose= "../data/dataSetPBA_init_poor/seq12_300_Poses_gt.txt";
+	std::string abs_pose= "../data/dataSetPBA_init_poor/seq15/GT_Trajectory_seq15_650frames_WorldAtFirstFrame.txt";
 
 //	std::string abs_pose= "../data/dataSetPBA_init_poor/seq12_111_Poses_gt.txt";
 
@@ -148,7 +148,7 @@ int main(int argc, char** argv)
 	// convert environment light pose the coordinate system of the first camera in PBA sequence
 	std::vector<Sophus::SE3f, Eigen::aligned_allocator<Sophus::SE3f>> trajectoryPoses;
 //	string fileName = "/home/lei/Documents/Dataset/dataSetPBA/sequences/02/poses.txt";
-	string fileName = "/home/lei/Documents/Dataset/dataSetPBA/sequences/12/300frame0370_02/cam_interpolated_poses_Env.txt";
+	string fileName = "data/dataSetPBA_init_poor/seq15/cam_interpolated_poses_Env.txt";
 //	string fileName = "/home/lei/Documents/Dataset/dataSetPBA/sequences/13/cam_interpolated_poses_Env.txt";
 
 
@@ -373,7 +373,7 @@ bool next_step( ){
 	cv::Mat_<float> zmap;
 	UniquePointer<DatasetFrame> frame;
 
-	std::string dataFolder="/home/lei/Documents/Research/nldso_photometricLoss/dataAnalysis/seq01/lvl_1_pose/";
+	std::string dataFolder="/home/lei/Documents/Research/nldso_photometricLoss/dataAnalysis/seq_15/lvl_1_pose/";
 
 	int lvl=0;
 
