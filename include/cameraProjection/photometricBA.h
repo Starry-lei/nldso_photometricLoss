@@ -139,10 +139,9 @@ namespace DSONL {
         problem.SetParameterBlockVariable(&(camera_poses[7]));
 
 
-//    problem.SetParameterBlockConstant(&(camera_poses[0]));
+		// problem.SetParameterBlockConstant(&(camera_poses[0]));
 
-
-// output the residuals distribution
+		// output the residuals distribution
 
         vector<double> residuals;
         double cost;
@@ -153,6 +152,8 @@ namespace DSONL {
         if (image_left.cols==640){
             drawResidualDistribution(residuals,"residualsDistri_withoutCorrection", image_1.rows,image_1.cols);
         }
+
+
 
 
 

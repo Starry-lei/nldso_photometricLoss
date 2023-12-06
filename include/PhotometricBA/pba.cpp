@@ -791,6 +791,7 @@ void PhotometricBundleAdjustment::
 
 
 	cv::Mat weightMap = cv::Mat::zeros(480,640,CV_32FC1);
+
 //	cv::Mat selectedPoints_frame_3 = cv::Mat::zeros(480,640,CV_8UC1);
 //	cv::Mat weightMap_frame_5 = cv::Mat::zeros(480,640,CV_8UC1);
 //	cv::Mat weightMap_frame_7 = cv::Mat::zeros(480,640,CV_8UC1);
@@ -842,12 +843,6 @@ void PhotometricBundleAdjustment::
 //	}
 
 //	N_ptr
-
-
-
-
-
-
 
     //
     // extract the descriptors
@@ -1622,26 +1617,38 @@ void PhotometricBundleAdjustment::
 		cout<<"show counter_frame3:"<<counter_frame3<<endl;
 		cout<<"show counter_frame4:"<<counter_frame4<<endl;
 		cout<<"show counter_frame5:"<<counter_frame5<<endl;
-		Mat specularityChange;
-//		Mat  W_specularity = Mat::zeros(sumChannel.rows, sumChannel.cols, CV_32FC1); // not specular points and specular points
-//		Mat  W_values = Mat::zeros(sumChannel.rows, sumChannel.cols, CV_32FC1); // not specular points and specular points
-		cv::normalize(weightMap, specularityChange, 0, 1, cv::NORM_MINMAX, CV_32FC1);
 
-//		imshow("specularityChange",specularityChangeMap*255);
-//		imwrite("specularityChange.png",specularityChange*255);
-//
-//		cvtColor(specularityMap,specularityMap,COLOR_RGB2GRAY);
-//		cvtColor(specularityMap_right,specularityMap_right,COLOR_RGB2GRAY);
-//		cv::imshow("specularityMap"+ to_string(frame_id_start),specularityMap);
-//		imwrite("specularityMap.png",specularityMap*255);
-//		cv::imshow("specularityMap_right"+ to_string(frame_id_end),specularityMap_right);
-//		imwrite("specularityMap_right.png",specularityMap_right*255);
-//		waitKey(0);
-		cout<<"======================show envLightMap_cur size: "<<envLightMap_cur.size()<<"===========================:\n"<<endl;
+		if(_frame_id==177){
+
+			Mat specularityChange,specularityChangeMap_normalized;
+			//		Mat  W_specularity = Mat::zeros(sumChannel.rows, sumChannel.cols, CV_32FC1); // not specular points and specular points
+			//		Mat  W_values = Mat::zeros(sumChannel.rows, sumChannel.cols, CV_32FC1); // not specular points and specular points
+			cv::normalize(weightMap, specularityChange, 0, 1, cv::NORM_MINMAX, CV_32FC1);
+
+			cv::normalize(specularityChangeMap, specularityChangeMap_normalized, 0, 1, cv::NORM_MINMAX, CV_32FC3);
 
 
-//
-//
+			imshow("specularityChange",specularityChangeMap*255);
+			imwrite("specularityChange.png",specularityChange*255);
+
+			imshow("specularityChangeMap_normalized",specularityChangeMap_normalized);
+			imwrite("specularityChangeMap_normalized.png",specularityChangeMap_normalized*255);
+
+			cvtColor(specularityMap,specularityMap,COLOR_RGB2GRAY);
+			cvtColor(specularityMap_right,specularityMap_right,COLOR_RGB2GRAY);
+			cv::imshow("specularityMap"+ to_string(frame_id_start),specularityMap);
+			imwrite("specularityMap.png",specularityMap*255);
+			cv::imshow("specularityMap_right"+ to_string(frame_id_end),specularityMap_right);
+			imwrite("specularityMap_right.png",specularityMap_right*255);
+			waitKey(0);
+			cout<<"======================show envLightMap_cur size: "<<envLightMap_cur.size()<<"===========================:\n"<<endl;
+
+			//
+			//
+		}
+
+
+
 
 
         optimize(result);
@@ -2256,7 +2263,6 @@ void PhotometricBundleAdjustment::optimize(Result* result)
 
     // set the first camera constant
     {
-
         auto p = camera_params[frame_id_start].data();
         Info("first camera id %d\n", frame_id_start);
         if(problem.HasParameterBlock(p)) {

@@ -154,7 +154,7 @@ int main(int argc, char** argv)
 	// convert environment light pose the coordinate system of the first camera in PBA sequence
 	std::vector<Sophus::SE3f, Eigen::aligned_allocator<Sophus::SE3f>> trajectoryPoses;
 //	string fileName = "/home/lei/Documents/Dataset/dataSetPBA/sequences/02/poses.txt";
-	string fileName = "data/dataSetPBA_init_poor/seq15/cam_interpolated_poses_Env.txt";
+	string fileName = "../data/dataSetPBA_init_poor/seq15/cam_interpolated_poses_Env.txt";
 //	string fileName = "/home/lei/Documents/Dataset/dataSetPBA/sequences/13/cam_interpolated_poses_Env.txt";
 
 
@@ -400,10 +400,13 @@ bool next_step( ){
 
 
 		if (fid==T_init.size()-4) {
-			std::cout <<"End of dataset reached\n";
+
 			auto output_fn = dataFolder+ "refined_poses_es_tum_abs_pose"+ std::to_string(lvl)+ ".txt";
 			writePosesTumRGBDFormat(output_fn, result.poses, dataset->getTimestamp());
+			std::cout <<"End of dataset reached\n";
+			exit(1);
 			return false;
+
 		}
 		printf("Frame %05d\n", fid);
 

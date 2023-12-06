@@ -236,7 +236,9 @@ namespace DSONL {
 
 
                 imshow("Image_ref8UC3",grayImage_ref);
+				imwrite("Image_ref8UC3.png",grayImage_ref);
                 imshow("Image_tar8UC3",grayImage_target);
+				imwrite("Image_tar8UC3.png",grayImage_target);
                 waitKey(0);
 
 			} else {
