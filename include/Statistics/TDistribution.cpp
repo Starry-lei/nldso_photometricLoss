@@ -191,6 +191,13 @@ namespace dsm
 		// weight calculation
 		const float weight = (this->nu_ + 1.f) / (this->nu_ + energyNorm*energyNorm);
 
+		const float weight_n =1.0;
+
+		if (weight> weight_n)
+		{
+			return weight_n;
+		}
+
 		return weight;
 	}
 

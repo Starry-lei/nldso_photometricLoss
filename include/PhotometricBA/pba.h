@@ -210,8 +210,11 @@ public:
 	int lvl=0;
 	uint32_t _frame_id = 0;
 
-	void calcWindowframesErrorDist( );
+//	std::shared_ptr<dsm::IDistribution> distribution_test = nullptr;
 
+	        void calcWindowframesErrorDist( );
+
+	void computeDistribution( std::vector<float>& allObservations, int refId, int tarId, std::shared_ptr<dsm::IDistribution>& distribution );
 
 protected:
     void optimize(Result*, std::shared_ptr<dsm::IDistribution> error_distribution = nullptr);
