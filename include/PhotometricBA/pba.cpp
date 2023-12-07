@@ -42,6 +42,12 @@
 #include <algorithm>
 #include <map>
 
+
+
+
+
+
+
 // this is just for YCM to stop highlighting openmp as error (there is no openmp
 // in clang3.5)
 #define HAS_OPENMP __GNUC__ >= 4 && __clang__ == 0
@@ -580,6 +586,31 @@ static Mat_<double,4,4> ParamsToPose_test(const double* p)
 }
 
 
+//#include <opencv2/opencv.hpp>
+//
+//cv::Mat visualizeHistogram(const std::vector<float>& values, const std::shared_ptr<dsm::IDistribution>& distribution,
+//                           const Eigen::Vector2f& xRange, const Eigen::Vector2f& yRange,
+//                           const Eigen::Vector2i& winSize, int numBins,
+//                           const Eigen::Vector3i& lineColor = Eigen::Vector3i(255, 0, 0),
+//                           int lineWidth = 2, const Eigen::Vector3i& histColor = Eigen::Vector3i(128, 128, 128)) {
+//	// Create the histogram using the provided function
+//	cv::Mat hist = dsm::Utils::drawDistribution(values, distribution, xRange, yRange, winSize, numBins, lineColor, lineWidth, histColor);
+//
+//	// Normalize the histogram to fit within the image range [0, 255]
+//	cv::normalize(hist, hist, 0, 255, cv::NORM_MINMAX);
+//
+//	// Convert the histogram to 8-bit depth
+//	hist.convertTo(hist, CV_8UC3);
+//
+//	// Resize the histogram to fit the visualization window size
+//	cv::resize(hist, hist, winSize);
+//
+//	return hist;
+//}
+//
+
+
+
 void PhotometricBundleAdjustment::
 addFrame(const uint8_t* I_ptr, const cv::Mat& grayImg, const float* Z_ptr, const Mat44& T, Result* result)
 {
@@ -594,6 +625,7 @@ addFrame(const uint8_t* I_ptr, const cv::Mat& grayImg, const float* Z_ptr, const
 //	_image_src_map_buffer.push_back(ImageSrcMapPointer(image_src_map));
 
 	I_ptr_map[_frame_id] = I_ptr;
+	grayImg_ptr_map[ _frame_id] = grayImg;
 
 
     typedef Eigen::Map<const Image_<float>, Eigen::Aligned> SrcDepthMap;
@@ -827,9 +859,7 @@ addFrame(const uint8_t* I_ptr, const cv::Mat& grayImg, const float* Z_ptr, const
 
     if(_frame_buffer.full()) {
 
-
 		std::cout<<"show Scene point size in current round of optimiation : "<<_scene_points.size()<<std::endl;
-
 
 		// define a file to save the optimized points and corresponding pixel values
         uint32_t frame_id_start = _frame_buffer.front()->id(),
@@ -868,8 +898,6 @@ addFrame(const uint8_t* I_ptr, const cv::Mat& grayImg, const float* Z_ptr, const
 		std::cout<<"number of points in frame 2: "<<counter_frame3<<std::endl;
 		std::cout<<"number of points in frame 3: "<<counter_frame4<<std::endl;
 		std::cout<<"number of points in frame 4: "<<counter_frame5<<std::endl;
-
-
 //        for(auto& pt : _scene_points) {
 //            if(pt->numFrames() >= 3 && pt->refFrameId() >= frame_id_start) {
 //                num_selected_points++;
@@ -893,13 +921,162 @@ addFrame(const uint8_t* I_ptr, const cv::Mat& grayImg, const float* Z_ptr, const
 //        }
 //		myfile.close();
 //      Info("!!! myfile1 saved and show num_selected_points: %d\n", num_selected_points);
+		// Mark distribution
+		std::ofstream myfile2;
+		std::string filename2 = "optimized_points" +std::to_string(_frame_id) +"_after_optimization.txt";
+		myfile2.open (filename2);
+		std::map<uint32_t, Vec_<double,6>> camera_params_before_optimization;
+		for(uint32_t id = frame_id_start; id <= frame_id_end; ++id) {
+			camera_params_before_optimization[id] =PoseToParams_test(Eigen::Isometry3d(_trajectory.atId(id)).inverse().matrix());
+		}
+
+		// project the refined points to the image plane
+		// compute all photometric observations
+		std::vector<float> allObservations;
+
+		for(auto& pt : _scene_points) {
+			if(pt->numFrames() >= 3 && pt->refFrameId() >= frame_id_start) {
+				num_selected_points++;
+
+
+
+				int ref_pixel_values=grayImg_ptr_map[pt->refFrameId()].at<uchar>(pt->_x[1],pt->_x[0]);
+
+				float ref_pixel_values_float=static_cast<float>(grayImg_ptr_map[pt->refFrameId()].at<uchar>(pt->_x[1],pt->_x[0]));
+
+
+//				printf("ref_pixel_values: %d\n",ref_pixel_values);
+//				printf("ref_pixel_values_float: %f\n",ref_pixel_values_float);
+
+//				cv::imshow("refFrameId",grayImg_ptr_map[pt->refFrameId()]);
+//				cv::waitKey(0);
+
+
+				std::vector<float> pixel_patchValues(PATTERN_SIZE,0.0);
+
+				for (size_t i = 0; i < PATTERN_SIZE; ++i) {
+					int x = pt->_x[0] + PATTERN_OFFSETS[i][0];
+					int y = pt->_x[1] + PATTERN_OFFSETS[i][1];
+					pixel_patchValues[i]= static_cast<float >(grayImg_ptr_map[pt->refFrameId()].at<uchar>(y, x));
+				}
+
+
+				for(auto id : pt->visibilityList()) {
+					if(id >= frame_id_start && id <= frame_id_end) {
+
+						auto camera_pose = camera_params_before_optimization[id].data();
+						cv::Mat tar_image=  grayImg_ptr_map[id];
+						// convert camera pose to Eigen::Isometry3d
+						Mat44 camera_pose_eigen = ParamsToPose_test(camera_pose);
+						Vec3 xyz = pt->X();
+
+
+						std::cout<<"checking xyz: "<<xyz<<std::endl;
+
+						Vec3 xyz_cam = camera_pose_eigen.block<3,3>(0,0)*xyz + camera_pose_eigen.block<3,1>(0,3);
+						Vec2 uv = _calib.project(xyz_cam);
+						// save the optimized points and corresponding pixel values
+						myfile2 << pt->refFrameId()<<" "<<pt->_x[0]<<" "<<pt->_x[1]<<" "<<id<<" "<<std::round(uv[0])<<" "<<std::round(uv[1])<<std::endl;
+
+//						int val= tar_image.at<uchar>(std::round(uv[1]),std::round(uv[0]));
+//						printf("val: %d\n",val);
+
+						std::vector<float> pixel_patchValues_tar(PATTERN_SIZE,0.0);
+						std::vector<float> residuals(PATTERN_SIZE,0.0);
+
+						for (int i = 0; i < PATTERN_SIZE; ++i) {
+							int x = std::round(uv[0]) + PATTERN_OFFSETS[i][0];
+							int y = std::round(uv[1]) + PATTERN_OFFSETS[i][1];
+							pixel_patchValues_tar[i]= static_cast<float >(tar_image.at<uchar>(y, x));
+
+//							std::cout<<"pixel_patchValues_tar[i]: "<<pixel_patchValues_tar[i]<<std::endl;
+							residuals[i]=pixel_patchValues[i]-pixel_patchValues_tar[i];
+						}
+						// insert into vector
+						allObservations.insert(allObservations.end(), residuals.data(), residuals.data() + PATTERN_SIZE);
+
+//						cv::imshow("grayImg_ptr_map[pt->refFrameId()]",grayImg_ptr_map[pt->refFrameId()]);
+//						cv::imshow("images",tar_image);
+//						cv::waitKey(0);
+					}
+				}
+			}
+		}
+
+		// this should not happen
+		assert(!allObservations.empty() && "CeresPhotometricBA::calcNewKeyframeErrorDist has zero observations!!");
+
+		myfile2.close();
+		Info("!!! myfile2 saved and show num_selected_points: %d\n", num_selected_points);
+
+		// fit distribution parameters
+		std::shared_ptr<dsm::IDistribution> distribution;
+
+		bool use_t_distribution = true;
+
+		float maxEnergyFit = 60;
+
+		// Error Distribution
+		bool useTDistribution;
+		float nuFixed =-1;								// fixed if > 0
+		float muFixed =0;								// fixed if >= 0
+		float sigmaFixed =-1;							// fixed if > 0
+
+
+
+
+		if(use_t_distribution){
+
+			std::cout<<"use_t_distribution!"<<std::endl;
+
+			// discard outliers
+			const float normalStdDev = 1.4826f*dsm::mad(allObservations);
+
+			float maxEnergy = 3.f*normalStdDev;
+
+			if (maxEnergy > maxEnergyFit)
+			{
+				maxEnergy = maxEnergyFit;
+			}
+			std::vector<float> allObservationsInlier;
+			allObservationsInlier.reserve(allObservations.size());
+
+			for (int i = 0; i < allObservations.size(); ++i)
+			{
+				if (fabs(allObservations[i]) > maxEnergy) continue;
+
+				allObservationsInlier.push_back(allObservations[i]);
+			}
+
+			distribution = dsm::IDistribution::fitdist(allObservationsInlier, dsm::IDistribution::Type::TSTUDENT,
+			                                           Eigen::Vec3f(nuFixed, muFixed, sigmaFixed));
+
+			std::cout<<"doing draw histogram!"<<std::endl;
+			// draw histogram
+			cv::Mat hist = dsm::Utils::drawDistribution(allObservations, distribution,
+			                                       Eigen::Vector2f(-255.f, 255.f),
+			                                       Eigen::Vector2f(0.f, 0.1f),
+			                                       Eigen::Vector2i(510, 510),
+			                                       510);
+			// visualize
+//			cv::imshow("Histogram", hist);
+//			cv::waitKey(0);
+
+		}else
+		{
+			distribution = dsm::IDistribution::fitdist(allObservations, dsm::IDistribution::Type::NORMAL,
+			                                      Eigen::Vec2f(muFixed, sigmaFixed));
+		}
+
+
+
 
 
 		// use image pyramid to optimize the points
-
-        optimize(result);
+        optimize(result, distribution);
+		// delete the first frame in the sliding window
+//		grayImg_ptr_map.erase(frame_id_start);
 		optimizeSignal=true;
-
 		// save the optimized points and corresponding pixel values
 		//		std::ofstream myfile2;
 		//		std::string filename2 = "optimized_points" +std::to_string(_frame_id) +"_after_optimization.txt";
@@ -931,8 +1108,6 @@ addFrame(const uint8_t* I_ptr, const cv::Mat& grayImg, const float* Z_ptr, const
 		//
 		//		myfile2.close();
 		//		Info("!!! myfile2 saved and show num_selected_points: %d\n", num_selected_points);
-
-
     }
 
     ++_frame_id;
@@ -1016,15 +1191,15 @@ public:
 	                std::vector<double>& patch,
 	                double x_norm, double y_norm,
 	                double * refCameraPose,
-	                double depth_coeff
+	                double depth_coeff,
+	                std::shared_ptr<dsm::IDistribution> error_distribution
 	                )
             : _radius(PatchRadiusFromLength(p0.size() / frame->numChannels())),
               _calib(calib), _p0(p0.data()), _frame(frame), _patch_weights(w.data()),
 	                                                            img_width (image_width),
 	                                                            img_height (image_height),
 	                                                         mean_patch_value (mean_patch_value_ref),
-	      depth_coeffe(depth_coeff)
-
+	      depth_coeffe(depth_coeff),errorDistribution(error_distribution)
     {
 		image_grid.reset(new ceres::Grid2D<double, 1>(&_frame->image_tar_vectorized[0], 0, image_height, 0, image_width));
 		compute_interpolation.reset(new ceres::BiCubicInterpolator<ceres::Grid2D<double, 1> >(*image_grid));
@@ -1037,14 +1212,16 @@ public:
 			mean_patch_value = 1.0;
 		}
 		patch_values=patch;
-        // TODO should just pass the config to get the radius value
-        assert( p0.size() == w.size() );
+//        // TODO should just pass the config to get the radius value
+//        assert( p0.size() == w.size() );
     }
 	std::vector<double> patch_values;
 	double mean_patch_value;
 	double x_host_normalized;
 	double y_host_normalized;
 	double depth_coeffe;
+	std::shared_ptr<dsm::IDistribution> errorDistribution;
+
 	double * ref_camera=nullptr;
     static ceres::CostFunction* Create(const Calibration& calib,
                                        const std::vector<double>& p0,
@@ -1057,14 +1234,14 @@ public:
 	                                   double xnorm,
 	                                   double ynorm,
 	                                   double * ref_camera_ptr,
-	                                   double depth_coeff
+	                                   double depth_coeff,
+	                                   std::shared_ptr<dsm::IDistribution> error_distribution
 	                                   )
     {
 //        return new ceres::AutoDiffCostFunction<DescriptorError, ceres::DYNAMIC, 6, 3>(
 //                new DescriptorError(calib, p0, f, w), p0.size());
-
 		return new ceres::AutoDiffCostFunction<DescriptorError, PATTERN_SIZE,7,7,1>(
-		        new DescriptorError(calib, p0, f, w,image_width,image_height, mean_patch_value , patch , xnorm,ynorm, ref_camera_ptr, depth_coeff ));
+		        new DescriptorError(calib, p0, f, w,image_width,image_height, mean_patch_value , patch , xnorm,ynorm, ref_camera_ptr, depth_coeff ,error_distribution));
 
     }
 
@@ -1072,13 +1249,10 @@ public:
     bool operator()(const T* const camera_src,const T* const camera, const T* const pidepth, T* presiduals) const
     {
 
-
 		Eigen::Map<Eigen::Array<T, PATTERN_SIZE, 1>> residuals(presiduals);
 		T quaternion[4] = {camera[0], camera[1], camera[2], camera[3]};
 		T quaternion_ref_camera[4] = { T(camera_src[0]), T(camera_src[1]), T(camera_src[2]), T(camera_src[3])}; // mark here
 		const T& depth(*pidepth);
-
-
 
 		Eigen::Array<T, PATTERN_SIZE, 1> patch_values_target;
 		// define R
@@ -1090,14 +1264,11 @@ public:
 		t_ref2W.y() = -T(camera_src[5]);
 		t_ref2W.z() = -T(camera_src[6]);
 		t_ref2W= R_ref2W * t_ref2W;
-
 //		T p_c[3];
 //		ceres::UnitQuaternionRotatePoint(quaternion_ref_camera, point, p_c);
 //		p_c[0] += ref_camera[4];
 //		p_c[1] += ref_camera[5];
 //		p_c[2] += ref_camera[6]; // depth of the point in the reference frame
-
-
 		for (size_t i = 0; i < PATTERN_SIZE; i++){
 			int du = PATTERN_OFFSETS[i][0];
 			int dv = PATTERN_OFFSETS[i][1];
@@ -1143,9 +1314,6 @@ public:
 //			compute_interpolation->Evaluate(v_new, u_new, &patch_values_target[i]);
 //
 //		}
-
-
-
 //		T xw[3];
 //		T point[3];
 //        ceres::AngleAxisRotatePoint(camera, point, xw);
@@ -1172,14 +1340,16 @@ public:
 //                }
 //            }
 //        }
-
 		// sum of patch_values_target
 		T mean_patch_value_target = patch_values_target.sum() /T(PATTERN_SIZE);
 
 //		T mean_patch_value_target = patch_values_target/(PATTERN_SIZE);
 		for (size_t i = 0; i < PATTERN_SIZE; i++){
+
 //			residuals[i] = patch_values_target[i] - (mean_patch_value_target / mean_patch_value)*T(patch_values[i]);
-			residuals[i] = patch_values_target[i] - T(patch_values[i]);
+//			residuals[i] = T(_patch_weights[i]) *(patch_values_target[i] - T(patch_values[i]) );
+			residuals[i] =(patch_values_target[i] - T(patch_values[i]) );
+
 		}
 
         // maybe we should return false if the point goes out of the image!  done!
@@ -1232,12 +1402,19 @@ GetSolverOptions(int num_threads, bool verbose = false, double tol = 1e-6)
 }
 
 
-void PhotometricBundleAdjustment::optimize(Result* result)
+void PhotometricBundleAdjustment::optimize(Result* result,  std::shared_ptr<dsm::IDistribution> error_distribution )
 {
     uint32_t frame_id_start = _frame_buffer.front()->id(),
             frame_id_end   = _frame_buffer.back()->id();
 
     auto patch_weights = MakePatchWeights(_options.patchRadius, _options.doGaussianWeighting);
+
+
+	std::map<uint32_t, Vec_<double,6>> camera_params_before_optimization;
+	for(uint32_t id = frame_id_start; id <= frame_id_end; ++id) {
+		camera_params_before_optimization[id] =PoseToParams_test(Eigen::Isometry3d(_trajectory.atId(id)).inverse().matrix());
+	}
+
 
     //
     // collect the camera poses in a single map for easy access
@@ -1270,37 +1447,18 @@ void PhotometricBundleAdjustment::optimize(Result* result)
 
 	for(auto& pt : _scene_points) {
 
-//		if (pt->_x[0] != 80 || pt->_x[1]!= 12){continue ;}
-
-//				0 80 12 0 80 12
-//				0 80 12 1 80 11
-//				0 80 12 2 80 10
-//				0 80 12 3 80 12
-//				0 80 12 4 80 11
-
-//		        1 463 233 1 463 233
-//		        1 463 233 2 463 232
-//		        1 463 233 3 463 234
-//		        1 463 233 4 462 234
-
-
-//		std::cout<<"pt->_x[0] : "<<pt->_x[0] << "and pt->_x[1]:"<<pt->_x[1] <<std::endl;
-//		std::cout <<"show point coordinates: "<<pt->X()<<std::endl;
-//		std::cout <<"show point ref id"<< pt->refFrameId()<<std::endl;
-//		std::cout <<"show point depth"<< pt->ori_depth<<std::endl;
-
-
-
         if(pt->numFrames() >= 3 && pt->refFrameId() >= frame_id_start) {
             num_selected_points++;
 			// get the patch values for the ref frame
-			const DescriptorFrame* ref = getFrameAtId(pt->refFrameId());
+			const DescriptorFrame* ref = getFrameAtId(pt->refFrameId()); // image 1
+
+
+
 //			std::cout<<"show ref-frame id: "<<pt->refFrameId()<<std::endl;
 			std::unique_ptr<ceres::Grid2D<double, 1>> image_grid;
 			std::unique_ptr<ceres::BiCubicInterpolator<ceres::Grid2D<double, 1> > > compute_interpolation;
 			// test value
-																																							//			cv::imshow("Reconstructed Channel", channel);
-																																									//			cv::waitKey(0);
+
 			image_grid.reset(new ceres::Grid2D<double, 1>(&ref->image_tar_vectorized[0], 0, _image_size.rows, 0, _image_size.cols));
 			compute_interpolation.reset(new ceres::BiCubicInterpolator<ceres::Grid2D<double, 1> >(*image_grid));
 
@@ -1328,13 +1486,10 @@ void PhotometricBundleAdjustment::optimize(Result* result)
 
                 if(id >= frame_id_start && id <= frame_id_end) {
 					// print out id
-
 					if(pt->ori_depth < 1e-3) { continue; }
 					if (id==pt->refFrameId()){ continue ;}
 					double x_norm = (pt->_x[0] - _calib.cx()) / _calib.fx();
 					double y_norm = (pt->_x[1] - _calib.cy()) / _calib.fy();
-
-
 //					// get the pose_W of this target frame
 //					const Eigen::Isometry3d pose_tar(_trajectory.atId(id).matrix());
 //					Vec3 pt_c_tar = pose_tar * pt->X();
@@ -1348,7 +1503,6 @@ void PhotometricBundleAdjustment::optimize(Result* result)
 //					int r = std::round(uv[1]), c = std::round(uv[0]);
 //					double x_norm_tar = (c- _calib.cx()) / _calib.fx();
 //					double y_norm_tar = (r - _calib.cy()) / _calib.fy();
-
                     pt->setRefined(true);
 					double * depth_ptr = & pt->ori_depth;
 					double * depth_coeff_ptr = & pt->depth_tar_coeff;
@@ -1360,25 +1514,73 @@ void PhotometricBundleAdjustment::optimize(Result* result)
 					mean_patch_value /= patch.size();
 
 
-					const auto huber_t = _options.robustThreshold;
-                    auto* loss = huber_t > 0.0 ? new ceres::HuberLoss(huber_t) : nullptr;
-                    ceres::CostFunction* cost = nullptr;
-                    cost = DescriptorError::Create(_calib, pt->descriptor(), getFrameAtId(id), patch_weights, size_t(_image_size.cols), size_t(_image_size.rows),
-					                                mean_patch_value, patch, x_norm, y_norm,ref_camera_ptr,1);
+					auto camera_pose = camera_params_before_optimization[id].data();
+					Mat44 camera_pose_eigen = ParamsToPose_test(camera_pose);
+					Vec3 xyzCoord = pt->X();
+					Vec3 xyz_cam = camera_pose_eigen.block<3,3>(0,0)*xyzCoord + camera_pose_eigen.block<3,1>(0,3);
+					Vec2 uv_temp = _calib.project(xyz_cam);
 
-					problem.AddResidualBlock(cost, loss,ref_camera_ptr,camera_ptr, depth_ptr);
-					problem.SetParameterBlockConstant(depth_ptr);
-					if (pt->refFrameId()==frame_id_start){
-						depth_counter+=1; //  14209
-					//	problem.SetParameterBlockConstant(depth_ptr);
-					//	problem.SetParameterBlockConstant(ref_camera_ptr);
 
-						problem.SetParameterization(ref_camera_ptr, camera_parameterization);
-						problem.SetParameterization(camera_ptr, camera_parameterization);
 
+
+
+					// get the patch weights from the distribution
+
+
+					const DescriptorFrame*  tar=getFrameAtId(id);
+					std::vector<double> patch_weights_dist(PATTERN_SIZE, 0.0);
+					std::vector<double> patch_val_tar(PATTERN_SIZE, 0.0);
+
+					std::unique_ptr<ceres::Grid2D<double, 1>> image_gri_tar;
+					std::unique_ptr<ceres::BiCubicInterpolator<ceres::Grid2D<double, 1> > > compute_interpolation_tar;
+					image_gri_tar.reset(new ceres::Grid2D<double, 1>(&tar->image_tar_vectorized[0], 0, _image_size.rows, 0, _image_size.cols));
+					compute_interpolation_tar.reset(new ceres::BiCubicInterpolator<ceres::Grid2D<double, 1> >(*image_gri_tar));
+
+					for (size_t i = 0; i < PATTERN_SIZE; i++){
+						int du = PATTERN_OFFSETS[i][0];
+						int dv = PATTERN_OFFSETS[i][1];
+						float u_new = std::round(uv_temp[0])  + du; // col
+						float v_new = std::round(uv_temp[1])  + dv; // row
+						compute_interpolation_tar->Evaluate(v_new, u_new, &patch_val_tar[i]);
+						double distWeight =error_distribution->weight((float )(patch[i]-patch_val_tar[i]));
+
+						patch_weights_dist[i]= sqrt(distWeight);
+//						patch_weights_dist[i]= 1.0f;
+					}
+
+					std::cout<<"\n show patch_weights_dist: ";//
+					for (int i = 0; i < patch_weights_dist.size(); ++i) {
+						std::cout<<" "<<patch_weights_dist[i]<<" "<<std::endl;
 					}
 
 
+
+//					std::cout<<"show pt->descriptor() size: "<<std::endl; // 25
+//					std::cout<<pt->descriptor().size()<<std::endl;
+
+
+
+
+
+
+
+					const auto huber_t = _options.robustThreshold;
+                    auto* loss = huber_t > 0.0 ? new ceres::HuberLoss(huber_t) : nullptr;
+                    ceres::CostFunction* cost = nullptr;
+					// image 2
+                    cost = DescriptorError::Create(_calib, pt->descriptor(), getFrameAtId(id), patch_weights_dist, size_t(_image_size.cols), size_t(_image_size.rows),
+					                                mean_patch_value, patch, x_norm, y_norm,ref_camera_ptr,1, error_distribution);
+
+					problem.AddResidualBlock(cost, loss,ref_camera_ptr,camera_ptr, depth_ptr);
+					problem.SetParameterBlockConstant(depth_ptr);
+
+
+
+					if (pt->refFrameId()==frame_id_start){
+						depth_counter+=1; //  14209
+						problem.SetParameterization(ref_camera_ptr, camera_parameterization);
+						problem.SetParameterization(camera_ptr, camera_parameterization);
+					}
                 }
             }
         }
@@ -1528,7 +1730,7 @@ auto PhotometricBundleAdjustment::getSrcImageAtId(uint32_t id) const -> const Im
 			return f.get();
 		}
 
-	throw std::runtime_error("could not find Image   id!");
+	throw std::runtime_error("could not find Image id!");
 }
 
 auto PhotometricBundleAdjustment::removePointsAtFrame(uint32_t id) -> ScenePointPointerList

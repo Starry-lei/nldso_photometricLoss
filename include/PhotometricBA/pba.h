@@ -20,6 +20,15 @@
 
 #include "pixelSelector.h"
 
+#include "../include/Statistics/IDistribution.h"
+#include "../include/Statistics/Statistics.h"
+#include "../include/Statistics/RobustNormalDistribution.h"
+#include "../include/Statistics/TDistribution.h"
+#include "../include/Utils/Settings.h"
+#include "../include/Utils/UtilFunctions.h"
+#include "../include/Visualizer/IVisualizer.h"
+
+
 namespace pbaUtils {
     class ConfigFile;
 };  // utils
@@ -82,6 +91,8 @@ public:
             IntensityAndGradient, // 3 channels, {I, Ix, Iy}
             BitPlanes // 8 channel BitPlanes
         };
+
+		bool useErrorDistribution = true;
 
         /** type of the patch/descriptor */
         DescriptorType descriptorType;
@@ -199,11 +210,11 @@ public:
 	int lvl=0;
 	uint32_t _frame_id = 0;
 
-
+	void calcWindowframesErrorDist( );
 
 
 protected:
-    void optimize(Result*);
+    void optimize(Result*, std::shared_ptr<dsm::IDistribution> error_distribution = nullptr);
 
 private:
     struct ScenePoint;
@@ -230,6 +241,8 @@ private:
     Options     _options;
 //    Trajectory _trajectory;
 	std::map<uint32_t, const uint8_t*> I_ptr_map;
+
+	std::map<uint32_t,  cv::Mat> grayImg_ptr_map;
 
 //    DescriptorFrameBuffer _frame_buffer;
     ScenePointPointerList _scene_points;

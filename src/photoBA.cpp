@@ -27,7 +27,7 @@
 #include <chrono>
 #include <iostream>
 #include <thread>
-
+//#include "../QtVisualizer/src/QtVisualizer.h"
 struct CamWithId
 {
 	Mat44 pose; // 4x4 rigid body pose
@@ -60,6 +60,12 @@ int fid=0; // start frame id
 
 int main(int argc, char** argv)
 {
+
+//	QApplication app(argc, argv);
+//	dsm::QtVisualizer visualizer(app);
+
+
+
 	bool show_gui = true;
     signal(SIGINT, sigHandler);
     pbaUtils::ProgramOptions options;
