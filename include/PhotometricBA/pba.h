@@ -20,6 +20,14 @@
 
 #include "pixelSelector.h"
 
+#include "../include/Statistics/IDistribution.h"
+#include "../include/Statistics/Statistics.h"
+#include "../include/Statistics/RobustNormalDistribution.h"
+#include "../include/Statistics/TDistribution.h"
+#include "../include/Utils/Settings.h"
+#include "../include/Utils/UtilFunctions.h"
+
+
 namespace pbaUtils {
     class ConfigFile;
 };  // utils
@@ -169,6 +177,10 @@ public:
      */
     void addFrame(const uint8_t* image, const cv::Mat& grayImg, const float* depth_map, const Mat44& T, Result* = nullptr);
 
+
+	void computeDistribution( std::vector<float>& allObservations, int refId, int tarId, std::shared_ptr<dsm::IDistribution>& distribution );
+
+
 	Trajectory initial_trajectory;
 	class DescriptorFrame;
 	typedef UniquePointer<DescriptorFrame> DescriptorFramePointer ;
@@ -203,7 +215,8 @@ public:
 
 
 protected:
-    void optimize(Result*);
+//    void optimize(Result*);
+	void optimize(Result*, std::shared_ptr<dsm::IDistribution> error_distribution = nullptr);
 
 private:
     struct ScenePoint;
@@ -230,6 +243,7 @@ private:
     Options     _options;
 //    Trajectory _trajectory;
 	std::map<uint32_t, const uint8_t*> I_ptr_map;
+//	std::map<uint32_t,  cv::Mat> grayImg_ptr_map;
 
 //    DescriptorFrameBuffer _frame_buffer;
     ScenePointPointerList _scene_points;

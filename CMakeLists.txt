@@ -215,6 +215,19 @@ set(dsonl_SOURCE_FILES
 
 #        include/settings/common.h
 
+        include/Statistics/Statistics.h
+        include/Statistics/IDistribution.h
+        include/Statistics/IDistribution.cpp
+        include/Statistics/RobustNormalDistribution.h
+        include/Statistics/RobustNormalDistribution.cpp
+
+        include/Statistics/TDistribution.h
+        include/Statistics/TDistribution.cpp
+
+        include/Utils/Settings.h
+        include/Utils/Settings.cpp
+        include/Utils/UtilFunctions.h
+
         )
 
 
@@ -255,6 +268,16 @@ add_executable(pba src/photoBA.cpp include/PhotometricBA/pba.cpp include/Photome
         include/pixelSelector.cpp
         include/settings/setting.cpp
 #        include/PhotometricBA/stereo_algorithm.cpp
+
+
+
+        include/Statistics/TDistribution.cpp
+        include/Statistics/IDistribution.cpp
+        include/Statistics/RobustNormalDistribution.cpp
+        include/Statistics/Statistics.h
+        include/Statistics/BetaFunction.cpp
+        include/Statistics/NelderMead.cpp
+        include/Utils/Settings.cpp
         )
 target_link_libraries(pba
         Eigen3::Eigen

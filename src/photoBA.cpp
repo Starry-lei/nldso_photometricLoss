@@ -153,6 +153,9 @@ int main(int argc, char** argv)
     auto output_fn = options.get<std::string>("output");
     Info("Writing refined poses to %s\n", output_fn.c_str());
     writePosesTumRGBDFormat(output_fn, result.poses, dataset->getTimestamp());
+
+	delete photoba; //freed memory
+	photoba = NULL; //pointed dangling ptr to NULL
     return 0;
 }
 
