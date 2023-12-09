@@ -85,8 +85,12 @@ int main(int argc, char **argv) {
 //	string controlPointPose_path="/home/lei/Documents/Research/envMapData/control_cam_pose_scene0370_02origins_down795.txt";
 
 
-	std::string envMap_Folder="/home/lei/Documents/Research/envMapData/formattedEnvmap_1694";
-	string controlPointPose_path="/home/lei/Documents/Research/envMapData/60frame0370_02_control_cam_pose_1694.txt";
+//	std::string envMap_Folder="/home/lei/Documents/Research/envMapData/formattedEnvmap_1694";
+//	string controlPointPose_path="/home/lei/Documents/Research/envMapData/60frame0370_02_control_cam_pose_1694.txt";
+
+	std::string envMap_Folder="/home/lei/Documents/Research/envMapData/scene0551_00newtable_env/formattedEnvSeq16";
+	string controlPointPose_path="/home/lei/Documents/Research/envMapData/scene0551_00newtable_env/cam60_interpolated_control_cam_pose1744.txt";
+
 
 
 
