@@ -764,8 +764,8 @@ void PhotometricBundleAdjustment::
     }
 
 
-//	cv::imshow("dsoSelectedPointMask:"+std::to_string(_frame_id),dsoSelectedPointMask);
-//	cv::waitKey(0);
+	cv::imshow("dsoSelectedPointMask:"+std::to_string(_frame_id),dsoSelectedPointMask);
+	cv::waitKey(0);
 
 	delete newFrame_ref;
 	delete frame_ref;
@@ -787,9 +787,8 @@ void PhotometricBundleAdjustment::
         new_scene_points.erase(nth, new_scene_points.end());
     }
 
+
 	std::cout<<"show final new scene points size: "<<new_scene_points.size()<<std::endl;
-
-
 	cv::Mat weightMap = cv::Mat::zeros(480,640,CV_32FC1);
 
 //	cv::Mat selectedPoints_frame_3 = cv::Mat::zeros(480,640,CV_8UC1);
@@ -878,7 +877,23 @@ void PhotometricBundleAdjustment::
 	if(_frame_buffer.full()) {
 
 		//
-		std::cout<<"show Scene point size in current round of optimiation : "<<_scene_points.size()<<std::endl;
+		std::cout<<"show Scene point size in current round of optimization : "<<_scene_points.size()<<std::endl;
+
+
+
+//		show Scene point size in current round of optimiation : 61119
+//		        show counter_frame1:1263
+//		        show counter_frame2:1350
+//		        show counter_frame3:1657
+//		        show counter_frame4:0
+//		        show counter_frame5:0
+
+
+
+
+
+
+
 		// define a file to save the optimized points and corresponding pixel values
         uint32_t frame_id_start = _frame_buffer.front()->id(),frame_id_end   = _frame_buffer.back()->id();
         int num_selected_points = 0;
@@ -894,12 +909,13 @@ void PhotometricBundleAdjustment::
 		int max_rows = (int) height - B - 1, max_cols = (int) width -  B - 1;
 		std::unordered_map<int, PBANL::pointEnvlight> envLightMap_cur;
 
-
-//
 		std::string renderedEnvLight_path=EnvMapPath;
 		Mat specularityMap(_image_size.rows, _image_size.cols, CV_32FC3, Scalar(0,0,0));
 		Mat specularityMap_right(_image_size.rows, _image_size.cols, CV_32FC3, Scalar(0,0,0));
 		Mat specularityChangeMap(_image_size.rows, _image_size.cols, CV_32FC3, Scalar(0,0,0));
+
+		Mat specularityChangeMapMask(_image_size.rows, _image_size.cols, CV_8UC1, Scalar(0));
+		Mat specularityChangeMabeginpMask(_image_size.rows, _image_size.cols, CV_8UC1, Scalar(0));
 
 		for(auto& pt : _scene_points) {
 
@@ -916,7 +932,6 @@ void PhotometricBundleAdjustment::
 					int r=pt->_x[1];
 					int c=pt->_x[0];
 
-//					if (!(r==414 && c==67)){ continue ;}
 
 					const Vec3f normal_pixel = normalMaps[0].at<Vec3f>(r,c);
 					Vec3f normal = normalize(normal_pixel); //normal in camera coordinate
@@ -1028,6 +1043,7 @@ void PhotometricBundleAdjustment::
 					                                                     enterPanoroma);
 
 					Vec3 specularity(radiance_beta[0],radiance_beta[1],radiance_beta[2]);
+
 					if (isnan(specularity[0])){ continue ;}
 
 					if (specularity[0]>10){
@@ -1039,6 +1055,7 @@ void PhotometricBundleAdjustment::
 					pt->specularitySequence.insert(make_pair(pt->refFrameId(),Vec3(specularity[0],specularity[1],specularity[2])));
 
 					for (int i = 1; i < pt->visibilityList().size(); ++i) {
+
 						Eigen::Isometry3d T_w_view_2_start_c2w(_trajectory[pt->visibilityList()[i]].matrix());
 						Eigen::Isometry3d T_w_view_2_start_w2c(T_w_view_2_start_c2w.inverse());
 
@@ -1133,6 +1150,11 @@ void PhotometricBundleAdjustment::
 
 							specularityMap.at<Vec3f>(r,c)= spec_1;
 							specularityMap_right.at<Vec3f>(pixel_row_right,pixel_col_right)=spec_2;
+
+							specularityChangeMabeginpMask.at<uchar>(r,c)= 255;
+							specularityChangeMapMask.at<uchar>(pixel_row_right,pixel_row_right)= 255;
+
+
 							float specularityChange=  0.587*delta_g+0.114*delta_b+0.299*delta_r;
 //							float specularity=  0.587*abs(specularityChange.val[1])/(spec_1.val[1])+ 0.114*abs(specularityChange.val[0])/(spec_1.val[0])+0.299*abs(specularityChange.val[2])/(spec_1.val[2]);
 //							double sumWeight= 0.587* abs(deltaSpecularity.y()/refSpecularity.y())+0.114* abs(deltaSpecularity.x()/refSpecularity.x())+0.299* abs(deltaSpecularity.z()/refSpecularity.z());
@@ -1618,33 +1640,32 @@ void PhotometricBundleAdjustment::
 		cout<<"show counter_frame4:"<<counter_frame4<<endl;
 		cout<<"show counter_frame5:"<<counter_frame5<<endl;
 
-		if(_frame_id==177){
+		if(_frame_id==5){
 
 			Mat specularityChange,specularityChangeMap_normalized;
 			//		Mat  W_specularity = Mat::zeros(sumChannel.rows, sumChannel.cols, CV_32FC1); // not specular points and specular points
 			//		Mat  W_values = Mat::zeros(sumChannel.rows, sumChannel.cols, CV_32FC1); // not specular points and specular points
 			cv::normalize(weightMap, specularityChange, 0, 1, cv::NORM_MINMAX, CV_32FC1);
-
 			cv::normalize(specularityChangeMap, specularityChangeMap_normalized, 0, 1, cv::NORM_MINMAX, CV_32FC3);
 
 
 			imshow("specularityChange",specularityChangeMap*255);
 			imwrite("specularityChange.png",specularityChange*255);
-
 			imshow("specularityChangeMap_normalized",specularityChangeMap_normalized);
 			imwrite("specularityChangeMap_normalized.png",specularityChangeMap_normalized*255);
-
 			cvtColor(specularityMap,specularityMap,COLOR_RGB2GRAY);
 			cvtColor(specularityMap_right,specularityMap_right,COLOR_RGB2GRAY);
+
+			cv::imshow("specularityChangeMabeginpMask"+ to_string(frame_id_start ),specularityChangeMabeginpMask);
+			cv::imshow("specularityChangeMapMask"+ to_string(frame_id_end),specularityChangeMapMask);
+
+
 			cv::imshow("specularityMap"+ to_string(frame_id_start),specularityMap);
 			imwrite("specularityMap.png",specularityMap*255);
 			cv::imshow("specularityMap_right"+ to_string(frame_id_end),specularityMap_right);
 			imwrite("specularityMap_right.png",specularityMap_right*255);
 			waitKey(0);
 			cout<<"======================show envLightMap_cur size: "<<envLightMap_cur.size()<<"===========================:\n"<<endl;
-
-			//
-			//
 		}
 
 
@@ -1654,6 +1675,7 @@ void PhotometricBundleAdjustment::
         optimize(result);
 		optimizeSignal=true;
 		delete ibl_Radiance;
+		ibl_Radiance = nullptr;
 
 		// save the optimized points and corresponding pixel values
 		//		std::ofstream myfile2;
@@ -2163,7 +2185,11 @@ void PhotometricBundleAdjustment::optimize(Result* result)
 
 						specularity_weight = specularityWeight(pt->specularitySequence[pt->refFrameId()],pt->specularitySequence[id]);
 
-						cout<<"show specularity_weight"<<	specularity_weight <<endl;
+//						cout<<"show specularity_weight""<<	specularity_weight <<endl;
+
+
+
+
 //
 //						if (pt->refFrameId()==3 && id==7){
 //
