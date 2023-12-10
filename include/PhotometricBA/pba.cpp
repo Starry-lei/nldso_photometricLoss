@@ -1412,7 +1412,7 @@ void PhotometricBundleAdjustment::
 					std::unordered_map<cv::Point2i, float, DSONL::hash2d<cv::Point2i>, DSONL::equalTo2D<cv::Point2i>> pixelDepthMap_1;
 					std::unordered_map<cv::Point2i, float, DSONL::hash2d<cv::Point2i>, DSONL::equalTo2D<cv::Point2i>> pixelDepthMap_2;
 //					std::unordered_map<cv::Point2i, float, DSONL::hash2d<cv::Point2i>, DSONL::equalTo2D<cv::Point2i>> pixelDepthMap_3;
-					//					std::unordered_map<cv::Point2i, float, DSONL::hash2d<cv::Point2i>, DSONL::equalTo2D<cv::Point2i>> pixelDepthMap_4;
+					//std::unordered_map<cv::Point2i, float, DSONL::hash2d<cv::Point2i>, DSONL::equalTo2D<cv::Point2i>> pixelDepthMap_4;
 
 					Eigen::Isometry3d T_w_beta_start(_trajectory[pt->refFrameId()].matrix());
 					int r=pt->_x[1];
@@ -1618,7 +1618,7 @@ void PhotometricBundleAdjustment::
 		cout<<"show counter_frame4:"<<counter_frame4<<endl;
 		cout<<"show counter_frame5:"<<counter_frame5<<endl;
 
-		if(_frame_id==177){
+		if(_frame_id==5){
 
 			Mat specularityChange,specularityChangeMap_normalized;
 			//		Mat  W_specularity = Mat::zeros(sumChannel.rows, sumChannel.cols, CV_32FC1); // not specular points and specular points
