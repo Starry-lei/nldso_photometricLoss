@@ -764,8 +764,11 @@ void PhotometricBundleAdjustment::
     }
 
 
-	cv::imshow("dsoSelectedPointMask:"+std::to_string(_frame_id),dsoSelectedPointMask);
-	cv::waitKey(0);
+
+	std::cout<<"new scene points size: "<<new_scene_points.size()<<std::endl;
+	std::cout<<"!!!!!dso_point_counter: "<<dso_point_counter<<std::endl;
+//	cv::imshow("dsoSelectedPointMask:"+std::to_string(_frame_id),dsoSelectedPointMask);
+//	cv::waitKey(0);
 
 	delete newFrame_ref;
 	delete frame_ref;
@@ -775,9 +778,11 @@ void PhotometricBundleAdjustment::
 	delete[] color_ref_lvl;
 
 
-    std::cout<<"new scene points size: "<<new_scene_points.size()<<std::endl;
+
 	// Todo: keep the best N points
 //	// keep the best N points
+
+	std::cout<<"(size_t) _options.maxNumPoints: "<<(size_t) _options.maxNumPoints<<std::endl;
     if(new_scene_points.size() > (size_t) _options.maxNumPoints) {
         auto nth = new_scene_points.begin() + _options.maxNumPoints;
         std::nth_element(new_scene_points.begin(), nth, new_scene_points.end(),
@@ -879,18 +884,12 @@ void PhotometricBundleAdjustment::
 		//
 		std::cout<<"show Scene point size in current round of optimization : "<<_scene_points.size()<<std::endl;
 
-
-
 //		show Scene point size in current round of optimiation : 61119
 //		        show counter_frame1:1263
 //		        show counter_frame2:1350
 //		        show counter_frame3:1657
 //		        show counter_frame4:0
 //		        show counter_frame5:0
-
-
-
-
 
 
 
@@ -917,6 +916,8 @@ void PhotometricBundleAdjustment::
 		Mat specularityChangeMapMask(_image_size.rows, _image_size.cols, CV_8UC1, Scalar(0));
 		Mat specularityChangeMabeginpMask(_image_size.rows, _image_size.cols, CV_8UC1, Scalar(0));
 
+		float scaleDist= 5; // from 2 to 5
+		int numKNN= 10; // from 5 to 10
 		for(auto& pt : _scene_points) {
 
 			if(pt->numFrames() >= 3 && pt->refFrameId() >= frame_id_start) {
@@ -937,7 +938,7 @@ void PhotometricBundleAdjustment::
 					Vec3f normal = normalize(normal_pixel); //normal in camera coordinate
 					const float roughness_pixel= roughnessMaps[0].at<float>(r,c);
 					float reflectance = 1.0f;                                   // reflectance
-					int num_K = 5;
+					int num_K = numKNN; // 5 to 10
 //					cout<<"check normal and roughness:\n "<<normal_pixel<<", and "<<roughness_pixel<<"and depth:"<<depthMaps[0].at<float>(r,c)<<endl;
 					Eigen::Vector3f point_c= (depthMaps[0].at<float>(r,c) * _K_inv * Vec3(c, r, 1.0)).cast<float>();
 					Eigen::Vector3f point_w= (T_w_beta_start * Vec3(point_c.x(),point_c.y(), point_c.z())).cast<float>();
@@ -969,7 +970,7 @@ void PhotometricBundleAdjustment::
 							//                                  << " (squared distance: " << pointKNNSquaredDistance[i] << ")" << std::endl;
 							// 0.004367 is the squared distance of the closest control point
 //							if (pointKNNSquaredDistance[i] > 0.004367*3) { continue; }
-							if (pointKNNSquaredDistance[i] > 0.004367*2) { continue; }
+							if (pointKNNSquaredDistance[i] > 0.004367* scaleDist) { continue; } // 2 to 5
 //							if (pointKNNSquaredDistance[i] > 0.32) { continue; }
 
 
@@ -1195,7 +1196,7 @@ void PhotometricBundleAdjustment::
 					Vec3f normal = normalize(normal_pixel); //normal in camera coordinate
 					const float roughness_pixel= roughnessMaps[currentFrameIdx].at<float>(r,c);
 					float reflectance = 1.0f;                                   // reflectance
-					int num_K = 5;
+					int num_K = numKNN;
 					Eigen::Vector3f point_c= (depthMaps[currentFrameIdx].at<float>(r,c) * _K_inv * Vec3(c, r, 1.0)).cast<float>();
 					Eigen::Vector3f point_w= (T_w_beta_start * Vec3(point_c.x(),point_c.y(), point_c.z())).cast<float>();
 
@@ -1226,7 +1227,7 @@ void PhotometricBundleAdjustment::
 							//                                  << " (squared distance: " << pointKNNSquaredDistance[i] << ")" << std::endl;
 							// 0.004367 is the squared distance of the closest control point
 							//							if (pointKNNSquaredDistance[i] > 0.004367*3) { continue; }
-							if (pointKNNSquaredDistance[i] > 0.004367) { continue; }
+							if (pointKNNSquaredDistance[i] > 0.004367* scaleDist) { continue; }
 							//							if (pointKNNSquaredDistance[i] > 0.32) { continue; }
 
 
@@ -1283,7 +1284,7 @@ void PhotometricBundleAdjustment::
 						envLightMap_cur.insert(make_pair(ctrlIndex, pEnv));
 					}
 
-					//					cout<<"show env ctrlIndex :"<<ctrlIndex<<endl;
+					// cout<<"show env ctrlIndex :"<< ctrlIndex<<endl ;
 					DSONL::prefilteredEnvmapSampler= & ( envLightMap_cur[ctrlIndex].EnvmapSampler[0]);
 					DSONL::brdfSampler_ = & (EnvLightLookup->brdfSampler[0]);
 
@@ -1444,7 +1445,7 @@ void PhotometricBundleAdjustment::
 					Vec3f normal = normalize(normal_pixel); //normal in camera coordinate
 					const float roughness_pixel= roughnessMaps[currentFrameIdx].at<float>(r,c);
 					float reflectance = 1.0f;                                   // reflectance
-					int num_K = 5;
+					int num_K = numKNN;
 					Eigen::Vector3f point_c= (depthMaps[currentFrameIdx].at<float>(r,c) * _K_inv * Vec3(c, r, 1.0)).cast<float>();
 					Eigen::Vector3f point_w= (T_w_beta_start * Vec3(point_c.x(),point_c.y(), point_c.z())).cast<float>();
 
@@ -1475,7 +1476,7 @@ void PhotometricBundleAdjustment::
 							//                                  << " (squared distance: " << pointKNNSquaredDistance[i] << ")" << std::endl;
 							// 0.004367 is the squared distance of the closest control point
 							//							if (pointKNNSquaredDistance[i] > 0.004367*3) { continue; }
-							if (pointKNNSquaredDistance[i] > 0.004367) { continue; }
+							if (pointKNNSquaredDistance[i] > 0.004367 * scaleDist) { continue; }
 							//							if (pointKNNSquaredDistance[i] > 0.32) { continue; }
 
 
@@ -1495,7 +1496,7 @@ void PhotometricBundleAdjustment::
 							ctrlPointNormal=cv::normalize(ctrlPointNormal);
 
 							float angle_consine = ctrlPointNormal.dot(N_);
-							if (angle_consine<0.9962){ continue;} // 0.9848 is the cos(10 degree), 0.9962 is the cos(5 degree)
+							if (angle_consine < 0.9948 ){ continue;} // 0.9848 is the cos(10 degree), 0.9962 is the cos(5 degree)
 							float disPoint2Env=  pointKNNSquaredDistance[i]/(ctrlPointNormal.dot(N_));
 							if (disPoint2Env<disPoint2Env_min){
 								disPoint2Env_min=disPoint2Env;
@@ -1540,7 +1541,7 @@ void PhotometricBundleAdjustment::
 					Sophus::SE3d T_c2w( T_w_beta_start.rotation(), T_w_beta_start.translation());
 
 
-					// TODO: convert the envmap to current "world coordinate" in advance
+					// TODO: convert the envmap to current "world coordinate" in advance: done
 					Vec3f radiance_beta = ibl_Radiance->solveForRadiance(View_beta, N_, roughness_pixel, image_metallic,
 					                                                     reflectance, baseColor, T_c2w.rotationMatrix(),
 					                                                     enterPanoroma);
@@ -1640,14 +1641,13 @@ void PhotometricBundleAdjustment::
 		cout<<"show counter_frame4:"<<counter_frame4<<endl;
 		cout<<"show counter_frame5:"<<counter_frame5<<endl;
 
-		if(_frame_id==5){
+		if(_frame_id==550){
 
 			Mat specularityChange,specularityChangeMap_normalized;
 			//		Mat  W_specularity = Mat::zeros(sumChannel.rows, sumChannel.cols, CV_32FC1); // not specular points and specular points
 			//		Mat  W_values = Mat::zeros(sumChannel.rows, sumChannel.cols, CV_32FC1); // not specular points and specular points
 			cv::normalize(weightMap, specularityChange, 0, 1, cv::NORM_MINMAX, CV_32FC1);
 			cv::normalize(specularityChangeMap, specularityChangeMap_normalized, 0, 1, cv::NORM_MINMAX, CV_32FC3);
-
 
 			imshow("specularityChange",specularityChangeMap*255);
 			imwrite("specularityChange.png",specularityChange*255);
@@ -1666,6 +1666,7 @@ void PhotometricBundleAdjustment::
 			imwrite("specularityMap_right.png",specularityMap_right*255);
 			waitKey(0);
 			cout<<"======================show envLightMap_cur size: "<<envLightMap_cur.size()<<"===========================:\n"<<endl;
+
 		}
 
 

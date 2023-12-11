@@ -73,7 +73,7 @@ public:
 
         /** minimum score to verify if a scene point exists in a new frame. This is
          * the ZNCC score which is [-1, 1] */
-        double minScore =  0.70; // 0.60; // 0.75
+        double minScore =  0.6; // 0.60; // 0.75
 
         /** threshold to use for a HuberLoss (if > 0) */
         double robustThreshold = 20; //0.05;
