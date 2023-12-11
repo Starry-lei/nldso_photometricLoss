@@ -600,7 +600,7 @@ void PhotometricBundleAdjustment::computeDistribution( std::vector<float>& allOb
 	//	std::shared_ptr<dsm::IDistribution> distribution;
 	bool use_t_distribution = true;
 //	float maxEnergyFit = 30; // lossks good
-	float maxEnergyFit = 20; // change from 25 to 20: seq16: 0.11-to-0.076
+	float maxEnergyFit = 27; // change from 25 to 20: seq16: 0.11-to-0.076
 	// Error Distribution
 	bool useTDistribution;
 	float nuFixed =-1;								// fixed if > 0
