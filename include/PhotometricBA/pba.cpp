@@ -916,8 +916,8 @@ void PhotometricBundleAdjustment::
 		Mat specularityChangeMapMask(_image_size.rows, _image_size.cols, CV_8UC1, Scalar(0));
 		Mat specularityChangeMabeginpMask(_image_size.rows, _image_size.cols, CV_8UC1, Scalar(0));
 
-		float scaleDist= 5; // from 2 to 5
-		int numKNN= 10; // from 5 to 10
+		float scaleDist= 4; // from 2 to 4, 5
+		int numKNN= 9; // from 5 to 10
 		for(auto& pt : _scene_points) {
 
 			if(pt->numFrames() >= 3 && pt->refFrameId() >= frame_id_start) {
@@ -1643,28 +1643,28 @@ void PhotometricBundleAdjustment::
 
 		if(_frame_id==550){
 
-			Mat specularityChange,specularityChangeMap_normalized;
-			//		Mat  W_specularity = Mat::zeros(sumChannel.rows, sumChannel.cols, CV_32FC1); // not specular points and specular points
-			//		Mat  W_values = Mat::zeros(sumChannel.rows, sumChannel.cols, CV_32FC1); // not specular points and specular points
-			cv::normalize(weightMap, specularityChange, 0, 1, cv::NORM_MINMAX, CV_32FC1);
-			cv::normalize(specularityChangeMap, specularityChangeMap_normalized, 0, 1, cv::NORM_MINMAX, CV_32FC3);
-
-			imshow("specularityChange",specularityChangeMap*255);
-			imwrite("specularityChange.png",specularityChange*255);
-			imshow("specularityChangeMap_normalized",specularityChangeMap_normalized);
-			imwrite("specularityChangeMap_normalized.png",specularityChangeMap_normalized*255);
-			cvtColor(specularityMap,specularityMap,COLOR_RGB2GRAY);
-			cvtColor(specularityMap_right,specularityMap_right,COLOR_RGB2GRAY);
-
-			cv::imshow("specularityChangeMabeginpMask"+ to_string(frame_id_start ),specularityChangeMabeginpMask);
-			cv::imshow("specularityChangeMapMask"+ to_string(frame_id_end),specularityChangeMapMask);
-
-
-			cv::imshow("specularityMap"+ to_string(frame_id_start),specularityMap);
-			imwrite("specularityMap.png",specularityMap*255);
-			cv::imshow("specularityMap_right"+ to_string(frame_id_end),specularityMap_right);
-			imwrite("specularityMap_right.png",specularityMap_right*255);
-			waitKey(0);
+//			Mat specularityChange,specularityChangeMap_normalized;
+//			//		Mat  W_specularity = Mat::zeros(sumChannel.rows, sumChannel.cols, CV_32FC1); // not specular points and specular points
+//			//		Mat  W_values = Mat::zeros(sumChannel.rows, sumChannel.cols, CV_32FC1); // not specular points and specular points
+//			cv::normalize(weightMap, specularityChange, 0, 1, cv::NORM_MINMAX, CV_32FC1);
+//			cv::normalize(specularityChangeMap, specularityChangeMap_normalized, 0, 1, cv::NORM_MINMAX, CV_32FC3);
+//
+//			imshow("specularityChange",specularityChangeMap*255);
+//			imwrite("specularityChange.png",specularityChange*255);
+//			imshow("specularityChangeMap_normalized",specularityChangeMap_normalized);
+//			imwrite("specularityChangeMap_normalized.png",specularityChangeMap_normalized*255);
+//			cvtColor(specularityMap,specularityMap,COLOR_RGB2GRAY);
+//			cvtColor(specularityMap_right,specularityMap_right,COLOR_RGB2GRAY);
+//
+//			cv::imshow("specularityChangeMabeginpMask"+ to_string(frame_id_start ),specularityChangeMabeginpMask);
+//			cv::imshow("specularityChangeMapMask"+ to_string(frame_id_end),specularityChangeMapMask);
+//
+//
+//			cv::imshow("specularityMap"+ to_string(frame_id_start),specularityMap);
+//			imwrite("specularityMap.png",specularityMap*255);
+//			cv::imshow("specularityMap_right"+ to_string(frame_id_end),specularityMap_right);
+//			imwrite("specularityMap_right.png",specularityMap_right*255);
+//			waitKey(0);
 			cout<<"======================show envLightMap_cur size: "<<envLightMap_cur.size()<<"===========================:\n"<<endl;
 
 		}

@@ -389,7 +389,7 @@ bool next_step( ){
 	cv::Mat_<float> zmap;
 	UniquePointer<DatasetFrame> frame;
 
-	std::string dataFolder="/home/lei/Documents/Research/nldso_photometricLoss/dataAnalysis/seq_15/lvl_1_pose/";
+	std::string dataFolder="/home/lei/Documents/Research/nldso_photometricLoss/dataAnalysis/seq_16/lvl_1_pose/";
 
 	int lvl=0;
 
@@ -409,7 +409,7 @@ bool next_step( ){
 	for(; (frame = dataset->getFrame(fid, lvl)) && !gStop; ++fid ){
 
 
-		if (fid==T_init.size()-4) {
+		if (fid==T_init.size()-3) {
 
 			auto output_fn = dataFolder+ "refined_poses_es_tum_abs_pose_NLPBA"+ std::to_string(lvl)+ ".txt";
 			writePosesTumRGBDFormat(output_fn, result.poses, dataset->getTimestamp());
