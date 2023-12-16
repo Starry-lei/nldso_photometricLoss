@@ -916,8 +916,8 @@ void PhotometricBundleAdjustment::
 		Mat specularityChangeMapMask(_image_size.rows, _image_size.cols, CV_8UC1, Scalar(0));
 		Mat specularityChangeMabeginpMask(_image_size.rows, _image_size.cols, CV_8UC1, Scalar(0));
 
-		float scaleDist= 4; // from 2 to 4, 5
-		int numKNN= 9; // from 5 to 10
+		float scaleDist= 2; // from 2 to 4, 5
+		int numKNN= 5; // from 5 to 10
 		for(auto& pt : _scene_points) {
 
 			if(pt->numFrames() >= 3 && pt->refFrameId() >= frame_id_start) {
