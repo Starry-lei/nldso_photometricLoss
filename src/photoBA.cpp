@@ -389,7 +389,7 @@ bool next_step( ){
 	cv::Mat_<float> zmap;
 	UniquePointer<DatasetFrame> frame;
 
-	std::string dataFolder="/home/lei/Documents/Research/nldso_photometricLoss/dataAnalysis/seq_17/lvl_1_pose/";
+	std::string dataFolder="/home/lei/Documents/Research/nldso_photometricLoss/dataAnalysis/seq_18/lvl_1_pose/";
 
 	int lvl=0;
 
