@@ -91,9 +91,11 @@ int main(int argc, char **argv) {
 //	std::string envMap_Folder="/home/lei/Documents/Research/envMapData/scene0551_00newtable_env/formattedEnvSeq16";
 //	string controlPointPose_path="/home/lei/Documents/Research/envMapData/scene0551_00newtable_env/cam60_interpolated_control_cam_pose1744.txt";
 
-	std::string envMap_Folder="/home/lei/Documents/Research/envMapData/formattedEnvSeq17";
-	string controlPointPose_path="/home/lei/Documents/Research/envMapData/scene0582_00env/env/finetune_full/scene0582_00_control_cam_pose 3084.txt";
+//	std::string envMap_Folder="/home/lei/Documents/Research/envMapData/formattedEnvSeq17";
+//	string controlPointPose_path="/home/lei/Documents/Research/envMapData/scene0582_00env/env/finetune_full/scene0582_00_control_cam_pose 3084.txt";
 
+	std::string envMap_Folder="/home/lei/Documents/Research/envMapData/formattedEnvSeq18";
+	string controlPointPose_path="/home/lei/Documents/Dataset/dataSetPBA/sequences/18/env/addon_control_cam_pose_seq18.txt";
 
 
 
