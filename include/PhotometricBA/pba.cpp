@@ -898,6 +898,19 @@ void PhotometricBundleAdjustment::
         int num_selected_points = 0;
 		//count the number of points in each frame in the current round of optimization
 		int counter_frame1 = 0;
+		int counter_frame1_envskip = 0;
+		int counter_skip_anchor1 = 0;
+		int counter_skip_anchor2 = 0;
+		int counter_skip_anchor3 = 0;
+		int counter_skip_anchor4 = 0;
+		int counter_skip_anchor5 = 0;
+		int counter_skip_anchor6 = 0;
+		int counter_skip_anchor7 = 0;
+		int counter_skip_anchor8 = 0;
+		int counter_skip_anchor9 = 0;
+		int counter_skip_anchor10 = 0;
+		int counter_skip_anchor11 = 0;
+		int counter_skip_anchor12 = 0;
 		int counter_frame2 = 0;
 		int counter_frame3 = 0;
 		int counter_frame4 = 0;
@@ -916,7 +929,7 @@ void PhotometricBundleAdjustment::
 		Mat specularityChangeMapMask(_image_size.rows, _image_size.cols, CV_8UC1, Scalar(0));
 		Mat specularityChangeMabeginpMask(_image_size.rows, _image_size.cols, CV_8UC1, Scalar(0));
 
-		float scaleDist= 4; // from 2 to 4, 5
+		float scaleDist= 100; // from 2 to 4, 5
 		int numKNN= 6; // from 5 to 6, 10
 		for(auto& pt : _scene_points) {
 
@@ -966,11 +979,13 @@ void PhotometricBundleAdjustment::
 							Vec3f envMap_point((*(EnvLightLookup->ControlpointCloud))[pointIdxKNNSearch[i]].x, (*(EnvLightLookup->ControlpointCloud))[pointIdxKNNSearch[i]].y,
 							                   (*(EnvLightLookup->ControlpointCloud))[pointIdxKNNSearch[i]].z);
 
-							//                        std::cout << "\n------"<<envMap_point.val[0]<< " " << envMap_point.val[1]<< " " << envMap_point.val[2]
+							// std::cout << "\n------"<<envMap_point.val[0]<< " " << envMap_point.val[1]<< " " << envMap_point.val[2]
 							//                                  << " (squared distance: " << pointKNNSquaredDistance[i] << ")" << std::endl;
 							// 0.004367 is the squared distance of the closest control point
 //							if (pointKNNSquaredDistance[i] > 0.004367*3) { continue; }
-							if (pointKNNSquaredDistance[i] > 0.004367* scaleDist) { continue; } // 2 to 5
+							if (pointKNNSquaredDistance[i] > 0.004367* scaleDist) {
+								counter_skip_anchor6+=1;
+								continue; } // 2 to 5
 //							if (pointKNNSquaredDistance[i] > 0.32) { continue; }
 
 
@@ -985,7 +1000,11 @@ void PhotometricBundleAdjustment::
 							int r_n = std::round(uv[1]), c_n = std::round(uv[0]);
 
 							// check if the projected point is in the image
-							if(r_n < B || r_n >= max_rows || c_n < B || c_n >= max_cols) { continue; }
+							if(r_n < B || r_n >= max_rows || c_n < B || c_n >= max_cols) {
+
+								counter_skip_anchor7+=1;
+
+								continue; }
 
 //							Vec3f ctrlPointNormal =  N_ptr[r_n * width + c_n];//newNormalMap.at<Vec3f>(r, c);
 							Vec3f ctrlPointNormal =  normalMaps[0].at<Vec3f>(r_n, c_n);;//newNormalMap.at<Vec3f>(r, c);
@@ -993,7 +1012,12 @@ void PhotometricBundleAdjustment::
 							ctrlPointNormal=cv::normalize(ctrlPointNormal);
 
 							float angle_consine = ctrlPointNormal.dot(N_);
-							if (angle_consine<0.9962){ continue;} // 0.9848 is the cos(10 degree), 0.9962 is the cos(5 degree)
+
+//							cout<<"check ctrlPointNormal:"<<ctrlPointNormal<<",check N_:"<< N_ << ",check angle_consine:"<<angle_consine<<endl;
+
+							if (angle_consine<0.96){
+								counter_skip_anchor8+=1;
+								continue;} // 0.9848 is the cos(10 degree), 0.9962 is the cos(5 degree)
 							float disPoint2Env=  pointKNNSquaredDistance[i]/(ctrlPointNormal.dot(N_));
 							if (disPoint2Env<disPoint2Env_min){
 								disPoint2Env_min=disPoint2Env;
@@ -1009,7 +1033,11 @@ void PhotometricBundleAdjustment::
 
 					}
 					// if no envMap point is found, skip this point
-					if (key4Search.dot(key4Search)==0){ continue;}
+					if (key4Search.dot(key4Search)==0){
+
+						counter_frame1_envskip+=1;
+
+						continue;}
 
 					int ctrlIndex= EnvLightLookup->envLightIdxMap[key4Search];
 					if ( EnvLightLookup->envLightIdxMap.size()==0){std::cerr<<"Error in EnvLight->envLightIdxMap! "<<endl;}
@@ -1030,6 +1058,8 @@ void PhotometricBundleAdjustment::
 						envLightMap_cur.insert(make_pair(ctrlIndex, pEnv));
 					}
 
+//					cout<<"envLightMap_cur.size(): "<< envLightMap_cur.size()<<endl;
+
 //					cout<<"show env ctrlIndex :"<<ctrlIndex<<endl;
 					DSONL::prefilteredEnvmapSampler= & ( envLightMap_cur[ctrlIndex].EnvmapSampler[0]);
 					DSONL::brdfSampler_ = & (EnvLightLookup->brdfSampler[0]);
@@ -1045,7 +1075,9 @@ void PhotometricBundleAdjustment::
 
 					Vec3 specularity(radiance_beta[0],radiance_beta[1],radiance_beta[2]);
 
-					if (isnan(specularity[0])){ continue ;}
+					if (isnan(specularity[0])){
+						counter_skip_anchor1+=1;
+						continue ;}
 
 					if (specularity[0]>10){
 						cout<<"radiance_beta[0]:"<<specularity[0]<<endl;
@@ -1247,7 +1279,11 @@ void PhotometricBundleAdjustment::
 							ctrlPointNormal=cv::normalize(ctrlPointNormal);
 
 							float angle_consine = ctrlPointNormal.dot(N_);
-							if (angle_consine<0.9962){ continue;} // 0.9848 is the cos(10 degree), 0.9962 is the cos(5 degree)
+
+//							cout<<"check ctrlPointNormal:"<<ctrlPointNormal<<",check N_:"<< N_ << ",check angle_consine:"<<angle_consine<<endl;
+
+
+							if (angle_consine<0.96){ continue;} // 0.9848 is the cos(10 degree), 0.9962 is the cos(5 degree)
 							float disPoint2Env=  pointKNNSquaredDistance[i]/(ctrlPointNormal.dot(N_));
 							if (disPoint2Env<disPoint2Env_min){
 								disPoint2Env_min=disPoint2Env;
@@ -1263,7 +1299,10 @@ void PhotometricBundleAdjustment::
 
 					}
 					// if no envMap point is found, skip this point
-					if (key4Search.dot(key4Search)==0){ continue;}
+					if (key4Search.dot(key4Search)==0){
+
+						counter_skip_anchor2+=1;
+						continue;}
 
 					int ctrlIndex= EnvLightLookup->envLightIdxMap[key4Search];
 					if ( EnvLightLookup->envLightIdxMap.size()==0){std::cerr<<"Error in EnvLight->envLightIdxMap! "<<endl;}
@@ -1467,6 +1506,8 @@ void PhotometricBundleAdjustment::
 						int targetEnvMapIdx=-1;
 						Vec3f targetEnvMapVal;
 
+//						cout<<"check pointIdxKNNSearch.size ():"<<pointIdxKNNSearch.size ()<<endl;
+
 						// find the closest control point which domain contains the current point
 						for (std::size_t i = 0; i < pointIdxKNNSearch.size (); ++i) {
 							Vec3f envMap_point((*(EnvLightLookup->ControlpointCloud))[pointIdxKNNSearch[i]].x, (*(EnvLightLookup->ControlpointCloud))[pointIdxKNNSearch[i]].y,
@@ -1476,7 +1517,10 @@ void PhotometricBundleAdjustment::
 							//                                  << " (squared distance: " << pointKNNSquaredDistance[i] << ")" << std::endl;
 							// 0.004367 is the squared distance of the closest control point
 							//							if (pointKNNSquaredDistance[i] > 0.004367*3) { continue; }
-							if (pointKNNSquaredDistance[i] > 0.004367 * scaleDist) { continue; }
+							if (pointKNNSquaredDistance[i] > 0.004367 * scaleDist) {
+
+								counter_skip_anchor3+=1;
+								continue; }
 							//							if (pointKNNSquaredDistance[i] > 0.32) { continue; }
 
 
@@ -1488,7 +1532,11 @@ void PhotometricBundleAdjustment::
 							int r_n = std::round(uv[1]), c_n = std::round(uv[0]);
 
 							// check if the projected point is in the image
-							if(r_n < B || r_n >= max_rows || c_n < B || c_n >= max_cols) { continue; }
+							if(r_n < B || r_n >= max_rows || c_n < B || c_n >= max_cols) {
+
+								counter_skip_anchor4+=1;
+
+								continue; }
 
 							//							Vec3f ctrlPointNormal =  N_ptr[r_n * width + c_n];//newNormalMap.at<Vec3f>(r, c);
 							Vec3f ctrlPointNormal =  normalMaps[currentFrameIdx].at<Vec3f>(r_n, c_n);;//newNormalMap.at<Vec3f>(r, c);
@@ -1496,7 +1544,11 @@ void PhotometricBundleAdjustment::
 							ctrlPointNormal=cv::normalize(ctrlPointNormal);
 
 							float angle_consine = ctrlPointNormal.dot(N_);
-							if (angle_consine < 0.9948 ){ continue;} // 0.9848 is the cos(10 degree), 0.9962 is the cos(5 degree)
+
+//							cout<<"check ctrlPointNormal:"<<ctrlPointNormal<<",check N_:"<< N_ << ",check angle_consine:"<<angle_consine<<endl;
+
+							if (angle_consine < 0.96 ){ continue;} // 0.9848 is the cos(10 degree), 0.9962 is the cos(5 degree)
+
 							float disPoint2Env=  pointKNNSquaredDistance[i]/(ctrlPointNormal.dot(N_));
 							if (disPoint2Env<disPoint2Env_min){
 								disPoint2Env_min=disPoint2Env;
@@ -1512,7 +1564,7 @@ void PhotometricBundleAdjustment::
 
 					}
 					// if no envMap point is found, skip this point
-					if (key4Search.dot(key4Search)==0){ continue;}
+					if (key4Search.dot(key4Search)==0){ counter_skip_anchor5+=1; continue;}
 
 					int ctrlIndex= EnvLightLookup->envLightIdxMap[key4Search];
 					if ( EnvLightLookup->envLightIdxMap.size()==0){std::cerr<<"Error in EnvLight->envLightIdxMap! "<<endl;}
@@ -1635,37 +1687,51 @@ void PhotometricBundleAdjustment::
 				}
 			}
 		}
+
+
 		cout<<"show counter_frame1:"<<counter_frame1<<endl;
 		cout<<"show counter_frame2:"<<counter_frame2<<endl;
 		cout<<"show counter_frame3:"<<counter_frame3<<endl;
 		cout<<"show counter_frame4:"<<counter_frame4<<endl;
 		cout<<"show counter_frame5:"<<counter_frame5<<endl;
 
+		cout<<"show counter_frame1_envskip:"<<counter_frame1_envskip<<endl;
+		cout<<"show counter_skip_anchor1:"<<counter_skip_anchor1<<endl;
+		cout<<"show counter_skip_anchor2:"<<counter_skip_anchor2<<endl;
+		cout<<"show counter_skip_anchor3:"<<counter_skip_anchor3<<endl;
+		cout<<"show counter_skip_anchor4:"<<counter_skip_anchor4<<endl;
+		cout<<"show counter_skip_anchor5:"<<counter_skip_anchor5<<endl;
+		cout<<"show counter_skip_anchor6:"<<counter_skip_anchor6<<endl;
+		cout<<"show counter_skip_anchor7:"<<counter_skip_anchor7<<endl;
+		cout<<"show counter_skip_anchor8:"<<counter_skip_anchor8<<endl;
+		cout<<"show counter_skip_anchor9:"<<counter_skip_anchor9<<endl;
+
+
 		if(_frame_id%5==0){
 
-			Mat specularityChange,specularityChangeMap_normalized;
-			//		Mat  W_specularity = Mat::zeros(sumChannel.rows, sumChannel.cols, CV_32FC1); // not specular points and specular points
-			//		Mat  W_values = Mat::zeros(sumChannel.rows, sumChannel.cols, CV_32FC1); // not specular points and specular points
-			cv::normalize(weightMap, specularityChange, 0, 1, cv::NORM_MINMAX, CV_32FC1);
-			cv::normalize(specularityChangeMap, specularityChangeMap_normalized, 0, 1, cv::NORM_MINMAX, CV_32FC3);
-
-			imshow("specularityChange",specularityChangeMap*255);
-			imwrite("specularityChange.png",specularityChange*255);
-			imshow("specularityChangeMap_normalized",specularityChangeMap_normalized);
-			imwrite("specularityChangeMap_normalized.png",specularityChangeMap_normalized*255);
-			cvtColor(specularityMap,specularityMap,COLOR_RGB2GRAY);
-			cvtColor(specularityMap_right,specularityMap_right,COLOR_RGB2GRAY);
-
-			cv::imshow("specularityChangeMabeginpMask"+ to_string(frame_id_start ),specularityChangeMabeginpMask);
-			cv::imshow("specularityChangeMapMask"+ to_string(frame_id_end),specularityChangeMapMask);
-
-
-			cv::imshow("specularityMap"+ to_string(frame_id_start),specularityMap);
-			imwrite("specularityMap.png",specularityMap*255);
-			cv::imshow("specularityMap_right"+ to_string(frame_id_end),specularityMap_right);
-			imwrite("specularityMap_right.png",specularityMap_right*255);
-			waitKey(0);
-			cout<<"======================show envLightMap_cur size: "<<envLightMap_cur.size()<<"===========================:\n"<<endl;
+	//			Mat specularityChange,specularityChangeMap_normalized;
+	//			//		Mat  W_specularity = Mat::zeros(sumChannel.rows, sumChannel.cols, CV_32FC1); // not specular points and specular points
+	//			//		Mat  W_values = Mat::zeros(sumChannel.rows, sumChannel.cols, CV_32FC1); // not specular points and specular points
+	//			cv::normalize(weightMap, specularityChange, 0, 1, cv::NORM_MINMAX, CV_32FC1);
+	//			cv::normalize(specularityChangeMap, specularityChangeMap_normalized, 0, 1, cv::NORM_MINMAX, CV_32FC3);
+	//
+	//			imshow("specularityChange",specularityChangeMap*255);
+	//			imwrite("specularityChange.png",specularityChange*255);
+	//			imshow("specularityChangeMap_normalized",specularityChangeMap_normalized);
+	//			imwrite("specularityChangeMap_normalized.png",specularityChangeMap_normalized*255);
+	//			cvtColor(specularityMap,specularityMap,COLOR_RGB2GRAY);
+	//			cvtColor(specularityMap_right,specularityMap_right,COLOR_RGB2GRAY);
+	//
+	//			cv::imshow("specularityChangeMabeginpMask"+ to_string(frame_id_start ),specularityChangeMabeginpMask);
+	//			cv::imshow("specularityChangeMapMask"+ to_string(frame_id_end),specularityChangeMapMask);
+	//
+	//
+	//			cv::imshow("specularityMap"+ to_string(frame_id_start),specularityMap);
+	//			imwrite("specularityMap.png",specularityMap*255);
+	//			cv::imshow("specularityMap_right"+ to_string(frame_id_end),specularityMap_right);
+	//			imwrite("specularityMap_right.png",specularityMap_right*255);
+	//			waitKey(0);
+	//			cout<<"======================show envLightMap_cur size: "<<envLightMap_cur.size()<<"===========================:\n"<<endl;
 
 		}
 
