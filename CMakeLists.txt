@@ -216,7 +216,7 @@ set(dsonl_SOURCE_FILES
 
 #        include/settings/common.h
 
-        )
+        src/photometricLossPointCloud.cpp)
 
 
 find_package(Boost 1.71.0 REQUIRED COMPONENTS system filesystem program_options)
@@ -233,7 +233,7 @@ message(STATUS "show ${Boost_LIBRARIES} Boost_LIBRARIES: ${Boost_INCLUDE_DIRS}")
 add_library(dsonl ${dsonl_SOURCE_FILES})
 add_subdirectory(include/matplotplusplus)
 
-add_executable(photometricLoss src/photometricLoss.cpp src/SpecularHighlightRemoval/SpecularHighlightRemoval.cpp)
+add_executable(photometricLoss src/photometricLoss.cpp src/SpecularHighlightRemoval/SpecularHighlightRemoval.cpp )
 target_link_libraries(photometricLoss
   PUBLIC matplot
   dsonl
@@ -247,6 +247,22 @@ target_link_libraries(photometricLoss
   ${GLUT_LIBRARIES}
   ${GLEW_LIBRARIES}
 )
+
+add_executable(photometricLossPC src/photometricLossPointCloud.cpp src/SpecularHighlightRemoval/SpecularHighlightRemoval.cpp )
+target_link_libraries(photometricLossPC
+        PUBLIC matplot
+        dsonl
+        Ceres::ceres
+        pangolin
+        fmt::fmt
+        TBB::tbb
+        OpenCV
+        ${PCL_LIBRARIES}
+        ${OPENGL_LIBRARIES}
+        ${GLUT_LIBRARIES}
+        ${GLEW_LIBRARIES}
+        )
+
 
 
 add_subdirectory(include/PhotometricBA)
