@@ -117,9 +117,9 @@ int main(int argc, char** argv)
 	// load GT trajectory
 	//	std::string abs_pose= "../data/dataSetPBA_init_poor/Kitti_GT_00.txt";
 	//	std::string abs_pose= "../data/dataSetPBA_init_poor/GT_pose_list_fr3.txt";
-//	std::string abs_pose= "../data/dataSetPBA_init_poor/seq15/GT_Trajectory_seq15_650frames_WorldAtFirstFrame.txt";
+	std::string abs_pose= "../data/dataSetPBA_init_poor/seq15/GT_Trajectory_seq15_650frames_WorldAtFirstFrame.txt";
 
-	std::string abs_pose= "../data/dataSetPBA_init_poor/seq_17/GT_Trajectory_seq17_650_WorldFirst.txt";
+//	std::string abs_pose= "../data/dataSetPBA_init_poor/seq_17/GT_Trajectory_seq15_650_WorldFirst.txt";
 
 
 
@@ -160,7 +160,7 @@ int main(int argc, char** argv)
 	// convert environment light pose the coordinate system of the first camera in PBA sequence
 	std::vector<Sophus::SE3f, Eigen::aligned_allocator<Sophus::SE3f>> trajectoryPoses;
 //	string fileName = "/home/lei/Documents/Dataset/dataSetPBA/sequences/02/poses.txt";
-	string fileName = "../data/dataSetPBA_init_poor/seq_17/cam_interpolated_poses_Env.txt";
+	string fileName = "../data/dataSetPBA_init_poor/seq15/cam_interpolated_poses_Env.txt";
 //	string fileName = "/home/lei/Documents/Dataset/dataSetPBA/sequences/13/cam_interpolated_poses_Env.txt";
 
 
@@ -389,7 +389,7 @@ bool next_step( ){
 	cv::Mat_<float> zmap;
 	UniquePointer<DatasetFrame> frame;
 
-	std::string dataFolder="/home/lei/Documents/Research/nldso_photometricLoss/dataAnalysis/seq_17/lvl_1_pose/";
+	std::string dataFolder="/home/lei/Documents/Research/nldso_photometricLoss/dataAnalysis/seq_15/lvl_1_pose/";
 
 	int lvl=0;
 
@@ -411,7 +411,7 @@ bool next_step( ){
 
 		if (fid==T_init.size()-3) {
 
-			auto output_fn = dataFolder+ "refined_poses_es_tum_abs_seq17_pose_NLPBA"+ std::to_string(lvl)+ ".txt";
+			auto output_fn = dataFolder+ "refined_poses_es_tum_abs_seq15_new_pose_NLPBA"+ std::to_string(lvl)+ ".txt";
 			writePosesTumRGBDFormat(output_fn, result.poses, dataset->getTimestamp());
 			std::cout <<"End of dataset reached\n";
 			exit(1);
