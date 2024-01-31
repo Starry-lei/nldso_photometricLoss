@@ -57,6 +57,9 @@ PhotometricBundleAdjustment* photoba=nullptr;
 EigenAlignedContainer_<Vec3> allRefinedPoints;
 int fid=0; // start frame id
 
+
+Sophus::SE3f T_head_frame_c2w= Sophus::SE3f();
+
 void readCtrlPointPoseData(string fileName, vector<Sophus::SE3f, Eigen::aligned_allocator<Sophus::SE3f>>& pose) {
 
 	ifstream trajectory(fileName);
@@ -117,14 +120,9 @@ int main(int argc, char** argv)
 	// load GT trajectory
 	//	std::string abs_pose= "../data/dataSetPBA_init_poor/Kitti_GT_00.txt";
 	//	std::string abs_pose= "../data/dataSetPBA_init_poor/GT_pose_list_fr3.txt";
-//	std::string abs_pose= "../data/dataSetPBA_init_poor/seq15/GT_Trajectory_seq15_650frames_WorldAtFirstFrame.txt";
+	std::string abs_pose= "../data/dataSetPBA_init_poor/seq15/GT_Trajectory_seq15_650frames_WorldAtFirstFrame.txt";
 
-	std::string abs_pose= "../data/dataSetPBA_init_poor/seq16/GT_Trajectory_seq116_650_WorldFirst.txt";
-
-
-
-
-
+//	std::string abs_pose= "../data/dataSetPBA_init_poor/seq16/GT_Trajectory_seq116_650_WorldFirst.txt";
 //	std::string abs_pose= "../data/dataSetPBA_init_poor/seq12_111_Poses_gt.txt";
 
 
@@ -160,7 +158,8 @@ int main(int argc, char** argv)
 	// convert environment light pose the coordinate system of the first camera in PBA sequence
 	std::vector<Sophus::SE3f, Eigen::aligned_allocator<Sophus::SE3f>> trajectoryPoses;
 //	string fileName = "/home/lei/Documents/Dataset/dataSetPBA/sequences/02/poses.txt";
-	string fileName = "../data/dataSetPBA_init_poor/seq16/cam_interpolated_poses_Env.txt";
+	string fileName = "../data/dataSetPBA_init_poor/seq15/cam_interpolated_poses_Env.txt";
+//	string fileName = "../data/dataSetPBA_init_poor/seq15/cam_interpolated_poses_Env.txt";
 //	string fileName = "/home/lei/Documents/Dataset/dataSetPBA/sequences/13/cam_interpolated_poses_Env.txt";
 
 
@@ -183,6 +182,9 @@ int main(int argc, char** argv)
 		ControlpointCloud->push_back(pcl::PointXYZ(pointBase.x, pointBase.y, pointBase.z));
 	}
 
+
+//
+
 	photoba->EnvMapPath=EnvMapPath;
 
 	PBANL::envLightLookup  *EnvLightLookup= new PBANL::envLightLookup(argc, argv, EnvMapPath,EnvMapPosePath,frontCamPose_w);
@@ -195,6 +197,20 @@ int main(int argc, char** argv)
 	}
 
 // control point cloud
+
+
+//	pcl::PointCloud<pcl::PointXYZ>::Ptr newControlpointCloud(new pcl::PointCloud<pcl::PointXYZ>());
+//	for (const auto& envLight : photoba->EnvLightLookup->envLightIdxMap) {
+//		Vec3 point(envLight.first.x, envLight.first.y, envLight.first.z);
+//		newControlpointCloud->push_back(pcl::PointXYZ(point.x(), point.y(), point.z()));
+//	}
+//
+//
+//	//     save the control point cloud using PCL
+//	writer.write<pcl::PointXYZ>("ControlpointCloud.pcd", *newControlpointCloud, false);
+//	std::cout << " data points to newControlpointCloud.pcd." << std::endl;
+
+
 
 
 	if (show_gui) {
@@ -323,7 +339,6 @@ void draw_scene( PhotometricBundleAdjustment::Result & res,  EigenAlignedContain
 		}
 
 		// render the control points
-
 		if (photoba->EnvLightLookup->envLightIdxMap.size() > 0) {
 			glPointSize(3.0);
 			glBegin(GL_POINTS);
@@ -335,11 +350,6 @@ void draw_scene( PhotometricBundleAdjustment::Result & res,  EigenAlignedContain
 
 			glEnd();
 		}
-
-
-
-
-
 
 
 		// render the refined trajectory
@@ -357,7 +367,7 @@ void draw_scene( PhotometricBundleAdjustment::Result & res,  EigenAlignedContain
 			}
 		}
 		// render the GT trajectory
-		// render 3D map points --------------anchor-------------------------
+		// render ENv 3D map points --------------anchor-------------------------
 		if (photoba->EnvLightLookup->envLightIdxMap.size() > 0) {
 			glPointSize(6.0);
 			glBegin(GL_POINTS);
@@ -370,6 +380,7 @@ void draw_scene( PhotometricBundleAdjustment::Result & res,  EigenAlignedContain
 			glEnd();
 		}
 
+
 		// render old landmark points
 		if (show_old_points3d && allRefinedPoints.size() > 0) {
 			glPointSize(3.0);  // original: 3
@@ -381,6 +392,12 @@ void draw_scene( PhotometricBundleAdjustment::Result & res,  EigenAlignedContain
 			}
 			glEnd();
 		}
+
+
+
+
+
+
 	}
 }
 
@@ -389,7 +406,7 @@ bool next_step( ){
 	cv::Mat_<float> zmap;
 	UniquePointer<DatasetFrame> frame;
 
-	std::string dataFolder="/home/lei/Documents/Research/nldso_photometricLoss/dataAnalysis/seq_16/lvl_1_pose/";
+	std::string dataFolder="/home/lei/Documents/Research/nldso_photometricLoss/dataAnalysis/seq_15/lvl_1_pose/";
 
 	int lvl=0;
 
@@ -409,12 +426,42 @@ bool next_step( ){
 	for(; (frame = dataset->getFrame(fid, lvl)) && !gStop; ++fid ){
 
 
-		if (fid==T_init.size()-3) {
+		if (fid==T_init.size()-5) {
 
 			auto output_fn = dataFolder+ "refined_poses_es_tum_abs_pose_NLPBA"+ std::to_string(lvl)+ ".txt";
 			writePosesTumRGBDFormat(output_fn, result.poses, dataset->getTimestamp());
 			std::cout <<"End of dataset reached\n";
-			exit(1);
+//			exit(1);
+//			save control point cloud from allRefinedPoints
+			pcl::PCDWriter writer;
+
+			pcl::PointCloud<pcl::PointXYZ>::Ptr refinePoints_pc(new pcl::PointCloud<pcl::PointXYZ>());
+			int counter_controlpoint = 0;
+			for (size_t i = 1; i <= allRefinedPoints.size(); i++) {
+				counter_controlpoint++;
+
+//				apply inverse of T_head_frame_c2w to allRefinedPoints
+				Eigen::Vector3f point;
+				point.x() = allRefinedPoints[i - 1].x();
+				point.y() = allRefinedPoints[i - 1].y();
+				point.z() = allRefinedPoints[i - 1].z();
+//				cout<<"show point 1: "<<point<<endl;
+
+//				cout<<"show point: "<<T_head_frame_c2w.matrix()<<endl;
+				point = T_head_frame_c2w.cast<float>() * point;
+
+//				cout<<"show point 2: "<<point<<endl;
+
+				cv::Point3f pointBase = Vec3f(point.x(),
+				                              point.y(),
+				                              point.z());
+				refinePoints_pc->push_back(pcl::PointXYZ(pointBase.x, pointBase.y, pointBase.z));
+			}
+			writer.write<pcl::PointXYZ>("refinePoints.pcd", *refinePoints_pc, false);
+			std::cout << "Saved " << counter_controlpoint << " data points to refinePoints.pcd." << std::endl;
+
+
+
 			return false;
 
 		}
