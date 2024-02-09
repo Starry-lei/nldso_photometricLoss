@@ -754,6 +754,13 @@ addFrame(const uint8_t* I_ptr, const cv::Mat& grayImg, const float* Z_ptr, const
 	cv::Mat dsoSelectedPointMask(grayImg.rows,  grayImg.cols, CV_8UC1, cv::Scalar(0));
 	int dso_point_counter=0;
 
+	double mean = 0.0; // Adjust this as needed
+	double stddev = 1.0; // Adjust this as needed
+
+	// Static to maintain state across function calls, if necessary
+	static std::default_random_engine generator;
+	std::normal_distribution<double> distribution(mean, stddev);
+
 
 	for(int y = B; y < max_rows; ++y) {
 		for(int x = B; x < max_cols; ++x) {
@@ -771,7 +778,13 @@ addFrame(const uint8_t* I_ptr, const cv::Mat& grayImg, const float* Z_ptr, const
 					p->descriptor().resize(descriptor_dim);
 					p->setSaliency( _saliency_map(y,x) );
 					p->setFirstProjection(xy);
+
+
+					double noise = distribution(generator);
+					z += std::abs(noise)* 0.06;// simulate real scene
 					p->ori_depth = z; // added by lei
+
+
 					p->inv_depth = 1.0f/z; // added by lei
 					new_scene_points.push_back(std::move(p));
 				}
