@@ -90,6 +90,8 @@ void readCtrlPointPoseData(string fileName, vector<Sophus::SE3f, Eigen::aligned_
 
 int main(int argc, char** argv)
 {
+
+	int skip_frames = 3;
 	bool show_gui = true;
     signal(SIGINT, sigHandler);
 
@@ -120,7 +122,7 @@ int main(int argc, char** argv)
 	// load GT trajectory
 	//	std::string abs_pose= "../data/dataSetPBA_init_poor/Kitti_GT_00.txt";
 	//	std::string abs_pose= "../data/dataSetPBA_init_poor/GT_pose_list_fr3.txt";
-	std::string abs_pose= "../data/dataSetPBA_init_poor/seq15/GT_Trajectory_seq15_650frames_WorldAtFirstFrame.txt";
+	std::string abs_pose = "../data/dataSetPBA_init_poor/seq15/GT_Trajectory_seq15_650frames_WorldAtFirstFrame.txt";
 
 //	std::string abs_pose= "../data/dataSetPBA_init_poor/seq16/GT_Trajectory_seq116_650_WorldFirst.txt";
 //	std::string abs_pose= "../data/dataSetPBA_init_poor/seq12_111_Poses_gt.txt";
@@ -446,7 +448,6 @@ bool next_step( ){
 				point.y() = allRefinedPoints[i - 1].y();
 				point.z() = allRefinedPoints[i - 1].z();
 //				cout<<"show point 1: "<<point<<endl;
-
 //				cout<<"show point: "<<T_head_frame_c2w.matrix()<<endl;
 				point = T_head_frame_c2w.cast<float>() * point;
 
@@ -459,8 +460,6 @@ bool next_step( ){
 			}
 			writer.write<pcl::PointXYZ>("refinePoints.pcd", *refinePoints_pc, false);
 			std::cout << "Saved " << counter_controlpoint << " data points to refinePoints.pcd." << std::endl;
-
-
 
 			return false;
 
@@ -478,11 +477,10 @@ bool next_step( ){
 
 
 //		cout<<"show frame->normal() type:"<<frame->normal().type()<<endl;
-
 //		cv::imshow("frame->normal()",frame->normal());
 //		waitKey(0)	;
 
-		const float* R= frame->roughness().ptr<float>();
+		const float* R = frame->roughness().ptr<float>();
 
 		if (N==nullptr || R==nullptr){
 			std::cout<<"N or R  is nullptr"<<std::endl;
