@@ -99,8 +99,12 @@ int main(int argc, char **argv) {
 
 
 
-	std::string envMap_Folder="/home/lei/Documents/Research/envMapData/formattedEnvSeq18";
-	string controlPointPose_path="/home/lei/Documents/Dataset/dataSetPBA/sequences/18/env/addon_control_cam_pose_18_2842.txt";
+//	std::string envMap_Folder="/home/lei/Documents/Research/envMapData/formattedEnvSeq18";
+//	string controlPointPose_path="/home/lei/Documents/Dataset/dataSetPBA/sequences/18/env/addon_control_cam_pose_18_2842.txt";
+
+
+	std::string envMap_Folder="/home/lei/Documents/Research/envMapData/formattedEnvSeq20";
+	string controlPointPose_path="/home/lei/Documents/Dataset/dataSetPBA/sequences/20/env/cam_manual_interpolated_control_cam_pose.txt";
 
 
 
