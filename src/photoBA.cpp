@@ -79,8 +79,8 @@ int main(int argc, char** argv)
 //	std::string abs_pose= "../data/dataSetPBA_init_poor/GT_Trajectory_seq15_650frames_WorldAtFirstFrame.txt";
 
 //	std::string abs_pose= "../data/dataSetPBA_init_poor/seq_18/GT_Trajectory_seq18_650_WorldFirst.txt";
-//	std::string abs_pose= "../data/dataSetPBA_init_poor/seq_19/GT_Trajectory_seq19_650_WorldFirst.txt";
-	std::string abs_pose= "../data/dataSetPBA_init_poor/seq_20/GT_Trajectory_seq20_650_WorldFirst.txt";
+	std::string abs_pose= "../data/dataSetPBA_init_poor/seq_19_new/GT_Trajectory_seq19new_650_WorldFirst.txt";
+//	std::string abs_pose= "../data/dataSetPBA_init_poor/seq_20/GT_Trajectory_seq20_650_WorldFirst.txt";
 
 
 
@@ -301,7 +301,7 @@ bool next_step( ){
 	for(; (frame = dataset->getFrame(fid, lvl)) && !gStop; ++fid ){
 		if (fid==T_init.size()-3) {
 			std::cout <<"End of dataset reached\n";
-			auto output_fn = dataFolder+ "refined_poses_es_tum_abs_pose_pure_pba_seq20_new"+ std::to_string(lvl)+ ".txt";
+			auto output_fn = dataFolder+ "refined_poses_es_tum_abs_pose_pure_pba_seq19_new"+ std::to_string(lvl)+ ".txt";
 			writePosesTumRGBDFormat(output_fn, result.poses, dataset->getTimestamp());
 			return false;
 		}
