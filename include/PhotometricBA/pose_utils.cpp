@@ -44,7 +44,7 @@ PoseList loadPosesTumRGBDFormat(std::string fn)
 {
   std::ifstream ifs(fn);
   if(!ifs.is_open()) {
-    throw std::runtime_error("failed to open pose file");
+    throw std::runtime_error("failed to open the pose file");
   }
 
   PoseList ret;

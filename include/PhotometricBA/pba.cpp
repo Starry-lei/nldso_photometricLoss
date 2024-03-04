@@ -2281,8 +2281,6 @@ void PhotometricBundleAdjustment::optimize(Result* result)
 					}
 //
 
-
-
 					double * depth_ptr = & pt->ori_depth;
 					double * depth_coeff_ptr = & pt->depth_tar_coeff;
 					double * ref_camera_ptr = camera_params[pt->refFrameId()].data();
@@ -2295,6 +2293,7 @@ void PhotometricBundleAdjustment::optimize(Result* result)
 
 					const auto huber_t = _options.robustThreshold;
                     auto* loss = huber_t > 0.0 ? new ceres::HuberLoss(huber_t) : nullptr;
+//					loss=nullptr; // ????????
                     ceres::CostFunction* cost = nullptr;
                     cost = DescriptorError::Create(_calib, pt->descriptor(), getFrameAtId(id), specularity_weight, size_t(_image_size.cols), size_t(_image_size.rows),
 					                                mean_patch_value, patch, x_norm, y_norm,ref_camera_ptr,1);
