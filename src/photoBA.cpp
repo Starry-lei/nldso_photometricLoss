@@ -81,7 +81,7 @@ int main(int argc, char** argv)
 //	std::string abs_pose= "../data/dataSetPBA_init_poor/seq_18/GT_Trajectory_seq18_650_WorldFirst.txt";
 
 
-	std::string abs_pose= "../data/dataSetPBA_init_poor/seq_20/GT_Trajectory_seq20_650_WorldFirst.txt";
+	std::string abs_pose= "../data/dataSetPBA_init_poor/seq_19_new/GT_Trajectory_seq19new_650_WorldFirst.txt";
 
 
 //	std::string abs_pose= "../data/dataSetPBA_init_poor/scene0370_02_seq_01_tumRGBD_segmented_reseted.txt";
@@ -281,7 +281,7 @@ bool next_step( ){
 
 //	std::string dataFolder="/home/lei/Documents/Research/nldso_photometricLoss/dataAnalysis/seq_15/lvl_1_pose/";
 
-	std::string dataFolder="/home/lei/Documents/Research/nldso_photometricLoss/dataAnalysis/seq_20/";
+	std::string dataFolder="/home/lei/Documents/Research/nldso_photometricLoss/dataAnalysis/seq_19_new/";
 
 
 
@@ -303,7 +303,7 @@ bool next_step( ){
 	for(; (frame = dataset->getFrame(fid, lvl)) && !gStop; ++fid ){
 		if (fid==T_init.size()-3) {
 			std::cout <<"End of dataset reached\n";
-			auto output_fn = dataFolder+ "refined_poses_pure_pba_t_distribution_seq20_new"+ std::to_string(lvl)+ ".txt";
+			auto output_fn = dataFolder+ "T_distribution_seq19_new"+ std::to_string(lvl)+ ".txt";
 			writePosesTumRGBDFormat(output_fn, result.poses, dataset->getTimestamp());
 			return false;
 		}

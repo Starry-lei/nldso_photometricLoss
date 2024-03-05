@@ -599,7 +599,9 @@ void PhotometricBundleAdjustment::computeDistribution( std::vector<float>& allOb
 	// fit distribution parameters
 	//	std::shared_ptr<dsm::IDistribution> distribution;
 	bool use_t_distribution = true;
-	float maxEnergyFit = 31; // looks good
+	float maxEnergyFit = 50; // looks good
+
+//	float maxEnergyFit = 25; // looks good
 //	float maxEnergyFit = 30; // looks good
 //	float maxEnergyFit = 27; // change from 25 to 20: seq16: 0.11-to-0.076
 	// seq 15: 28
@@ -625,7 +627,6 @@ void PhotometricBundleAdjustment::computeDistribution( std::vector<float>& allOb
 		for (int i = 0; i < allObservations.size(); ++i)
 		{
 			if (fabs(allObservations[i]) > maxEnergy) continue;
-
 			allObservationsInlier.push_back(allObservations[i]);
 		}
 
@@ -642,8 +643,8 @@ void PhotometricBundleAdjustment::computeDistribution( std::vector<float>& allOb
 		                                            Eigen::Vector2i(510, 510),
 		                                            510);
 		// visualize
-//				cv::imshow("Histogram"+std::to_string(refId)+"+"+std::to_string(tarId), hist);
-//				cv::waitKey(0);
+		cv::imshow("Histogram"+std::to_string(refId)+"+"+std::to_string(tarId), hist);
+		cv::waitKey(0);
 
 	}else
 	{
@@ -1530,22 +1531,9 @@ void PhotometricBundleAdjustment::optimize(Result* result, std::shared_ptr<dsm::
 
 						double distWeight = error_distribution->weight((float )(patch[i]-patch_val_tar[i]));
 
-						//patch_weights_dist[i]= sqrt(distWeight);
-						patch_weights_dist[i]= 1.0;
+						patch_weights_dist[i]= sqrt(distWeight);
+//						patch_weights_dist[i]= 1.0;
 					}
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 					const auto huber_t = _options.robustThreshold;
