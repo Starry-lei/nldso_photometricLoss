@@ -243,7 +243,9 @@ namespace DSONL {
 //		string renderedEnvLight_path= "/home/lei/Documents/Research/envMapData/renderedEnvmap18_1648";
 
 
-		string renderedEnvLight_path= "/home/lei/Documents/Research/envMapData/renderedEnvmap20";
+//		string renderedEnvLight_path= "/home/lei/Documents/Research/envMapData/renderedEnvmap20";
+
+		string renderedEnvLight_path= "/home/lei/Documents/Research/envMapData/renderedEnvmap19";
 
 
 
@@ -522,11 +524,9 @@ namespace DSONL {
 
 //		string renderedEnvLight_path= "/home/lei/Documents/Research/envMapData/renderedEnvMaps3084";
 
-		string renderedEnvLight_path= "/home/lei/Documents/Research/envMapData/renderedEnvmap20";
+//		string renderedEnvLight_path= "/home/lei/Documents/Research/envMapData/renderedEnvmap20";
 
-
-
-
+		string renderedEnvLight_path= "/home/lei/Documents/Research/envMapData/renderedEnvmap19";
 
 
         string renderedEnvLightDiffuse= renderedEnvLight_path+ "/envMap"+lightIdx+"/renderedEnvLightDiffuse"; //+"/renderedEnvLight";
