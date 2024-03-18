@@ -303,7 +303,7 @@ bool next_step( ){
 	for(; (frame = dataset->getFrame(fid, lvl)) && !gStop; ++fid ){
 		if (fid==T_init.size()-3) {
 			std::cout <<"End of dataset reached\n";
-			auto output_fn = dataFolder+ "T_distribution_seq19_new"+ std::to_string(lvl)+ ".txt";
+			auto output_fn = dataFolder+ "T_distribution_seq19_new_c"+ std::to_string(lvl)+ ".txt";
 			writePosesTumRGBDFormat(output_fn, result.poses, dataset->getTimestamp());
 			return false;
 		}

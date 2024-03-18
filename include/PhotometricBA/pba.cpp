@@ -643,8 +643,8 @@ void PhotometricBundleAdjustment::computeDistribution( std::vector<float>& allOb
 		                                            Eigen::Vector2i(510, 510),
 		                                            510);
 		// visualize
-		cv::imshow("Histogram"+std::to_string(refId)+"+"+std::to_string(tarId), hist);
-		cv::waitKey(0);
+//		cv::imshow("Histogram"+std::to_string(refId)+"+"+std::to_string(tarId), hist);
+//		cv::waitKey(0);
 
 	}else
 	{
