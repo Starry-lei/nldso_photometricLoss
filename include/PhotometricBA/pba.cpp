@@ -1022,7 +1022,7 @@ void PhotometricBundleAdjustment::
 		Mat specularityChangeMapMask(_image_size.rows, _image_size.cols, CV_8UC1, Scalar(0));
 		Mat specularityChangeMabeginpMask(_image_size.rows, _image_size.cols, CV_8UC1, Scalar(0));
 
-		float scaleDist= 2; // from 2 to 4, 5
+		float scaleDist= 100; // from 2 to 4, 5
 		int numKNN= 5; // from 5 to 10
 		for(auto& pt : _scene_points) {
 
@@ -1078,8 +1078,6 @@ void PhotometricBundleAdjustment::
 //							if (pointKNNSquaredDistance[i] > 0.004367*3) { continue; }
 							if (pointKNNSquaredDistance[i] > 0.004367* scaleDist) { continue; } // 2 to 5
 //							if (pointKNNSquaredDistance[i] > 0.32) { continue; }
-
-
 							// calculate control point normal
 							// transform envMap_point to camera coordinate system
 							Eigen::Vector3f envMap_point_c1 = T_w_beta_start.inverse().cast<float>() * Eigen::Vector3f(envMap_point.val[0], envMap_point.val[1], envMap_point.val[2]);
@@ -1099,7 +1097,8 @@ void PhotometricBundleAdjustment::
 							ctrlPointNormal=cv::normalize(ctrlPointNormal);
 
 							float angle_consine = ctrlPointNormal.dot(N_);
-							if (angle_consine<0.9962){ continue;} // 0.9848 is the cos(10 degree), 0.9962 is the cos(5 degree)
+//							if (angle_consine<0.9962){ continue;} // 0.9848 is the cos(10 degree), 0.9962 is the cos(5 degree)
+							if (angle_consine<0.96){ continue;} // 0.9848 is the cos(10 degree), 0.9962 is the cos(5 degree)
 							float disPoint2Env=  pointKNNSquaredDistance[i]/(ctrlPointNormal.dot(N_));
 							if (disPoint2Env<disPoint2Env_min){
 								disPoint2Env_min=disPoint2Env;
@@ -1353,7 +1352,8 @@ void PhotometricBundleAdjustment::
 							ctrlPointNormal=cv::normalize(ctrlPointNormal);
 
 							float angle_consine = ctrlPointNormal.dot(N_);
-							if (angle_consine<0.9962){ continue;} // 0.9848 is the cos(10 degree), 0.9962 is the cos(5 degree)
+//							if (angle_consine<0.9962){ continue;} // 0.9848 is the cos(10 degree), 0.9962 is the cos(5 degree)
+							if (angle_consine<0.96){ continue;}
 							float disPoint2Env=  pointKNNSquaredDistance[i]/(ctrlPointNormal.dot(N_));
 							if (disPoint2Env<disPoint2Env_min){
 								disPoint2Env_min=disPoint2Env;
