@@ -92,7 +92,6 @@ int main(int argc, char** argv)
 {
 	bool show_gui = true;
     signal(SIGINT, sigHandler);
-
 	pbaUtils::ProgramOptions options;
 
 //  utils::ProgramOptions options;
@@ -121,8 +120,8 @@ int main(int argc, char** argv)
 	//	std::string abs_pose= "../data/dataSetPBA_init_poor/GT_pose_list_fr3.txt";
 //	std::string abs_pose= "../data/dataSetPBA_init_poor/seq15/GT_Trajectory_seq15_650frames_WorldAtFirstFrame.txt";
 //	std::string abs_pose= "../data/dataSetPBA_init_poor/seq16/GT_Trajectory_seq116_650_WorldFirst.txt";
-	std::string abs_pose= "../data/dataSetPBA_init_poor/seq_18/GT_Trajectory_seq18_650_WorldFirst.txt";
-	cout<<"pba run here 12! "<<endl;
+	std::string abs_pose= "../data/dataSetPBA_init_poor/seq_17/GT_Trajectory_seq17_650_WorldFirst.txt";
+
 //	std::string abs_pose= "../data/dataSetPBA_init_poor/seq_17/GT_Trajectory_seq15_650_WorldFirst.txt";
 //	std::string abs_pose= "../data/dataSetPBA_init_poor/seq12_111_Poses_gt.txt";
 //	std::string abs_pose= "../data/dataSetPBA_init_poor/scene0370_02_seq_01_tumRGBD_segmented_reseted.txt";
@@ -157,7 +156,7 @@ int main(int argc, char** argv)
 	// convert environment light pose the coordinate system of the first camera in PBA sequence
 	std::vector<Sophus::SE3f, Eigen::aligned_allocator<Sophus::SE3f>> trajectoryPoses;
 //	string fileName = "/home/lei/Documents/Dataset/dataSetPBA/sequences/02/poses.txt";
-	string fileName = "../data/dataSetPBA_init_poor/seq_18/cam_interpolated_poses_Env.txt";
+	string fileName = "../data/dataSetPBA_init_poor/seq_17/cam_interpolated_poses_Env.txt";
 //	string fileName = "/home/lei/Documents/Dataset/dataSetPBA/sequences/13/cam_interpolated_poses_Env.txt";
 	// transform env light pose to the coordinate system of the first camera in PBA sequence
 	readCtrlPointPoseData(fileName, trajectoryPoses);
@@ -444,7 +443,7 @@ bool next_step(  std::vector<std::shared_ptr<pangolin::ImageView>>& img_view ){
 	cv::Mat_<float> zmap;
 	UniquePointer<DatasetFrame> frame;
 
-	std::string dataFolder="/home/lei/Documents/Research/nldso_photometricLoss/dataAnalysis/seq_16/lvl_1_pose/";
+	std::string dataFolder="/home/lei/Documents/Research/nldso_photometricLoss/dataAnalysis/seq_17/lvl_1_pose/";
 
 	int lvl=0;
 
@@ -463,7 +462,7 @@ bool next_step(  std::vector<std::shared_ptr<pangolin::ImageView>>& img_view ){
 
 		if (fid==T_init.size()-3) {
 
-			auto output_fn = dataFolder+ "refined_poses_es_tum_abs_seq18_new_pose_NLPBAvideo"+ std::to_string(lvl)+ ".txt";
+			auto output_fn = dataFolder+ "refined_poses_es_tum_abs_seq17_new_pose_NLPBAvideo"+ std::to_string(lvl)+ ".txt";
 			writePosesTumRGBDFormat(output_fn, result.poses, dataset->getTimestamp());
 			std::cout <<"End of dataset reached\n";
 //			exit(1);
