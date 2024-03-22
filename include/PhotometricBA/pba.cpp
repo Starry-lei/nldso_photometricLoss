@@ -533,7 +533,9 @@ PhotometricBundleAdjustment::PhotometricBundleAdjustment(
 	DSONL::setGlobalCalib(_image_size.cols,_image_size.rows,camera_intrinsics);
 
     _mask.resize(_image_size.rows, _image_size.cols);
+	_mask_draw.resize(_image_size.rows, _image_size.cols);
     _saliency_map.resize(_image_size.rows, _image_size.cols);
+	_saliency_map_draw.resize(_image_size.rows, _image_size.cols);
     _K_inv = calib.K().inverse();
 }
 
@@ -592,6 +594,7 @@ void PhotometricBundleAdjustment::
 	PBANL::IBL_Radiance *ibl_Radiance = new PBANL::IBL_Radiance;
     typedef Eigen::Map<const Image_<uint8_t>, Eigen::Aligned> SrcMap;
     auto I = SrcMap(I_ptr, _image_size.rows, _image_size.cols);
+	auto I_draw = SrcMap(I_ptr, _image_size.rows, _image_size.cols);
 	I_ptr_map[_frame_id] = I_ptr;
 
 	normalMaps.push_back(N_map);
@@ -602,8 +605,11 @@ void PhotometricBundleAdjustment::
     typedef Eigen::Map<const Image_<float>, Eigen::Aligned> SrcDepthMap;
     auto Z = SrcDepthMap(Z_ptr, _image_size.rows, _image_size.cols);
     // check the depth map
-	std::cout<<"show options.descriptorType"<<static_cast<int>(_options.descriptorType)<<std::endl;
+	std::cout<<"show options.descriptorType: "<<static_cast<int>(_options.descriptorType)<<std::endl;
 	DescriptorFrame* frame = DescriptorFrame::Create(_frame_id, I, _options.descriptorType);
+	DescriptorFrame* frame_draw = DescriptorFrame::Create(_frame_id, I_draw, _options.descriptorType);
+
+
 
     int B = std::max(_options.maskBlockRadius, std::max(2, _options.patchRadius));
     int max_rows = (int) I.rows() - B - 1,
@@ -612,14 +618,11 @@ void PhotometricBundleAdjustment::
             patch_length = PatchSizeFromRadius(radius),
             descriptor_dim = (int) frame->numChannels() * patch_length,
             mask_radius = _options.maskBlockRadius;
-
-    //
-    // Establish "correspondences" with the old data. This is the visibility list
-    // computation
-    //
     _mask.setOnes();
+	_mask_draw.setOnes();
     std::cout<<"show scene point size:"<<_scene_points.size() <<std::endl;
     int num_updated = 0, max_num_to_update = 0;
+	int num_updated_draw = 0, max_num_to_update_draw = 0;
     for(size_t i = 0; i < _scene_points.size(); ++i) {
         const auto& pt = _scene_points[i];
         int f_dist = _frame_id - pt->lastFrameId();
@@ -632,33 +635,17 @@ void PhotometricBundleAdjustment::
             Vec2 uv = _calib.project(T_c * pt->X());
             ++max_num_to_update;
             int r = std::round(uv[1]), c = std::round(uv[0]);
-
-
-
             if(r >= B && r < max_rows && c >= B && c <= max_cols) {
                 typename ScenePoint::ZnccPatchType other_patch(I, uv);
                 auto score = pt->patch().score( other_patch);
                 if(score > _options.minScore) {
                     num_updated++;
-																	// old TODO update the patch for the new frame data
                     pt->addFrame(_frame_id);
-
-//					bool view_beta = false;
-//					// calculate specularity
-//					specularityCalcualtion(pt, view_beta, Z, T_w, N_ptr, R_ptr, ibl_Radiance);
-
-                    //
-                    // block an area in the mask to prevent initializing redundant new
-                    // scene points
-                    //
-					// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
                     for(int r_i = -mask_radius; r_i <= mask_radius; ++r_i)
                         for(int c_i = -mask_radius; c_i <= mask_radius; ++c_i)
                             _mask(r+r_i, c+c_i) = 0;
                 }
             }
-
-
 //			// back projection on previous frames, check and add previous frame to visualization frame list added by lei
 //			// note: Image_<uint8_t>& image
 //			uint32_t frame_id_start = _frame_buffer.front()->id(),frame_id_end=_frame_id;
@@ -688,29 +675,62 @@ void PhotometricBundleAdjustment::
 //					}
 //				}
 //			}
-
 		}
     }
+	std::cout<<"show _scene_points_4draw has point size:"<<_scene_points_4draw.size() <<std::endl;
+	cout << "_scene_points_4draw.size() mark1.1--->" << " max_num_to_update: " << max_num_to_update << endl;
+
+	for(size_t i = 0; i < _scene_points_4draw.size(); ++i) {
+		const auto& pt_draw = _scene_points_4draw[i];
+//		std::cout<<"show makk 1.2"<<endl;
+		int f_dist = _frame_id - pt_draw->lastFrameId();
+//		std::cout<<"show makk 1.3"<<endl;
+		if(f_dist <= _options.maxFrameDistance) {
+			Vec2 uv = _calib.project(T_c * pt_draw->X());
+			++max_num_to_update_draw;
+//			std::cout<<"show makk 1.4"<<endl;
+			int r = std::round(uv[1]), c = std::round(uv[0]);
+			if(r >= B && r < max_rows && c >= B && c <= max_cols) {
+				typename ScenePoint::ZnccPatchType other_patch(I_draw, uv);
+				auto score = pt_draw->patch().score( other_patch);
+//				std::cout<<"show makk 1.5"<<endl;
+				if(score > _options.minScore) {
+					num_updated_draw++;
+					pt_draw->addFrame(_frame_id);
+//					std::cout<<"show makk 1.51"<<endl;
+					for(int r_i = -mask_radius; r_i <= mask_radius; ++r_i)
+						for(int c_i = -mask_radius; c_i <= mask_radius; ++c_i)
+							_mask_draw(r+r_i, c+c_i) = 0;
+//					std::cout<<"show makk 1.6"<<endl;
+				}
+			}
+		}
+	}
 
 
-    //
+
+	//
     // Add new scene points
     //
     decltype(_scene_points) new_scene_points;
+	decltype(_scene_points_4draw) new_scene_points_draw;
     new_scene_points.reserve( max_rows * max_cols * 0.5 );
+	new_scene_points_draw.reserve( max_rows * max_cols * 0.5 );
     frame->computeSaliencyMap(_saliency_map);
+	frame_draw->computeSaliencyMap(_saliency_map_draw);
     // print the saliency map
 
 	cv::Mat salientImage(_saliency_map.rows(), _saliency_map.cols(), CV_32F, _saliency_map.data());
+	cv::Mat salientImage_draw(_saliency_map_draw.rows(), _saliency_map_draw.cols(), CV_32F, _saliency_map_draw.data());
 
     int count_selectedPoint = 0;
     salientImage.convertTo(salientImage, CV_8UC1);
-
-//	cv::imshow("salientImage:"+std::to_string(_frame_id),salientImage);
-//	cv::waitKey(0);
+	salientImage_draw.convertTo(salientImage_draw, CV_8UC1);
 
     typedef IsLocalMax_<decltype(_saliency_map), decltype(_mask)> IsLocalMax;
+	typedef IsLocalMax_<decltype(_saliency_map_draw), decltype(_mask_draw)> IsLocalMax_draw;
     const IsLocalMax is_local_max(_saliency_map, _mask, _options.nonMaxSuppRadius);
+	const IsLocalMax is_local_max_draw(_saliency_map_draw, _mask_draw, _options.nonMaxSuppRadius);
 
 	DSONL::FrameHessian* newFrame_ref=NULL;
 	float* color_ref=NULL;
@@ -736,6 +756,69 @@ void PhotometricBundleAdjustment::
 
 	Mat dsoSelectedPointMask(grayImg.rows,  grayImg.cols, CV_8UC1, Scalar(0));
 	int dso_point_counter=0;
+
+
+	Mat RandomSelectedPointMask(grayImg.rows,  grayImg.cols, CV_8UC1, Scalar(0));
+
+//	 Segment the object - this is a placeholder, actual method depends on your image
+	                                                      cv::Mat binary;
+	cv::threshold(grayImg, binary, 128, 255, cv::THRESH_BINARY);
+
+	// Find the coordinates of all pixels belonging to the object
+	std::vector<cv::Point> objectPixels;
+	for (int y = 0; y < binary.rows; y++) {
+		for (int x = 0; x < binary.cols; x++) {
+			if (binary.at<uchar>(y, x) == 255) { // Assuming object pixels are white (255)
+				objectPixels.push_back(cv::Point(x, y));
+			}
+		}
+	}
+	// Randomly select n pixels from the object
+	int n = 100; // Number of pixels to select 300?
+	std::srand(std::time(nullptr)); // Seed for random number generation
+	for (int i = 0; i < n; i++) {
+		int randIndex = std::rand() % objectPixels.size();
+		cv::Point randomPixel = objectPixels[randIndex];
+
+		// Process the selected pixel as needed
+		// For demonstration, let's mark the selected pixel in red on the original image
+		RandomSelectedPointMask.at<uchar>(randomPixel.y, randomPixel.x) = 255;
+	}
+
+//		cv::namedWindow("Selected Pixels", cv::WINDOW_AUTOSIZE);
+//		cv::imshow("grayImg:"+std::to_string(_frame_id),grayImg);
+//		cv::imshow("Selected Pixels", RandomSelectedPointMask);
+//		cv::waitKey(0);
+
+	    // randomly select points 5000 point on the image
+
+	    // pixel selector
+	    for(int y = B; y < max_rows; ++y) {
+		for(int x = B; x < max_cols; ++x) {
+
+			double z = Z(y,x);
+			if(z >= _options.minValidDepth && z <= _options.maxValidDepth) {
+				if(RandomSelectedPointMask.at<uchar>(y,x)!=0) { // dso condition for pixel selector
+					//if(is_local_max(y, x)) { // orginal for pixel selector
+					dso_point_counter+=1;
+					dsoSelectedPointMask.at<uchar>(y,x)= 255;
+					Vec3 X = T_w * (z * _K_inv * Vec3(x, y, 1.0)); // X in the world frame
+					std::unique_ptr<ScenePoint> p = std::make_unique<ScenePoint>(X, _frame_id);// associate a new scene point with its frame id
+					Vec_<int,2> xy(x, y);
+					p->setZnccPach( I, xy );
+					p->descriptor().resize(descriptor_dim);
+					p->setSaliency( _saliency_map(y,x) );
+					p->setFirstProjection(xy);
+					p->ori_depth = z; // added by lei
+					p->inv_depth = 1.0f/z; // added by lei
+					new_scene_points_draw.push_back(std::move(p));
+				}
+			}
+
+			}
+	    }
+
+
 
 	// pixel selector
     for(int y = B; y < max_rows; ++y) {
@@ -776,6 +859,18 @@ void PhotometricBundleAdjustment::
 	delete[] color_ref;
 	delete[] statusMapPoints_ref;
 	delete[] color_ref_lvl;
+
+
+
+	std::cout<<"(size_t) _options.maxNumPoints: "<<(size_t) _options.maxNumPoints<<std::endl;
+	if(new_scene_points_draw.size() > (size_t) _options.maxNumPoints) {
+		auto nth = new_scene_points_draw.begin() + _options.maxNumPoints;
+		std::nth_element(new_scene_points_draw.begin(), nth, new_scene_points_draw.end(),
+		                 [&](const ScenePointPointer& a, const ScenePointPointer& b) {
+			                 return a->getSaliency() > b->getSaliency();
+		                 });
+		new_scene_points_draw.erase(nth, new_scene_points_draw.end());
+	}
 
 
 
@@ -847,7 +942,6 @@ void PhotometricBundleAdjustment::
 //	}
 
 //	N_ptr
-
     //
     // extract the descriptors
     //
@@ -862,8 +956,24 @@ void PhotometricBundleAdjustment::
             ExtractPatch(ptr, channel, new_scene_points[i]->getFirstProjection(), radius);
         }
     }
+
+	const int num_channels_draw = frame_draw->numChannels(), num_new_points_draw = (int) new_scene_points_draw.size();
+
+	for(int k = 0; k < num_channels_draw; ++k) {
+		const auto& channel = frame_draw->getChannel(k);
+		for(int i = 0; i < num_new_points_draw; ++i) {
+			auto ptr_draw = new_scene_points_draw[i]->descriptor().data() + k*patch_length;
+
+			ExtractPatch(ptr_draw, channel, new_scene_points_draw[i]->getFirstProjection(), radius);
+		}
+	}
+
+	cout<<"_scene_points.size():"<<_scene_points.size()<< endl;
+	cout <<"new_scene_points.size():"<<new_scene_points.size()<< endl;
     _scene_points.reserve(_scene_points.size() + new_scene_points.size());
+	_scene_points_4draw.reserve(_scene_points_4draw.size() + new_scene_points_draw.size());
     std::move(new_scene_points.begin(), new_scene_points.end(), std::back_inserter(_scene_points));
+	std::move(new_scene_points_draw.begin(), new_scene_points_draw.end(), std::back_inserter(_scene_points_4draw));
     _frame_buffer.push_back(DescriptorFramePointer(frame));
 
 //	for(int i=0;i<480;i++){
@@ -883,16 +993,12 @@ void PhotometricBundleAdjustment::
 
 		//
 		std::cout<<"show Scene point size in current round of optimization : "<<_scene_points.size()<<std::endl;
-
 //		show Scene point size in current round of optimiation : 61119
 //		        show counter_frame1:1263
 //		        show counter_frame2:1350
 //		        show counter_frame3:1657
 //		        show counter_frame4:0
 //		        show counter_frame5:0
-
-
-
 		// define a file to save the optimized points and corresponding pixel values
         uint32_t frame_id_start = _frame_buffer.front()->id(),frame_id_end   = _frame_buffer.back()->id();
         int num_selected_points = 0;
@@ -2111,8 +2217,6 @@ void PhotometricBundleAdjustment::optimize(Result* result)
     Info("_trajectory.size() = %d, frame_id_start=  %d", _trajectory.size(), frame_id_start);
     Info("_scene_points.size() = %d", _scene_points.size());
 
-
-
     //-----------------------------------------optimization----- start-------------------------------------------------------------------------
 //     get the points that we *should* optimize. They must have a large enough
 //     visibility list
@@ -2332,16 +2436,24 @@ void PhotometricBundleAdjustment::optimize(Result* result)
         _trajectory.atId(it.first) = Eigen::Isometry3d( ParamsToPose(it.second.data())).inverse().matrix();
         std::cout<<"after optimize: _trajectory.atId(it.first:"  <<it.first <<"\n"<<_trajectory.atId(it.first)<<std::endl;
     }
-
-
 	// put back the refined depth values
+//	for(auto& pt : _scene_points) {
+//		const Eigen::Isometry3d refined_camera_pose_w(_trajectory.atId(pt->refFrameId()));
+//		Vec3 X = refined_camera_pose_w * ((pt->ori_depth) * _K_inv * Vec3(pt->_x[0], pt->_x[1], 1.0)); // X in the world frame
+//		pt->X() = X;
+//		}
 
-	for(auto& pt : _scene_points) {
+	    for(auto& pt : _scene_points_4draw) {
 		const Eigen::Isometry3d refined_camera_pose_w(_trajectory.atId(pt->refFrameId()));
 		Vec3 X = refined_camera_pose_w * ((pt->ori_depth) * _K_inv * Vec3(pt->_x[0], pt->_x[1], 1.0)); // X in the world frame
 		pt->X() = X;
-		}
+	    }
 
+//	for(auto& pt : _scene_points_4draw) {
+//	const Eigen::Isometry3d refined_camera_pose_w(_trajectory_4draw.atId(pt->refFrameId()));
+//	Vec3 X = refined_camera_pose_w * ((pt->ori_depth) * _K_inv * Vec3(pt->_x[0], pt->_x[1], 1.0)); // X in the world frame
+//	pt->X() = X;
+//	}
 
 
 
@@ -2356,29 +2468,50 @@ void PhotometricBundleAdjustment::optimize(Result* result)
 	//		}
 
     auto points_to_remove = removePointsAtFrame(frame_id_start);
+	auto points_to_remove_draw = removePointsAtFrame_draw(frame_id_start);
     printf("removing %zu old points\n", points_to_remove.size());
 
     //
     // check if we should return a result to the user
     //
-    if(result) {
-        result->poses = _trajectory.poses();
-        const auto npts = points_to_remove.size();
-        result->refinedPoints.resize(npts);
-        result->originalPoints.resize(npts);
-        for(size_t i = 0; i < npts; ++i) {
-            result->refinedPoints[i] = points_to_remove[i]->X();
-            result->originalPoints[i] = points_to_remove[i]->getOriginalPoint();
-        }
-        result->initialCost = summary.initial_cost;
-        result->finalCost   = summary.final_cost;
-        result->fixedCost   = summary.fixed_cost;
-        result->numSuccessfulStep = summary.num_successful_steps;
-        result->totalTime = summary.total_time_in_seconds;
-        result->numResiduals = summary.num_residuals;
-        result->message = std::string(summary.message);
-        result->iterationSummary = summary.iterations;
-    }
+//    if(result) {
+//        result->poses = _trajectory.poses();
+//        const auto npts = points_to_remove.size();
+//        result->refinedPoints.resize(npts);
+//        result->originalPoints.resize(npts);
+//        for(size_t i = 0; i < npts; ++i) {
+//            result->refinedPoints[i] = points_to_remove[i]->X();
+//            result->originalPoints[i] = points_to_remove[i]->getOriginalPoint();
+//        }
+//        result->initialCost = summary.initial_cost;
+//        result->finalCost   = summary.final_cost;
+//        result->fixedCost   = summary.fixed_cost;
+//        result->numSuccessfulStep = summary.num_successful_steps;
+//        result->totalTime = summary.total_time_in_seconds;
+//        result->numResiduals = summary.num_residuals;
+//        result->message = std::string(summary.message);
+//        result->iterationSummary = summary.iterations;
+//    }
+
+	if(result) {
+		result->poses = _trajectory.poses();
+		const auto npts = points_to_remove_draw.size();
+		result->refinedPoints.resize(npts);
+		result->originalPoints.resize(npts);
+		for(size_t i = 0; i < npts; ++i) {
+			result->refinedPoints[i] = points_to_remove_draw[i]->X();
+			result->originalPoints[i] = points_to_remove[i]->getOriginalPoint();
+		}
+		result->initialCost = summary.initial_cost;
+		result->finalCost   = summary.final_cost;
+		result->fixedCost   = summary.fixed_cost;
+		result->numSuccessfulStep = summary.num_successful_steps;
+		result->totalTime = summary.total_time_in_seconds;
+		result->numResiduals = summary.num_residuals;
+		result->message = std::string(summary.message);
+		result->iterationSummary = summary.iterations;
+	}
+
 
 
 }
@@ -2403,6 +2536,25 @@ auto PhotometricBundleAdjustment::getSrcImageAtId(uint32_t id) const -> const Im
 	throw std::runtime_error("could not find Image   id!");
 }
 
+
+auto PhotometricBundleAdjustment::removePointsAtFrame_draw(uint32_t id) -> ScenePointPointerList
+{
+	using namespace std;
+
+	decltype(_scene_points_4draw) points_to_keep, points_to_remove;
+
+	points_to_keep.reserve(_scene_points_4draw.size());
+	points_to_remove.reserve( 0.5 * _scene_points_4draw.size() );
+
+	partition_copy(make_move_iterator(begin(_scene_points_4draw)),
+	               make_move_iterator(end(_scene_points_4draw)),
+	               back_inserter(points_to_remove),
+	               back_inserter(points_to_keep),
+	               [&](const ScenePointPointer& p) { return p->refFrameId() <= id; });
+
+	_scene_points_4draw.swap(points_to_keep);
+	return points_to_remove;
+}
 auto PhotometricBundleAdjustment::removePointsAtFrame(uint32_t id) -> ScenePointPointerList
 {
     using namespace std;
@@ -2419,6 +2571,7 @@ auto PhotometricBundleAdjustment::removePointsAtFrame(uint32_t id) -> ScenePoint
                    [&](const ScenePointPointer& p) { return p->refFrameId() <= id; });
 
     _scene_points.swap(points_to_keep);
+//	_scene_points_4draw.swap(points_to_keep);
     return points_to_remove;
 }
 void PhotometricBundleAdjustment::setImage_size(int lvl) {

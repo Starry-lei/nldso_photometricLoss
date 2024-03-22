@@ -21,6 +21,7 @@ enum class DatasetType
 struct DatasetFrame
 {
   virtual const cv::Mat& image() const = 0;
+  virtual const cv::Mat& rgbImage() const = 0;
   virtual  cv::Mat& depth()  = 0;
   virtual const cv::Mat& normal() const = 0;
   virtual const cv::Mat& roughness() const = 0;
@@ -162,6 +163,17 @@ public:
 //			return I;
 
 		}
+
+		inline const cv::Mat& rgbImage() const {
+			if (_lvl==1)
+			{return I_orig;}
+			else if (_lvl==0)
+			{return I_orig;}
+			//			return I;
+
+		}
+
+
         inline cv::Mat& depth()  {
 			if (_lvl==1)
 			{return D_lvl_1;}

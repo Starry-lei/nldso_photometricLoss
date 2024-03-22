@@ -217,9 +217,12 @@ public:
 
 	Calibration _calib;
 	Image_<uint16_t> _mask;
+	Image_<uint16_t> _mask_draw;
 	Image_<float> _saliency_map;
+	Image_<float> _saliency_map_draw;
 	Mat33 _K_inv;
 	Trajectory _trajectory;
+	Trajectory _trajectory_4draw;
 	int lvl=0;
 	uint32_t _frame_id = 0;
 
@@ -243,6 +246,7 @@ private:
 
     /** removes scene points whose frame id == id */
     ScenePointPointerList removePointsAtFrame(uint32_t id);
+	ScenePointPointerList removePointsAtFrame_draw(uint32_t id);
 
 //    class DescriptorFrame;
 //    typedef UniquePointer<DescriptorFrame>                 DescriptorFramePointer;
@@ -266,6 +270,7 @@ private:
 
 //    DescriptorFrameBuffer _frame_buffer;
     ScenePointPointerList _scene_points;
+	ScenePointPointerList _scene_points_4draw;
 //    Image_<uint16_t> _mask;
 //    Image_<float> _saliency_map;
 

@@ -37,9 +37,12 @@ EigenAlignedContainer_<CamWithId> Init_traj_data;
 EigenAlignedContainer_<CamWithId> Init_traj_data_from_relativePose;
 void draw_scene( PhotometricBundleAdjustment::Result & res, EigenAlignedContainer_<CamWithId> & Init_traj_data, EigenAlignedContainer_<CamWithId> & Init_traj_data_from_relativePose);
 pangolin::Var<bool> show_trajectory("ui.show_trajectory", true, true);
-bool next_step();
+bool next_step(std::vector<std::shared_ptr<pangolin::ImageView>>& img_view);
+
+string type2str(int type) ;
 constexpr int UI_WIDTH = 200;
-constexpr int NUM_CAMS = 2;
+constexpr int NUM_CAMS = 1;
+void draw_image_overlay(pangolin::View& v, size_t view_id);
 pangolin::Var<bool> ui_show_hidden("ui.show_extra_options", false, true);
 pangolin::Var<bool> show_cameras3d("hidden.show_cameras", true, true);
 pangolin::Var<bool> continue_next("ui.continue_next", false, true);
@@ -110,7 +113,6 @@ int main(int argc, char** argv)
 		return -1;
 	}
 	cout<<"pba run here 1! "<<endl;
-
 	// load initial trajectory
 	T_init = loadPosesTumRGBDFormat(cf.get<std::string>("trajectory"));
 	//	T_init = loadPosesKittiFormat(cf.get<std::string>("trajectory"));
@@ -118,16 +120,8 @@ int main(int argc, char** argv)
 	//	std::string abs_pose= "../data/dataSetPBA_init_poor/Kitti_GT_00.txt";
 	//	std::string abs_pose= "../data/dataSetPBA_init_poor/GT_pose_list_fr3.txt";
 	std::string abs_pose= "../data/dataSetPBA_init_poor/seq15/GT_Trajectory_seq15_650frames_WorldAtFirstFrame.txt";
-
 //	std::string abs_pose= "../data/dataSetPBA_init_poor/seq_17/GT_Trajectory_seq15_650_WorldFirst.txt";
-
-
-
-
-
 //	std::string abs_pose= "../data/dataSetPBA_init_poor/seq12_111_Poses_gt.txt";
-
-
 //	std::string abs_pose= "../data/dataSetPBA_init_poor/scene0370_02_seq_01_tumRGBD_segmented_reseted.txt";
 	cout<<"dataset created! "<<endl;
 
@@ -167,9 +161,7 @@ int main(int argc, char** argv)
 	// transform env light pose to the coordinate system of the first camera in PBA sequence
 	readCtrlPointPoseData(fileName, trajectoryPoses);
 	Sophus::SE3f frontCamPose_w (trajectoryPoses[0]);
-
 	T_head_frame_c2w = frontCamPose_w;
-
 	std::vector<Sophus::SE3f, Eigen::aligned_allocator<Sophus::SE3f>> EnvGTPose;
 	readCtrlPointPoseData(EnvMapPosePath, EnvGTPose);
 	pcl::PointCloud<pcl::PointXYZ>::Ptr ControlpointCloud(new pcl::PointCloud<pcl::PointXYZ>());
@@ -193,35 +185,61 @@ int main(int argc, char** argv)
 		std::cout<<"No environment light data!"<<std::endl;
 		return -1;
 	}
-
 // control point cloud
-
-
 	if (show_gui) {
 			pangolin::CreateWindowAndBind("Main", 1800, 1000);
 			glEnable(GL_DEPTH_TEST);
 			// main parent display for images and 3d viewer
-			pangolin::View& main_view = pangolin::Display("main")
-		                                        .SetBounds(0.0, 1.0, pangolin::Attach::Pix(UI_WIDTH), 1.0)
-												.SetLayout(pangolin::LayoutEqualVertical);
-			pangolin::View& img_view_display =
-					pangolin::Display("images").SetLayout(pangolin::LayoutEqual);
-			main_view.AddDisplay(img_view_display);
+//			pangolin::View& main_view = pangolin::Display("main")
+//		                                        .SetBounds(0.0, 1.0, pangolin::Attach::Pix(UI_WIDTH), 1.0)
+//												.SetLayout(pangolin::LayoutEqualVertical);
 
-			// main ui panel
-			pangolin::CreatePanel("ui").SetBounds(0.0, 1.0, 0.0,
-												  pangolin::Attach::Pix(UI_WIDTH));
+			pangolin::View& main_view = pangolin::Display("main")
+												.SetBounds(0.0, 1.0, 0, 1.0);
+
+
+		    float heightFraction = 0.5; // 30% of the window height
+		    float widthFraction = 0.5; // 30% of the window width
+
+		    constexpr int UI_HEIGHT_img = 450; // Example height in pixels
+		    constexpr int UI_WIDTH_img = 550;  // Example width in pixels
+		    constexpr int RIGHT_MARGIN_img = 50; // Margin from the right boundary in pixels
+		    constexpr int BOTTOM_MARGIN_img = 50; // Margin from the bottom boundary in pixels
+		    pangolin::View& img_view_display = pangolin::Display("images");
+		    img_view_display.SetBounds(
+		            pangolin::Attach::Pix(BOTTOM_MARGIN_img),                                        // Bottom: Margin from the bottom
+		            pangolin::Attach::Pix(BOTTOM_MARGIN_img + UI_HEIGHT_img),                            // Top: Bottom margin + UI_HEIGHT
+		            pangolin::Attach::ReversePix(RIGHT_MARGIN_img + UI_WIDTH_img),                       // Left: Window width - (Right margin + UI_WIDTH)
+		            pangolin::Attach::ReversePix(RIGHT_MARGIN_img));                       // Right: Align with the right of the main view (adjusted below)
+
+		    main_view.AddDisplay(img_view_display);
+			pangolin::CreatePanel("ui").SetBounds(0.0, 1.0, 0.0,pangolin::Attach::Pix(UI_WIDTH));
 
 			// extra options panel
 			pangolin::View& hidden_panel = pangolin::CreatePanel("hidden").SetBounds(
 					0.0, 1.0, pangolin::Attach::Pix(UI_WIDTH),
 					pangolin::Attach::Pix(2 * UI_WIDTH));
 			ui_show_hidden.Meta().gui_changed = true;
-			// 3D visualization (initial camera view optimized to see full map)
+
+
+		    // 2D image views
+		    std::vector<std::shared_ptr<pangolin::ImageView>> img_view;
+		    while (img_view.size() < NUM_CAMS) {
+			    cout<<"NUM_CAMS: "<<NUM_CAMS<<endl;
+			    std::shared_ptr<pangolin::ImageView> iv(new pangolin::ImageView);
+			    size_t idx = img_view.size();
+			    img_view.push_back(iv);
+			    img_view_display.AddDisplay(*iv);
+			    iv->extern_draw_function =
+			            std::bind(&draw_image_overlay, std::placeholders::_1, idx);
+		    }
+
+
+		    // 3D visualization (initial camera view optimized to see full map)
 			pangolin::OpenGlRenderState camera(pangolin::ProjectionMatrix(640, 480, 400, 400, 320, 240, 0.001, 10000),
 					pangolin::ModelViewLookAt(-3.4, -3.7, -8.3, 2.1, 0.6, 0.2,pangolin::AxisNegY));
 
-			pangolin::View& display3D =pangolin::Display("scene").SetAspect(-640 / 480.0).SetHandler(new pangolin::Handler3D(camera));
+			pangolin::View& display3D = pangolin::Display("scene").SetAspect(-640 / 480.0).SetHandler(new pangolin::Handler3D(camera));
 			main_view.AddDisplay(display3D);
 			while (!pangolin::ShouldQuit()) {
 				glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -231,15 +249,30 @@ int main(int argc, char** argv)
 					main_view.SetBounds(0.0, 1.0, pangolin::Attach::Pix(panel_width), 1.0);
 				}
 				display3D.Activate(camera);
-				glClearColor(0.95f, 0.95f, 0.95f, 1.0f);// light gray background
 
+//			    if (images.find(fcid) != images.end()) {
+//				    pangolin::TypedImage img = pangolin::LoadImage(images[fcid]);
+//				    img_view[0]->SetImage(img);
+//			    } else {
+//				    img_view[0]->Clear();
+//			    }
+
+
+
+
+//				glClearColor(0.95f, 0.95f, 0.95f, 1.0f);// light gray background
+			    glClearColor(1.0f, 1.0f, 1.0f, 1.0f);// light gray background
 				draw_scene(result, Init_traj_data,Init_traj_data_from_relativePose);
 			    optimizeSignal = false;
 				img_view_display.Activate();
 				pangolin::FinishFrame();
 				if (continue_next && ! optimizeSignal) {
-							continue_next = next_step();
+							continue_next = next_step(img_view);
 //				            if (optimizeSignal){ continue ;}
+//				            pangolin::TypedImage img = pangolin::LoadImage(images[fcid]);
+//				            img_view[0]->SetImage(img);
+
+
 
 				} else {
 							std::this_thread::sleep_for(std::chrono::milliseconds(5));
@@ -267,15 +300,15 @@ void draw_scene( PhotometricBundleAdjustment::Result & res,  EigenAlignedContain
 	// axis x
 	glColor3f ( 0.8f,0.f,0.f );
 	glVertex3f( 0,0, 0 );
-	glVertex3f( 1,0, 0 );
+	glVertex3f( 0.4,0, 0 );
 	// axis y
 	glColor3f( 0.f,0.8f,0.f);
 	glVertex3f( 0,0, 0 );
-	glVertex3f( 0,1,0 );
+	glVertex3f( 0,0.4,0 );
 	// axis z
 	glColor3f( 0.2f,0.2f,1.f);
 	glVertex3f( 0,0, 0 );
-	glVertex3f( 0,0,1);
+	glVertex3f( 0,0,0.4);
 
 	const u_int8_t color_camera_current[3]{255, 0, 0};         // red
 	const u_int8_t color_camera_left[3]{0, 125, 0};            // dark green
@@ -335,13 +368,6 @@ void draw_scene( PhotometricBundleAdjustment::Result & res,  EigenAlignedContain
 
 			glEnd();
 		}
-
-
-
-
-
-
-
 		// render the refined trajectory
 		if (show_trajectory && res.poses.size() > 0) {
 			glLineWidth(2);
@@ -358,17 +384,17 @@ void draw_scene( PhotometricBundleAdjustment::Result & res,  EigenAlignedContain
 		}
 		// render the GT trajectory
 		// render 3D map points --------------anchor-------------------------
-		if (photoba->EnvLightLookup->envLightIdxMap.size() > 0) {
-			glPointSize(6.0);
-			glBegin(GL_POINTS);
-			for (const auto& envLight : photoba->EnvLightLookup->envLightIdxMap) {
-				Vec3 point(envLight.first.x, envLight.first.y, envLight.first.z);
-				glColor3ubv(color_camera_left);
-				pangolin::glVertex(point);
-			}
-
-			glEnd();
-		}
+//		if (photoba->EnvLightLookup->envLightIdxMap.size() > 0) {
+//			glPointSize(6.0);
+//			glBegin(GL_POINTS);
+//			for (const auto& envLight : photoba->EnvLightLookup->envLightIdxMap) {
+//				Vec3 point(envLight.first.x, envLight.first.y, envLight.first.z);
+//				glColor3ubv(color_camera_left);
+//				pangolin::glVertex(point);
+//			}
+//
+//			glEnd();
+//		}
 
 		// render old landmark points
 		if (show_old_points3d && allRefinedPoints.size() > 0) {
@@ -383,8 +409,36 @@ void draw_scene( PhotometricBundleAdjustment::Result & res,  EigenAlignedContain
 		}
 	}
 }
+// Visualize features and related info on top of the image views
+void draw_image_overlay(pangolin::View& v, size_t view_id) {
+	UNUSED(v);
+}
 
-bool next_step( ){
+string type2str(int type) {
+	string r;
+
+	uchar depth = type & CV_MAT_DEPTH_MASK;
+	uchar chans = 1 + (type >> CV_CN_SHIFT);
+
+	switch ( depth ) {
+		case CV_8U:  r = "8U"; break;
+		case CV_8S:  r = "8S"; break;
+		case CV_16U: r = "16U"; break;
+		case CV_16S: r = "16S"; break;
+		case CV_32S: r = "32S"; break;
+		case CV_32F: r = "32F"; break;
+		case CV_64F: r = "64F"; break;
+		default:     r = "User"; break;
+	}
+
+	r += "C";
+	r += (chans+'0');
+
+	return r;
+}
+
+
+bool next_step(  std::vector<std::shared_ptr<pangolin::ImageView>>& img_view ){
 	EigenAlignedContainer_<Mat44> T_opt;
 	cv::Mat_<float> zmap;
 	UniquePointer<DatasetFrame> frame;
@@ -404,23 +458,45 @@ bool next_step( ){
 //	std::cout <<"show image size: "<<photoba->_image_size.rows<<" "<<photoba->_image_size.cols<<std::endl;
 	photoba->_K_inv = photoba->_calib.K().matrix().inverse().matrix();
 
-
-
 	for(; (frame = dataset->getFrame(fid, lvl)) && !gStop; ++fid ){
-
 
 		if (fid==T_init.size()-3) {
 
 			auto output_fn = dataFolder+ "refined_poses_es_tum_abs_seq15_new_pose_NLPBA"+ std::to_string(lvl)+ ".txt";
 			writePosesTumRGBDFormat(output_fn, result.poses, dataset->getTimestamp());
 			std::cout <<"End of dataset reached\n";
-			exit(1);
+//			exit(1);
 			return false;
 
 		}
 		printf("Frame %05d\n", fid);
-
 //		cv::imshow("frame->image()",frame->image());
+
+		cv::Mat cvImage = frame->rgbImage();
+// convert cvImage from brg to rgb
+//		cv::cvtColor(cvImage, cvImage, cv::COLOR_BGR2RGB);
+//		cv::imshow("cvImage",cvImage);
+		string ty=type2str( cvImage.type());
+		cout<<"show frame->image() type:"<<ty<<endl;
+		std::cout<<"show frame->image() channels:"<<frame->image().channels()<<std::endl;
+//		cv::waitKey(0);
+		// Determine the pixel format
+		pangolin::PixelFormat fmt = pangolin::PixelFormatFromString("BGR24");
+		// Create a new TypedImage with the same dimensions and pixel format
+		pangolin::TypedImage img(cvImage.cols, cvImage.rows, fmt);
+
+		// Copy the data from cv::Mat to TypedImage
+		if (cvImage.isContinuous()) {
+			memcpy(img.ptr, cvImage.data, cvImage.cols * cvImage.rows * cvImage.elemSize());
+		} else {
+			// Handle non-continuous images by copying row by row
+			for (int i = 0; i < cvImage.rows; ++i) {
+				memcpy(img.ptr + i * img.pitch, cvImage.ptr(i), cvImage.cols * cvImage.elemSize());
+			}
+		}
+//		pangolin::TypedImage img = frame->image();
+		img_view[0]->SetImage(img);
+
 //		cv::waitKey(0);
 
 		const uint8_t* I = frame->image().ptr<const uint8_t>();
@@ -431,7 +507,6 @@ bool next_step( ){
 
 
 //		cout<<"show frame->normal() type:"<<frame->normal().type()<<endl;
-
 //		cv::imshow("frame->normal()",frame->normal());
 //		waitKey(0)	;
 
